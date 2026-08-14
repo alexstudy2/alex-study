@@ -2,6 +2,7 @@
 @import "../styles/tokens.css";
 @import "../styles/base.css";
 @import "../styles/shell.css";
+@import "../styles/components.css";
 
 
 
@@ -2668,90 +2669,6 @@
 }
 
 
-.quick-add {
-  position: relative;
-  overflow: hidden;
-  display: grid;
-  grid-template-columns: minmax(14rem, 0.65fr) 1.35fr;
-  gap: clamp(1.5rem, 4vw, 4rem);
-  padding: clamp(1.5rem, 4vw, 3rem);
-  background: var(--foreground);
-  color: var(--background);
-  border-radius: calc(var(--radius) * 1.5);
-}
-
-
-.quick-add::after {
-  content: "";
-  position: absolute;
-  inset-inline-end: -5rem;
-  inset-block-start: -7rem;
-  width: 18rem;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--accent) 35%, transparent);
-  filter: blur(4px);
-}
-
-
-.quick-add h2 {
-  font-size: clamp(1.8rem, 3vw, 3rem);
-  line-height: 1.05;
-  margin: 0.4rem 0;
-}
-
-
-.quick-add .eyebrow {
-  color: var(--focus);
-}
-
-
-.quick-add-row {
-  align-self: center;
-  display: flex;
-  gap: 0.75rem;
-  z-index: 1;
-}
-
-
-.quick-add-row input,
-.draft-editor input,
-.draft-editor select,
-.draft-editor textarea {
-  width: 100%;
-  min-height: 48px;
-  padding: 0.75rem 0.9rem;
-  border: 1px solid color-mix(in srgb, var(--background) 30%, transparent);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--surface) 10%, transparent);
-  color: inherit;
-}
-
-
-.quick-add-row input::placeholder {
-  color: color-mix(in srgb, var(--background) 60%, transparent);
-}
-
-
-.draft-editor {
-  display: grid;
-  gap: 1rem;
-  z-index: 1;
-}
-
-
-.draft-editor label {
-  display: grid;
-  gap: 0.35rem;
-}
-
-
-.draft-label {
-  font-weight: 800;
-  color: var(--focus);
-}
-
-
 .task-board {
   margin-top: 1.5rem;
   background: var(--surface);
@@ -3030,50 +2947,6 @@
 }
 
 
-.subject-strip {
-  display: grid;
-  grid-template-columns: 0.6fr 1fr;
-  gap: 2rem;
-  margin-top: 1.5rem;
-  padding: clamp(1.5rem, 4vw, 3rem);
-  border: 1px solid var(--line);
-  border-radius: calc(var(--radius) * 1.5);
-}
-
-
-.subject-strip h2 {
-  font-size: 2rem;
-  margin: 0.25rem 0;
-}
-
-
-.subject-chips {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  align-content: start;
-}
-
-
-.subject-chips span {
-  padding: 0.55rem 0.8rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--primary) 13%, var(--surface));
-  font-weight: 800;
-}
-
-
-.subject-chips span[data-color="coral"] {
-  background: color-mix(in srgb, var(--accent) 18%, var(--surface));
-}
-
-
-.subject-form {
-  grid-column: 1/-1;
-  display: grid;
-  grid-template-columns: 1fr 10rem auto;
-  gap: 0.7rem;
-}
 
 
 .back-link {

@@ -4,6 +4,22 @@ import { prisma } from "@/lib/db/prisma";
 import { requireUser } from "@/lib/auth/session";
 import { getTaskDateWindow } from "@/lib/tasks/dates";
 import { goalsWithProgress } from "@/lib/goals/queries";
+import { PageShell } from "@/components/ui/page-shell";
+import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
+import {
+  CalendarDays,
+  CheckCircle2,
+  Clock,
+  Play,
+  Plus,
+  Sparkles,
+  Target,
+  Timer as TimerIcon,
+  ArrowRight,
+  ArrowLeft,
+  ListTodo,
+} from "lucide-react";
 
 export default async function DashboardPage() {
   const user = await requireUser();
@@ -11,9 +27,11 @@ export default async function DashboardPage() {
     where: { userId_kind_version: { userId: user.id, kind: "analytics", version: "2026-08" } },
   });
   if (!consent || consent.status === "PENDING") redirect("/onboarding/privacy");
+
   const now = new Date();
   const today = getTaskDateWindow("today", now)!;
   const week = getTaskDateWindow("week", now)!;
+
   const [dueTasks, weekTasks, todaySessions, weekSessions, goals, insight, timer] =
     await Promise.all([
       prisma.task.findMany({
@@ -55,66 +73,83 @@ export default async function DashboardPage() {
         select: { mode: true, status: true },
       }),
     ]);
+
   const ar = user.locale === "AR";
   const actual = Math.round(
-    todaySessions.reduce((sum, item) => sum + item.durationSeconds, 0) / 60,
+    todaySessions.reduce((sum, item) => sum + item.durationSeconds, 0) / 60
   );
   const planned =
     todaySessions.reduce((sum, item) => sum + item.plannedDurationSeconds, 0) / 60 +
     dueTasks.reduce((sum, item) => sum + (item.estimatedMinutes ?? 0), 0);
   const weekMinutes = Math.round(
-    weekSessions.reduce((sum, item) => sum + item.durationSeconds, 0) / 60,
+    weekSessions.reduce((sum, item) => sum + item.durationSeconds, 0) / 60
   );
   const scores = todaySessions.flatMap((item) =>
-    item.focusScore == null ? [] : [item.focusScore],
+    item.focusScore == null ? [] : [item.focusScore]
   );
   const averageScore = scores.length
     ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
     : null;
   const completedWeek = weekTasks.filter((item) => item.status === "COMPLETED").length;
+
+  const dateFormatted = new Intl.DateTimeFormat(ar ? "ar-EG" : "en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "Africa/Cairo",
+  }).format(now);
+
+  const NavArrow = ar ? ArrowLeft : ArrowRight;
+
   return (
-    <main className="page-shell" dir={ar ? "rtl" : "ltr"}>
-      <header className="dashboard-header">
-        <div>
-          <p className="eyebrow">
-            Alex Study ·{" "}
-            {new Intl.DateTimeFormat(ar ? "ar-EG" : "en-GB", {
-              weekday: "long",
-              day: "numeric",
-              month: "long",
-              timeZone: "Africa/Cairo",
-            }).format(now)}
-          </p>
-          <h1>
-            {ar
-              ? `أهلًا، ${user.name?.split(" ")[0]}`
-              : `Welcome back, ${user.name?.split(" ")[0]}`}
-          </h1>
-          <p>{ar ? "خطة اليوم، بهدوء ووضوح." : "Today’s plan, calm and legible."}</p>
-        </div>
-        <div className="page-header">
-          <Link className="primary-button" href="/tasks">
-            {ar ? "+ إضافة مهمة" : "+ New task"}
-          </Link>
-          <Link className="secondary-button" href="/focus">
-            {ar ? "بدء الجلسة" : "Start focus"}
-          </Link>
-        </div>
-      </header>
+    <PageShell dir={ar ? "rtl" : "ltr"}>
+      <PageHeader
+        eyebrow={`Alex Study · ${dateFormatted}`}
+        title={ar ? `أهلًا، ${user.name?.split(" ")[0]}` : `Welcome back, ${user.name?.split(" ")[0]}`}
+        description={ar ? "خطة اليوم، بهدوء ووضوح." : "Today's plan, calm and legible."}
+        actions={
+          <>
+            <Button
+              href="/tasks"
+              variant="primary"
+              size="sm"
+              leftIcon={<Plus className="w-4 h-4" />}
+            >
+              {ar ? "إضافة مهمة" : "New task"}
+            </Button>
+            <Button
+              href="/focus"
+              variant="secondary"
+              size="sm"
+              leftIcon={<Play className="w-4 h-4" />}
+            >
+              {ar ? "بدء الجلسة" : "Start focus"}
+            </Button>
+          </>
+        }
+      />
+
       {timer && (
         <Link className="active-timer-banner" href="/focus">
-          <span>
-            {timer.status === "PAUSED"
-              ? ar
-                ? "مؤقت متوقف مؤقتًا"
-                : "Timer paused"
-              : ar
+          <div className="flex items-center gap-2">
+            <TimerIcon className="w-5 h-5 text-accent animate-pulse" />
+            <span>
+              {timer.status === "PAUSED"
+                ? ar
+                  ? "مؤقت متوقف مؤقتًا"
+                  : "Timer paused"
+                : ar
                 ? "جلسة جارية"
                 : "Session in progress"}
-          </span>
-          <strong>{ar ? "العودة إلى المؤقت ←" : "Return to timer →"}</strong>
+            </span>
+          </div>
+          <strong className="flex items-center gap-1.5 text-accent">
+            {ar ? "العودة إلى المؤقت" : "Return to timer"}
+            <NavArrow className="w-4 h-4" />
+          </strong>
         </Link>
       )}
+
       <section className="dashboard-grid">
         <article className="today-card">
           <p className="eyebrow">{ar ? "اليوم" : "Today"}</p>
@@ -127,31 +162,46 @@ export default async function DashboardPage() {
           <div className="dashboard-progress">
             <span style={{ width: `${Math.min(100, planned ? (actual / planned) * 100 : 0)}%` }} />
           </div>
-          <Link href="/focus" className="primary-button">
+          <Button
+            href="/focus"
+            variant="accent"
+            size="sm"
+            leftIcon={<Play className="w-4 h-4" />}
+          >
             {ar ? "ابدأ التركيز" : "Start focus"}
-          </Link>
+          </Button>
         </article>
+
         <article className="metric-card">
           <span>{ar ? "هذا الأسبوع" : "This week"}</span>
           <strong>{weekMinutes}</strong>
           <small>{ar ? "دقيقة دراسة" : "study minutes"}</small>
         </article>
+
         <article className="metric-card">
           <span>{ar ? "المهام المكتملة" : "Tasks completed"}</span>
           <strong>{completedWeek}</strong>
           <small>{ar ? "من المهام المؤرخة" : "dated this week"}</small>
         </article>
+
         <article className="metric-card accent">
           <span>{ar ? "متوسط التركيز" : "Average Focus Score"}</span>
           <strong>{averageScore ?? "—"}</strong>
           <small>{ar ? "لجلسات اليوم" : "for today’s sessions"}</small>
         </article>
       </section>
+
       <section className="dashboard-columns">
         <div>
           <div className="section-heading">
-            <h2>{ar ? "ما يستحق انتباهك" : "What needs attention"}</h2>
-            <Link href="/tasks">{ar ? "كل المهام" : "All tasks"}</Link>
+            <h2 className="flex items-center gap-2">
+              <ListTodo className="w-5 h-5 text-primary" />
+              <span>{ar ? "ما يستحق انتباهك" : "What needs attention"}</span>
+            </h2>
+            <Link href="/tasks" className="text-sm font-semibold flex items-center gap-1 text-primary hover:underline">
+              {ar ? "كل المهام" : "All tasks"}
+              <NavArrow className="w-3.5 h-3.5" />
+            </Link>
           </div>
           <div className="dashboard-task-list">
             {dueTasks.length ? (
@@ -169,10 +219,17 @@ export default async function DashboardPage() {
             )}
           </div>
         </div>
+
         <div>
           <div className="section-heading">
-            <h2>{ar ? "الأهداف النشطة" : "Active goals"}</h2>
-            <Link href="/goals">{ar ? "كل الأهداف" : "All goals"}</Link>
+            <h2 className="flex items-center gap-2">
+              <Target className="w-5 h-5 text-accent" />
+              <span>{ar ? "الأهداف النشطة" : "Active goals"}</span>
+            </h2>
+            <Link href="/goals" className="text-sm font-semibold flex items-center gap-1 text-accent-strong hover:underline">
+              {ar ? "كل الأهداف" : "All goals"}
+              <NavArrow className="w-3.5 h-3.5" />
+            </Link>
           </div>
           <div className="dashboard-goals">
             {goals.filter((goal) => goal.status === "ACTIVE").length ? (
@@ -192,10 +249,10 @@ export default async function DashboardPage() {
                 ))
             ) : (
               <div className="quiet-state" style={{ padding: "16px", textAlign: "center" }}>
-                <p style={{ margin: "0 0 8px", color: "var(--text-muted)" }}>
+                <p style={{ margin: "0 0 8px", color: "var(--muted)" }}>
                   {ar ? "لا توجد أهداف نشطة." : "No active goals."}
                 </p>
-                <Link href="/goals" style={{ textDecoration: "underline", color: "var(--accent-base)" }}>
+                <Link href="/goals" style={{ textDecoration: "underline", color: "var(--accent)" }}>
                   {ar ? "أنشئ هدفك الأول" : "Create your first goal"}
                 </Link>
               </div>
@@ -203,17 +260,24 @@ export default async function DashboardPage() {
           </div>
         </div>
       </section>
+
       {insight && (
         <aside className="insight-card">
           <div>
-            <span className="ai-label">AI</span>
+            <span className="ai-label flex items-center gap-1">
+              <Sparkles className="w-3.5 h-3.5" />
+              AI
+            </span>
             <p className="eyebrow">{ar ? "ملاحظة دراسية" : "Study note"}</p>
             <h2>{insight.title}</h2>
             <p>{insight.content}</p>
           </div>
-          <Link href="/sessions">{ar ? "راجع جلساتك" : "Review sessions"}</Link>
+          <Link href="/sessions" className="flex items-center gap-1 font-semibold">
+            {ar ? "راجع جلساتك" : "Review sessions"}
+            <NavArrow className="w-4 h-4" />
+          </Link>
         </aside>
       )}
-    </main>
+    </PageShell>
   );
 }

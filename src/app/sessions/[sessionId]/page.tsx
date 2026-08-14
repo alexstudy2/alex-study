@@ -1,8 +1,9 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db/prisma";
 import { requireUser } from "@/lib/auth/session";
 import { sessionInclude } from "@/lib/sessions/queries";
+import { PageShell } from "@/components/ui/page-shell";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default async function SessionDetailPage({
   params,
@@ -17,25 +18,26 @@ export default async function SessionDetailPage({
   });
   if (!session) notFound();
   const ar = user.locale === "AR";
+
   return (
-    <main className="page-shell" dir={ar ? "rtl" : "ltr"}>
-      <Link className="back-link" href="/sessions">
-        ← {ar ? "كل الجلسات" : "All sessions"}
-      </Link>
-      <header className="session-detail-header">
-        <div>
-          <p className="eyebrow">{ar ? "تفاصيل الجلسة" : "Session detail"}</p>
-          <h1>
-            {session.task?.title ??
-              session.subject?.name ??
-              (ar ? "جلسة مستقلة" : "Independent session")}
-          </h1>
-        </div>
-        <div className="score-orbit">
-          <strong>{session.focusScore ?? "—"}</strong>
-          <span>{ar ? "درجة التركيز" : "Focus Score"}</span>
-        </div>
-      </header>
+    <PageShell dir={ar ? "rtl" : "ltr"}>
+      <PageHeader
+        backHref="/sessions"
+        backLabel={ar ? "كل الجلسات" : "All sessions"}
+        isRtl={ar}
+        eyebrow={ar ? "تفاصيل الجلسة" : "Session detail"}
+        title={
+          session.task?.title ??
+          session.subject?.name ??
+          (ar ? "جلسة مستقلة" : "Independent session")
+        }
+        actions={
+          <div className="score-orbit">
+            <strong>{session.focusScore ?? "—"}</strong>
+            <span>{ar ? "درجة التركيز" : "Focus Score"}</span>
+          </div>
+        }
+      />
       <dl className="detail-metrics">
         <div>
           <dt>{ar ? "المدة الفعلية" : "Actual time"}</dt>
@@ -59,12 +61,12 @@ export default async function SessionDetailPage({
         </div>
       </dl>
       {session.reflection && (
-        <section className="reflection-card">
+        <section className="reflection-card mt-6">
           <h2>{ar ? "تأمل الجلسة" : "Session reflection"}</h2>
           <p>{session.reflection}</p>
         </section>
       )}
-      <section className="distraction-log">
+      <section className="distraction-log mt-6">
         <h2>{ar ? "سجل التشتت" : "Distraction log"}</h2>
         {session.distractions.length ? (
           <ol>
@@ -86,6 +88,6 @@ export default async function SessionDetailPage({
           </p>
         )}
       </section>
-    </main>
+    </PageShell>
   );
 }

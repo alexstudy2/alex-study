@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { IBM_Plex_Sans_Arabic } from "next/font/google";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
 import { getLocale, getMessages } from "next-intl/server";
 import { AppShell } from "@/components/navigation/app-shell";
 import { Providers } from "@/components/providers";
@@ -10,6 +13,13 @@ import "./globals.css";
 const cinzel = localFont({
   src: "../../fonts/Cinzel-VariableFont_wght.ttf",
   variable: "--font-cinzel",
+  display: "swap",
+});
+
+const ibmPlexArabic = IBM_Plex_Sans_Arabic({
+  subsets: ["arabic"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-arabic",
   display: "swap",
 });
 
@@ -39,7 +49,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     <html
       lang={locale}
       dir={locale === "ar" ? "rtl" : "ltr"}
-      className={cinzel.variable}
+      className={`${cinzel.variable} ${GeistSans.variable} ${GeistMono.variable} ${ibmPlexArabic.variable}`}
       data-theme={profile?.preference?.theme.toLowerCase() ?? undefined}
     >
       <body className="min-h-full flex flex-col">

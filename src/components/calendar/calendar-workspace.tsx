@@ -1,8 +1,10 @@
 "use client";
+
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { addDays, addMonths, format, startOfMonth } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cairoDateKey } from "@/lib/calendar/dates";
 import type { CalendarEvent } from "./types";
 
@@ -20,6 +22,7 @@ export function CalendarWorkspace({
   const [view, setView] = useState<"month" | "week" | "agenda">("month");
   const [busy, setBusy] = useState(false);
   const ar = locale === "ar";
+
   async function move(direction: number, nextView = view) {
     const next =
       nextView === "month"
@@ -34,6 +37,7 @@ export function CalendarWorkspace({
     }
     setBusy(false);
   }
+
   async function change(nextView: typeof view) {
     setView(nextView);
     setBusy(true);
@@ -41,27 +45,37 @@ export function CalendarWorkspace({
     if (response.ok) setEvents((await response.json()).events);
     setBusy(false);
   }
+
   const groups = useMemo(
     () =>
       new Map<string, CalendarEvent[]>(
         Array.from(new Set(events.map((event) => cairoDateKey(new Date(event.startsAt))))).map(
-          (key) => [key, events.filter((event) => cairoDateKey(new Date(event.startsAt)) === key)],
-        ),
+          (key) => [key, events.filter((event) => cairoDateKey(new Date(event.startsAt)) === key)]
+        )
       ),
-    [events],
+    [events]
   );
+
   const monthStart = startOfMonth(toZonedTime(anchor, "Africa/Cairo"));
   const gridStart = addDays(monthStart, -monthStart.getDay());
   const days = Array.from({ length: 42 }, (_, index) => addDays(gridStart, index));
   const weekAnchor = toZonedTime(anchor, "Africa/Cairo");
   const weekStart = addDays(weekAnchor, -weekAnchor.getDay());
   const weekDays = Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
+
+  const PrevIcon = ar ? ChevronRight : ChevronLeft;
+  const NextIcon = ar ? ChevronLeft : ChevronRight;
+
   return (
     <section className="calendar-workspace" dir={ar ? "rtl" : "ltr"}>
       <div className="calendar-toolbar">
         <div className="calendar-nav">
-          <button aria-label={ar ? "الفترة السابقة" : "Previous period"} onClick={() => move(-1)}>
-            ←
+          <button
+            aria-label={ar ? "الفترة السابقة" : "Previous period"}
+            onClick={() => move(-1)}
+            className="flex items-center justify-center p-1.5 rounded-full hover:bg-surface-hover transition-colors"
+          >
+            <PrevIcon className="w-5 h-5" />
           </button>
           <h2>
             {new Intl.DateTimeFormat(ar ? "ar-EG" : "en-GB", {
@@ -70,8 +84,12 @@ export function CalendarWorkspace({
               timeZone: "Africa/Cairo",
             }).format(anchor)}
           </h2>
-          <button aria-label={ar ? "الفترة التالية" : "Next period"} onClick={() => move(1)}>
-            →
+          <button
+            aria-label={ar ? "الفترة التالية" : "Next period"}
+            onClick={() => move(1)}
+            className="flex items-center justify-center p-1.5 rounded-full hover:bg-surface-hover transition-colors"
+          >
+            <NextIcon className="w-5 h-5" />
           </button>
         </div>
         <div className="view-tabs" role="tablist">
@@ -87,12 +105,12 @@ export function CalendarWorkspace({
                   ? "شهر"
                   : "Month"
                 : item === "week"
-                  ? ar
-                    ? "أسبوع"
-                    : "Week"
-                  : ar
-                    ? "قائمة"
-                    : "Agenda"}
+                ? ar
+                  ? "أسبوع"
+                  : "Week"
+                : ar
+                ? "قائمة"
+                : "Agenda"}
             </button>
           ))}
         </div>

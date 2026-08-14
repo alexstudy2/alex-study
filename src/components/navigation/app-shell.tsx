@@ -22,7 +22,7 @@ import {
   Trophy,
   Users,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Theme = "SYSTEM" | "LIGHT" | "DARK";
 type ShellUser = { name: string; locale: "EN" | "AR" };
@@ -79,6 +79,11 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const [theme, setTheme] = useState(initialTheme);
+
+  useEffect(() => {
+    applyTheme(initialTheme);
+  }, [initialTheme]);
+
   if (!user || pathname === "/" || publicPaths.some((path) => pathname.startsWith(path)))
     return children;
   const ar = user.locale === "AR";

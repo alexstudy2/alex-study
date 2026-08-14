@@ -1,7 +1,9 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db/prisma";
 import { requireUser } from "@/lib/auth/session";
+import { PageShell } from "@/components/ui/page-shell";
+import { PageHeader } from "@/components/ui/page-header";
+
 export default async function LobbySettingsPage({
   params,
 }: {
@@ -15,13 +17,16 @@ export default async function LobbySettingsPage({
   });
   if (!member || member.role === "MEMBER") redirect(`/lobbies/${roomId}`);
   const ar = user.locale === "AR";
+
   return (
-    <main className="lobby-form-shell">
-      <Link className="back-link" href={`/lobbies/${roomId}`}>
-        ← {ar ? "الغرفة" : "Room"}
-      </Link>
-      <p className="eyebrow">{ar ? "إعدادات الغرفة" : "Room settings"}</p>
-      <h1>{member.room.name}</h1>
+    <PageShell size="narrow" dir={ar ? "rtl" : "ltr"}>
+      <PageHeader
+        backHref={`/lobbies/${roomId}`}
+        backLabel={ar ? "الغرفة" : "Room"}
+        isRtl={ar}
+        eyebrow={ar ? "إعدادات الغرفة" : "Room settings"}
+        title={member.room.name}
+      />
       <dl className="detail-metrics">
         <div>
           <dt>{ar ? "الظهور" : "Visibility"}</dt>
@@ -40,11 +45,11 @@ export default async function LobbySettingsPage({
           <dd>{member.role}</dd>
         </div>
       </dl>
-      <p className="muted-copy">
+      <p className="muted-copy mt-6">
         {ar
           ? "تعديل الأدوار والأرشفة سيُضاف مع أدوات الإدارة الاجتماعية الموسعة."
           : "Role editing and archival will be completed with the expanded social moderation tools."}
       </p>
-    </main>
+    </PageShell>
   );
 }

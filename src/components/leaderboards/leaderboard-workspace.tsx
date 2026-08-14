@@ -2,6 +2,21 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import {
+  Trophy,
+  Users,
+  Flame,
+  CheckCircle2,
+  Clock,
+  Eye,
+  EyeOff,
+  RefreshCw,
+  Award,
+  Sparkles,
+} from "lucide-react";
+import { PageShell } from "@/components/ui/page-shell";
+import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
 import type { LeaderboardRow } from "@/components/challenges/types";
 
 type Payload = {
@@ -9,6 +24,29 @@ type Payload = {
   periodStart: string | Date;
   periodEnd: string | Date;
 };
+
+function formatWeek(start: string | Date, end: string | Date, locale: "en" | "ar") {
+  const s = new Date(start);
+  const e = new Date(end);
+  const formatter = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG" : "en-GB", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+  return `${formatter.format(s)} – ${formatter.format(e)}`;
+}
+
+function metricLabel(
+  val: number,
+  metric: "STUDY_MINUTES" | "TASKS_COMPLETED",
+  locale: "en" | "ar"
+) {
+  const ar = locale === "ar";
+  if (metric === "STUDY_MINUTES") {
+    return ar ? `${val} دقيقة دراسة` : `${val} study min`;
+  }
+  return ar ? `${val} مهام مكتملة` : `${val} tasks done`;
+}
 
 export function LeaderboardWorkspace({
   userId,
@@ -39,7 +77,7 @@ export function LeaderboardWorkspace({
     if (response.ok) setData(await response.json());
     else
       setMessage(
-        ar ? "تعذر تحميل الترتيب الآن." : "The leaderboard could not be loaded right now.",
+        ar ? "تعذر تحميل الترتيب الآن." : "The leaderboard could not be loaded right now."
       );
     setBusy(false);
   }
@@ -63,39 +101,34 @@ export function LeaderboardWorkspace({
           ? "أصبحت ظاهرًا في لوحات هذا الأسبوع."
           : "You are visible on this week’s boards."
         : ar
-          ? "تم إخفاؤك من جميع لوحات المتصدرين."
-          : "You are hidden from all leaderboards.",
+        ? "تم إخفاؤك من جميع لوحات المتصدرين."
+        : "You are hidden from all leaderboards."
     );
   }
 
   const myRow = data.rows.find((row) => row.userId === userId);
+
   return (
-    <main className="page-shell" dir={ar ? "rtl" : "ltr"}>
-      <header className="leaderboard-header">
-        <div>
-          <Link className="wordmark" href="/dashboard">
-            Alex Study
-          </Link>
-          <p className="eyebrow">{ar ? "نشاط أسبوعي" : "Weekly activity"}</p>
-          <h1>{ar ? "تقدم جماعي، بلا ضغط." : "Shared momentum, without the pressure."}</h1>
-          <p>
-            {ar
-              ? "ترتيب أسبوعي للنشاط المؤهل فقط. الرتبة لحظة عابرة وليست تقييمًا لقدرتك أو قيمتك."
-              : "A weekly view of eligible activity only. Rank is a temporary snapshot, not a judgment of ability or worth."}
-          </p>
-        </div>
-        <nav
-          className="page-header"
-          aria-label={ar ? "التنقل الاجتماعي" : "Social navigation"}
-        >
-          <Link className="secondary-button" href="/friends">
-            {ar ? "الأصدقاء" : "Friends"}
-          </Link>
-          <Link className="primary-button" href="/challenges">
-            {ar ? "التحديات" : "Challenges"}
-          </Link>
-        </nav>
-      </header>
+    <PageShell dir={ar ? "rtl" : "ltr"}>
+      <PageHeader
+        eyebrow={ar ? "نشاط أسبوعي" : "Weekly activity"}
+        title={ar ? "تقدم جماعي، بلا ضغط." : "Shared momentum, without the pressure."}
+        description={
+          ar
+            ? "ترتيب أسبوعي للنشاط المؤهل فقط. الرتبة لحظة عابرة وليست تقييمًا لقدرتك أو قيمتك."
+            : "A weekly view of eligible activity only. Rank is a temporary snapshot, not a judgment of ability or worth."
+        }
+        actions={
+          <div className="page-header">
+            <Link className="page-header-link" href="/friends">
+              {ar ? "الأصدقاء" : "Friends"}
+            </Link>
+            <Link className="page-header-link" href="/challenges">
+              {ar ? "التحديات" : "Challenges"}
+            </Link>
+          </div>
+        }
+      />
 
       <section
         className="leaderboard-controls"
@@ -164,8 +197,8 @@ export function LeaderboardWorkspace({
                         ? "سنة الامتياز"
                         : `السنة ${year}`
                       : year === 6
-                        ? "Internship"
-                        : `Year ${year}`}
+                      ? "Internship"
+                      : `Year ${year}`}
                   </option>
                 ))}
               </select>
@@ -198,11 +231,11 @@ export function LeaderboardWorkspace({
               ? myRow
                 ? metricLabel(myRow.value, metric, locale)
                 : ar
-                  ? "لا يوجد نشاط مؤهل بعد"
-                  : "No eligible activity yet"
+                ? "لا يوجد نشاط مؤهل بعد"
+                : "No eligible activity yet"
               : ar
-                ? "أنت مخفي حاليًا"
-                : "You are currently hidden"}
+              ? "أنت مخفي حاليًا"
+              : "You are currently hidden"}
           </small>
         </div>
       </section>
@@ -220,13 +253,19 @@ export function LeaderboardWorkspace({
                     ? "دقائق الدراسة المؤهلة"
                     : "Eligible study minutes"
                   : ar
-                    ? "المهام المؤهلة"
-                    : "Eligible tasks"}
+                  ? "المهام المؤهلة"
+                  : "Eligible tasks"}
               </h2>
             </div>
-            <button className="text-button" disabled={busy} onClick={() => load()}>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={busy}
+              leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${busy ? "animate-spin" : ""}`} />}
+              onClick={() => load()}
+            >
               {ar ? "تحديث" : "Refresh"}
-            </button>
+            </Button>
           </div>
           <div className="leaderboard-table-wrap">
             <table>
@@ -246,96 +285,78 @@ export function LeaderboardWorkspace({
                 {data.rows.map((row) => (
                   <tr key={row.userId} data-self={row.userId === userId}>
                     <td>
-                      <strong>#{row.rank}</strong>
+                      <strong className="flex items-center gap-1">
+                        {row.rank === 1 && <Trophy className="w-4 h-4 text-accent" />}
+                        {row.rank === 2 && <Award className="w-4 h-4 text-muted" />}
+                        {row.rank === 3 && <Award className="w-4 h-4 text-warning" />}
+                        #{row.rank}
+                      </strong>
                     </td>
                     <td>
-                      <span className="leaderboard-person">
-                        <i aria-hidden="true">{row.name.slice(0, 1).toUpperCase()}</i>
-                        <span>
-                          <strong>{row.name}</strong>
-                          {row.userId === userId && <small>{ar ? "أنت" : "You"}</small>}
-                        </span>
+                      <span className="student-name">{row.name}</span>
+                    </td>
+                    <td>
+                      <span className="year-pill">
+                        {row.academicYear
+                          ? ar
+                            ? row.academicYear === 6
+                              ? "امتياز"
+                              : `سنة ${row.academicYear}`
+                            : row.academicYear === 6
+                            ? "Intern"
+                            : `Y${row.academicYear}`
+                          : "—"}
                       </span>
                     </td>
-                    <td>{row.academicYear}</td>
                     <td>
-                      <strong>{metricLabel(row.value, metric, locale)}</strong>
+                      <strong>
+                        {metric === "STUDY_MINUTES"
+                          ? `${row.value} ${ar ? "دقيقة" : "min"}`
+                          : `${row.value} ${ar ? "مهمة" : "tasks"}`}
+                      </strong>
                     </td>
                     <td>
-                      {metricLabel(
-                        row.secondaryValue,
-                        metric === "STUDY_MINUTES" ? "TASKS_COMPLETED" : "STUDY_MINUTES",
-                        locale,
-                      )}
+                      <span className="text-muted text-sm">
+                        {metric === "STUDY_MINUTES"
+                          ? `${row.secondaryValue} ${ar ? "مهام" : "tasks"}`
+                          : `${row.secondaryValue} ${ar ? "دقيقة" : "min"}`}
+                      </span>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            {!data.rows.length && (
-              <div className="challenge-empty">
-                <h3>{ar ? "لا توجد نتائج ظاهرة بعد." : "No visible results yet."}</h3>
-                <p>
-                  {ar
-                    ? "قد يكون الطلاب قد أوقفوا الظهور، أو لم يسجلوا نشاطًا مؤهلًا هذا الأسبوع."
-                    : "Students may have opted out, or no eligible activity has been logged this week."}
-                </p>
-              </div>
-            )}
           </div>
         </section>
 
-        <aside className="leaderboard-privacy-panel">
-          <p className="eyebrow">{ar ? "الخصوصية" : "Privacy"}</p>
-          <h2>{ar ? "أنت تتحكم في ظهورك." : "You control your visibility."}</h2>
-          <label className="privacy-toggle">
-            <input
-              type="checkbox"
-              checked={visible}
-              onChange={(event) => setPrivacy(event.target.checked)}
-            />
-            <span>
-              <strong>{ar ? "الظهور في لوحات المتصدرين" : "Appear on leaderboards"}</strong>
-              <small>
-                {ar
-                  ? "ينطبق على كل طلاب الكلية والأصدقاء."
-                  : "Applies to All College Students and friends boards."}
-              </small>
-            </span>
-          </label>
-          <ul>
-            <li>{ar ? "لا يظهر رقمك الجامعي." : "Your college ID is never displayed."}</li>
-            <li>{ar ? "الجلسات اليدوية غير محتسبة." : "Manual sessions are excluded."}</li>
-            <li>
+        <aside className="leaderboard-sidebar">
+          <article className="privacy-card">
+            <p className="eyebrow flex items-center gap-1">
+              {visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+              {ar ? "الخصوصية والظهور" : "Privacy & Visibility"}
+            </p>
+            <h3>{ar ? "أنت تتحكم بظهورك" : "You control your visibility"}</h3>
+            <p>
               {ar
-                ? "المهام الأقل من 10 دقائق غير محتسبة."
-                : "Tasks under 10 estimated minutes are excluded."}
-            </li>
-            <li>
-              {ar ? "القيم المتساوية تحصل على نفس الرتبة." : "Equal totals receive the same rank."}
-            </li>
-          </ul>
+                ? "يمكنك إخفاء اسمك ونشاطك من جميع لوحات المتصدرين في أي وقت بضغطة واحدة."
+                : "You can hide your name and activity from all public leaderboards anytime with one click."}
+            </p>
+            <Button
+              variant={visible ? "secondary" : "primary"}
+              size="sm"
+              onClick={() => setPrivacy(!visible)}
+            >
+              {visible
+                ? ar
+                  ? "إخفاء اسمي من اللوحات"
+                  : "Hide me from boards"
+                : ar
+                ? "إظهار اسمي في اللوحات"
+                : "Show me on boards"}
+            </Button>
+          </article>
         </aside>
       </div>
-    </main>
+    </PageShell>
   );
-}
-
-function metricLabel(
-  value: number,
-  metric: "STUDY_MINUTES" | "TASKS_COMPLETED",
-  locale: "en" | "ar",
-) {
-  if (locale === "ar") return metric === "STUDY_MINUTES" ? `${value} دقيقة` : `${value} مهمة`;
-  return metric === "STUDY_MINUTES" ? `${value} min` : `${value} task${value === 1 ? "" : "s"}`;
-}
-
-function formatWeek(start: string | Date, end: string | Date, locale: "en" | "ar") {
-  const formatter = new Intl.DateTimeFormat(locale === "ar" ? "ar-EG" : "en-GB", {
-    day: "numeric",
-    month: "short",
-    timeZone: "UTC",
-  });
-  const inclusiveEnd = new Date(new Date(end).getTime() - 1);
-  return `${formatter.format(new Date(start))} – ${formatter.format(inclusiveEnd)}`;
 }

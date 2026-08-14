@@ -1,9 +1,24 @@
 "use client";
+
 import { useState } from "react";
 import Link from "next/link";
+import {
+  Target,
+  Plus,
+  X,
+  Check,
+  Ban,
+  Calendar,
+  Clock,
+  CheckCircle2,
+  TrendingUp,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { Goal } from "./types";
 
 type Subject = { id: string; name: string; colorToken: string };
+
 export function GoalWorkspace({
   initialGoals,
   subjects,
@@ -18,6 +33,7 @@ export function GoalWorkspace({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const ar = locale === "ar";
+
   async function create(form: FormData) {
     setBusy(true);
     setError("");
@@ -46,6 +62,7 @@ export function GoalWorkspace({
     } else setError(ar ? "تعذر حفظ الهدف." : "The goal could not be saved.");
     setBusy(false);
   }
+
   async function status(goal: Goal, value: "COMPLETED" | "CANCELLED") {
     const response = await fetch(`/api/goals/${goal.id}`, {
       method: "PATCH",
@@ -55,22 +72,32 @@ export function GoalWorkspace({
     if (response.ok)
       setGoals(goals.map((item) => (item.id === goal.id ? { ...item, status: value } : item)));
   }
+
   return (
     <section className="goal-workspace" dir={ar ? "rtl" : "ltr"}>
       <div className="goal-toolbar">
         <div>
-          <p className="eyebrow">{ar ? "خطة قابلة للقياس" : "Measurable direction"}</p>
+          <p className="eyebrow flex items-center gap-1">
+            <Target className="w-3.5 h-3.5 text-accent" />
+            {ar ? "خطة قابلة للقياس" : "Measurable direction"}
+          </p>
           <h2>{ar ? "أهدافك الحالية" : "Your active goals"}</h2>
         </div>
-        <button className="primary-button" onClick={() => setOpen(!open)}>
+        <Button
+          variant={open ? "secondary" : "primary"}
+          size="sm"
+          leftIcon={open ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+          onClick={() => setOpen(!open)}
+        >
           {open ? (ar ? "إغلاق" : "Close") : ar ? "هدف جديد" : "New goal"}
-        </button>
+        </Button>
       </div>
+
       {open && (
         <form className="goal-form" action={create}>
           <label>
             {ar ? "عنوان الهدف" : "Goal title"}
-            <input name="title" required maxLength={160} />
+            <input name="title" required maxLength={160} placeholder={ar ? "مثال: مراجعة 500 دقيقة تشريح" : "e.g. 500 study minutes"} />
           </label>
           <div className="form-grid">
             <label>
@@ -84,7 +111,7 @@ export function GoalWorkspace({
             </label>
             <label>
               {ar ? "القيمة المستهدفة" : "Target value"}
-              <input name="targetValue" type="number" min="1" required />
+              <input name="targetValue" type="number" min="1" required defaultValue="100" />
             </label>
           </div>
           <div className="form-grid">
@@ -99,7 +126,7 @@ export function GoalWorkspace({
             <label>
               {ar ? "المادة" : "Subject"}
               <select name="subjectId">
-                <option value="">{ar ? "كل المواد" : "All subjects"}</option>
+                <option value="">{ar ? "عام / بدون مادة" : "General / No subject"}</option>
                 {subjects.map((subject) => (
                   <option key={subject.id} value={subject.id}>
                     {subject.name}
@@ -110,69 +137,118 @@ export function GoalWorkspace({
           </div>
           <div className="form-grid">
             <label>
-              {ar ? "تاريخ البدء" : "Starts"}
-              <input name="startsAt" type="date" required />
+              {ar ? "يبدأ في" : "Starts at"}
+              <input
+                name="startsAt"
+                type="date"
+                required
+                defaultValue={new Date().toISOString().slice(0, 10)}
+              />
             </label>
             <label>
               {ar ? "الموعد النهائي" : "Deadline"}
-              <input name="deadline" type="date" required />
+              <input
+                name="deadline"
+                type="date"
+                required
+                defaultValue={new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10)}
+              />
             </label>
           </div>
-          {error && (
-            <p className="form-error" role="alert">
-              {error}
-            </p>
-          )}
-          <button className="primary-button" disabled={busy}>
-            {ar ? "حفظ الهدف" : "Save goal"}
-          </button>
+          <div className="form-actions">
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              disabled={busy}
+              leftIcon={<Check className="w-4 h-4" />}
+            >
+              {ar ? "حفظ الهدف" : "Save goal"}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setOpen(false)}
+            >
+              {ar ? "إلغاء" : "Cancel"}
+            </Button>
+          </div>
         </form>
       )}
-      <div className="goal-grid">
-        {goals.length ? (
-          goals.map((goal) => (
-            <article className="goal-card" key={goal.id}>
-              <div className="goal-card-head">
-                <span>{goal.subject?.name ?? (ar ? "كل المواد" : "All subjects")}</span>
-                <span>{goal.status}</span>
-              </div>
-              <h3>
-                <Link href={`/goals/${goal.id}`}>{goal.title}</Link>
-              </h3>
-              <div
-                className="goal-progress"
-                role="progressbar"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={goal.progress.percentage}
-              >
-                <span style={{ width: `${goal.progress.percentage}%` }} />
-              </div>
-              <div className="goal-numbers">
-                <strong>
-                  {goal.progress.currentValue} / {goal.targetValue}
-                </strong>
-                <span>{goal.progress.percentage}%</span>
-              </div>
-              {goal.status === "ACTIVE" && (
-                <div className="goal-actions">
-                  <button onClick={() => status(goal, "COMPLETED")}>
-                    {ar ? "تم" : "Mark complete"}
-                  </button>
-                  <button onClick={() => status(goal, "CANCELLED")}>
-                    {ar ? "إلغاء" : "Cancel"}
-                  </button>
+
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
+
+      {goals.length === 0 ? (
+        <EmptyState
+          title={ar ? "لا توجد أهداف نشطة بعد" : "No active goals yet"}
+          description={
+            ar
+              ? "أنشئ هدفك الأول لمتابعة دقائق دراستك أو مهامك خطوة بخطوة."
+              : "Create your first goal to track study minutes or task progress."
+          }
+          actionLabel={ar ? "هدف جديد" : "New goal"}
+          onAction={() => setOpen(true)}
+        />
+      ) : (
+        <div className="goal-cards">
+          {goals.map((goal) => (
+            <article key={goal.id} className="goal-card">
+              <div className="goal-card-header">
+                <div>
+                  <span className="goal-period-tag">{goal.period}</span>
+                  <h3>
+                    <Link href={`/goals/${goal.id}`}>{goal.title}</Link>
+                  </h3>
                 </div>
-              )}
+                <span className={`goal-status-tag goal-${goal.status.toLowerCase()}`}>
+                  {goal.status}
+                </span>
+              </div>
+              <div className="goal-progress-wrap">
+                <div className="goal-values">
+                  <strong>
+                    {goal.progress.currentValue} / {goal.targetValue}
+                  </strong>
+                  <span>{goal.progress.percentage}%</span>
+                </div>
+                <div className="dashboard-progress">
+                  <i style={{ width: `${Math.min(100, goal.progress.percentage)}%` }} />
+                </div>
+              </div>
+              <div className="goal-actions">
+                {goal.status === "ACTIVE" && (
+                  <>
+                    <Button
+                      variant="subtle"
+                      size="sm"
+                      leftIcon={<Check className="w-3.5 h-3.5" />}
+                      onClick={() => status(goal, "COMPLETED")}
+                    >
+                      {ar ? "إنجاز" : "Complete"}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      leftIcon={<Ban className="w-3.5 h-3.5" />}
+                      onClick={() => status(goal, "CANCELLED")}
+                    >
+                      {ar ? "إلغاء" : "Cancel"}
+                    </Button>
+                  </>
+                )}
+                <Link className="goal-detail-link" href={`/goals/${goal.id}`}>
+                  {ar ? "التفاصيل ←" : "Details →"}
+                </Link>
+              </div>
             </article>
-          ))
-        ) : (
-          <div className="session-state">
-            <h3>{ar ? "لا توجد أهداف بعد" : "No goals yet"}</h3>
-            <p>{ar ? "حوّل نيتك إلى رقم وموعد." : "Turn an intention into a number and a date."}</p>
-          </div>
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

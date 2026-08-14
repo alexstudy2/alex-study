@@ -3,6 +3,10 @@ import { prisma } from "@/lib/db/prisma";
 import { requireUser } from "@/lib/auth/session";
 import { sessionInclude } from "@/lib/sessions/queries";
 import { SessionList } from "@/components/sessions/session-list";
+import { PageShell } from "@/components/ui/page-shell";
+import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
+import { Play } from "lucide-react";
 
 export default async function SessionsPage() {
   const user = await requireUser();
@@ -13,21 +17,30 @@ export default async function SessionsPage() {
     take: 100,
   });
   const locale = user.locale === "AR" ? "ar" : "en";
+  const ar = locale === "ar";
+
   return (
-    <main className="sessions-shell" dir={locale === "ar" ? "rtl" : "ltr"}>
-      <header className="sessions-header">
-        <div>
-          <Link className="wordmark" href="/dashboard">
-            Alex Study
-          </Link>
-          <p className="eyebrow">{locale === "ar" ? "سجل الدراسة" : "Study record"}</p>
-          <h1>{locale === "ar" ? "كل دقيقة لها قصة." : "Every minute has a story."}</h1>
-        </div>
-        <Link className="primary-button" href="/focus">
-          {locale === "ar" ? "ابدأ جلسة" : "Start a session"}
-        </Link>
-      </header>
+    <PageShell dir={ar ? "rtl" : "ltr"}>
+      <PageHeader
+        eyebrow={ar ? "سجل الدراسة" : "Study record"}
+        title={ar ? "كل دقيقة لها قصة." : "Every minute has a story."}
+        description={
+          ar
+            ? "سجل كامل ومفصل لجميع جلسات التركيز المكتملة ودرجات الجودة."
+            : "Complete archive of completed focus sessions, distraction logs, and reflections."
+        }
+        actions={
+          <Button
+            href="/focus"
+            variant="primary"
+            size="sm"
+            leftIcon={<Play className="w-4 h-4" />}
+          >
+            {ar ? "ابدأ جلسة" : "Start a session"}
+          </Button>
+        }
+      />
       <SessionList sessions={sessions} locale={locale} />
-    </main>
+    </PageShell>
   );
 }

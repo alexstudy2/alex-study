@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db/prisma";
 import { requireUser } from "@/lib/auth/session";
 import { timerRunInclude } from "@/lib/sessions/queries";
 import { FocusWorkspace } from "@/components/sessions/focus-workspace";
+import { PageShell } from "@/components/ui/page-shell";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default async function FocusPage() {
   const user = await requireUser();
@@ -30,24 +32,32 @@ export default async function FocusPage() {
     }),
   ]);
   const locale = user.locale === "AR" ? "ar" : "en";
+  const ar = locale === "ar";
+
   return (
-    <main id="main-content" className="page-shell">
-      <header className="focus-header">
-        <div>
-          <Link className="wordmark" href="/dashboard">
-            Alex Study
-          </Link>
-          <p className="eyebrow">{locale === "ar" ? "مساحة تركيز" : "Focus studio"}</p>
-          <h1>{locale === "ar" ? "امنح عقلك مساحة واحدة." : "Give your mind one room."}</h1>
-        </div>
-        <nav aria-label={locale === "ar" ? "التنقل الرئيسي" : "Primary navigation"}>
-          <Link href="/tasks">{locale === "ar" ? "المهام" : "Tasks"}</Link>
-          <Link aria-current="page" href="/focus">
-            {locale === "ar" ? "التركيز" : "Focus"}
-          </Link>
-          <Link href="/sessions">{locale === "ar" ? "الجلسات" : "Sessions"}</Link>
-        </nav>
-      </header>
+    <PageShell dir={ar ? "rtl" : "ltr"}>
+      <PageHeader
+        eyebrow={ar ? "مساحة تركيز" : "Focus studio"}
+        title={ar ? "امنح عقلك مساحة واحدة." : "Give your mind one room."}
+        description={
+          ar
+            ? "جلسات تركيز عميقة مبنية على تقنية بومودورو مع تقليل التشتت."
+            : "Deep work sessions built on Pomodoro technique with distraction logging."
+        }
+        actions={
+          <div className="page-header">
+            <Link className="page-header-link" href="/tasks">
+              {ar ? "المهام" : "Tasks"}
+            </Link>
+            <Link className="page-header-link" aria-current="page" href="/focus">
+              {ar ? "التركيز" : "Focus"}
+            </Link>
+            <Link className="page-header-link" href="/sessions">
+              {ar ? "الجلسات" : "Sessions"}
+            </Link>
+          </div>
+        }
+      />
       <FocusWorkspace
         locale={locale}
         preferences={{
@@ -62,6 +72,6 @@ export default async function FocusPage() {
         initialTimer={timer}
         initialServerNow={new Date().toISOString()}
       />
-    </main>
+    </PageShell>
   );
 }

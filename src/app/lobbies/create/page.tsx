@@ -1,17 +1,23 @@
-import Link from "next/link";
 import { requireUser } from "@/lib/auth/session";
 import { LobbyCreateForm } from "@/components/lobbies/lobby-create-form";
+import { PageShell } from "@/components/ui/page-shell";
+import { PageHeader } from "@/components/ui/page-header";
+
 export default async function CreateLobbyPage() {
   const user = await requireUser();
   const locale = user.locale === "AR" ? "ar" : "en";
+  const ar = locale === "ar";
+
   return (
-    <main className="lobby-form-shell">
-      <Link className="back-link" href="/lobbies">
-        ← {locale === "ar" ? "الغرف" : "Lobbies"}
-      </Link>
-      <p className="eyebrow">{locale === "ar" ? "غرفة جديدة" : "New room"}</p>
-      <h1>{locale === "ar" ? "حدد إيقاع المجموعة." : "Set the group rhythm."}</h1>
+    <PageShell size="narrow" dir={ar ? "rtl" : "ltr"}>
+      <PageHeader
+        backHref="/lobbies"
+        backLabel={ar ? "الغرف" : "Lobbies"}
+        isRtl={ar}
+        eyebrow={ar ? "غرفة جديدة" : "New room"}
+        title={ar ? "حدد إيقاع المجموعة." : "Set the group rhythm."}
+      />
       <LobbyCreateForm locale={locale} />
-    </main>
+    </PageShell>
   );
 }

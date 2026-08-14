@@ -1,5 +1,54 @@
 {
-  "common": { "appName": "أليكس ستادي", "foundation": "البنية الأساسية للمرحلة الأولى جاهزة." },
+  "common": {
+    "appName": "أليكس ستادي",
+    "foundation": "البنية الأساسية للمرحلة الأولى جاهزة.",
+    "back": "رجوع",
+    "cancel": "إلغاء",
+    "save": "حفظ",
+    "create": "إنشاء",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "loading": "جارٍ التحميل...",
+    "error": "حدث خطأ ما",
+    "success": "تم بنجاح",
+    "empty": "لا توجد عناصر",
+    "search": "بحث...",
+    "filter": "تصفية",
+    "retry": "إعادة المحاولة",
+    "close": "إغلاق",
+    "confirm": "تأكيد"
+  },
+  "nav": {
+    "dashboard": "الرئيسية",
+    "tasks": "المهام",
+    "focus": "التركيز",
+    "calendar": "التقويم",
+    "friends": "الأصدقاء",
+    "goals": "الأهداف",
+    "sessions": "الجلسات",
+    "lobbies": "الغرف",
+    "challenges": "التحديات",
+    "insights": "الرؤى",
+    "examPlans": "خطة امتحان",
+    "settings": "الإعدادات",
+    "notifications": "الإشعارات",
+    "more": "المزيد"
+  },
+  "dashboard": {
+    "welcome": "أهلاً بك",
+    "studyToday": "المذاكرة اليوم",
+    "streak": "أيام متتالية",
+    "tasksCompleted": "المهام المكتملة",
+    "upcomingExam": "الامتحان القادم",
+    "urgentTasks": "مهام عاجلة",
+    "activeGoals": "الأهداف النشطة",
+    "startFocus": "ابدأ جلسة تركيز",
+    "aiNote": "ملاحظة دراسية",
+    "reviewSessions": "راجع جلساتك",
+    "viewAll": "عرض الكل",
+    "noUrgentTasks": "لا توجد مهام عاجلة مستحقة اليوم.",
+    "noActiveGoals": "لا توجد أهداف نشطة حالياً."
+  },
   "tasks": {
     "title": "ما الخطوة التالية؟",
     "new": "مهمة جديدة",
@@ -12,6 +61,41 @@
     },
     "empty": "لا توجد مهام في هذا العرض",
     "aiLabel": "بمساعدة الذكاء الاصطناعي",
-    "aiNotice": "لن تُحفظ أي مهمة قبل مراجعتك وتأكيدك."
+    "aiNotice": "لن تُحفظ أي مهمة قبل مراجعتك وتأكيدك.",
+    "priority": "الأولوية",
+    "high": "عالية",
+    "medium": "متوسطة",
+    "low": "منخفضة",
+    "dueDate": "تاريخ الاستحقاق",
+    "tags": "التصنيفات",
+    "createTask": "إضافة مهمة"
+  },
+  "focus": {
+    "title": "جلسة التركيز",
+    "pomodoro": "بومودورو",
+    "shortBreak": "استراحة قصيرة",
+    "longBreak": "استراحة طويلة",
+    "start": "ابدأ",
+    "pause": "إيقاف مؤقت",
+    "resume": "استئناف",
+    "reset": "إعادة ضبط",
+    "finish": "إنهاء",
+    "distractions": "المشتتات",
+    "logDistraction": "تسجيل مشتت",
+    "currentTask": "مهمة التركيز الحالية"
+  },
+  "leaderboard": {
+    "title": "لوحة الصدارة",
+    "weekly": "الترتيب الأسبوعي",
+    "rank": "الترتيب",
+    "student": "الطالب",
+    "studyTime": "وقت المذاكرة",
+    "points": "نقاط الخبرة"
+  },
+  "challenges": {
+    "title": "التحديات",
+    "newChallenge": "إنشاء تحدٍ",
+    "active": "النشطة",
+    "history": "السجل"
   }
 }

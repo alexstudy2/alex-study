@@ -2,6 +2,21 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import {
+  Trophy,
+  Medal,
+  Target,
+  TrendingUp,
+  Flag,
+  Plus,
+  ArrowRight,
+  ArrowLeft,
+  Award,
+  Sparkles,
+} from "lucide-react";
+import { PageShell } from "@/components/ui/page-shell";
+import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
 import type { BadgeAward, Challenge } from "@/components/challenges/types";
 import {
   badgeCopy,
@@ -23,6 +38,19 @@ type Stats = {
   badges: BadgeAward[];
 };
 
+function renderBadgeIcon(icon: string) {
+  switch (icon) {
+    case "medal":
+      return <Medal className="w-5 h-5 text-accent" />;
+    case "target":
+      return <Target className="w-5 h-5 text-primary" />;
+    case "trend-up":
+      return <TrendingUp className="w-5 h-5 text-success" />;
+    default:
+      return <Flag className="w-5 h-5 text-warning" />;
+  }
+}
+
 export function ChallengeList({
   userId,
   locale,
@@ -38,33 +66,36 @@ export function ChallengeList({
   const [filter, setFilter] = useState<"current" | "history">("current");
   const current = ["PENDING", "SCHEDULED", "ACTIVE"];
   const challenges = initialChallenges.filter((challenge) =>
-    filter === "current" ? current.includes(challenge.status) : !current.includes(challenge.status),
+    filter === "current" ? current.includes(challenge.status) : !current.includes(challenge.status)
   );
 
+  const NavArrow = ar ? ArrowLeft : ArrowRight;
+
   return (
-    <main className="page-shell" dir={ar ? "rtl" : "ltr"}>
-      <header className="challenge-header">
-        <div>
-          <Link className="wordmark" href="/dashboard">
-            Alex Study
-          </Link>
-          <p className="eyebrow">{ar ? "تحديات فردية" : "One-to-one challenges"}</p>
-          <h1>{ar ? "تنافس على عادات حقيقية." : "Compete on habits that hold up."}</h1>
-          <p>
-            {ar
-              ? "يُحتسب النشاط المؤهل فقط، وتظل التعديلات ظاهرة، ويمكنك اختيار طريقة الحسم."
-              : "Only eligible activity counts, corrections stay visible, and you choose how the result is decided."}
-          </p>
-        </div>
-        <nav className="page-header" aria-label={ar ? "التحديات" : "Challenges"}>
-          <Link className="secondary-button" href="/leaderboard">
-            {ar ? "لوحة المتصدرين" : "Leaderboard"}
-          </Link>
-          <Link className="primary-button" href="/challenges/new">
-            {ar ? "تحدٍ جديد" : "New challenge"}
-          </Link>
-        </nav>
-      </header>
+    <PageShell dir={ar ? "rtl" : "ltr"}>
+      <PageHeader
+        eyebrow={ar ? "تحديات فردية" : "One-to-one challenges"}
+        title={ar ? "تنافس على عادات حقيقية." : "Compete on habits that hold up."}
+        description={
+          ar
+            ? "يُحتسب النشاط المؤهل فقط، وتظل التعديلات ظاهرة، ويمكنك اختيار طريقة الحسم."
+            : "Only eligible activity counts, corrections stay visible, and you choose how the result is decided."}
+        actions={
+          <div className="page-header">
+            <Link className="page-header-link" href="/leaderboard">
+              {ar ? "لوحة المتصدرين" : "Leaderboard"}
+            </Link>
+            <Button
+              href="/challenges/new"
+              variant="primary"
+              size="sm"
+              leftIcon={<Plus className="w-4 h-4" />}
+            >
+              {ar ? "تحدٍ جديد" : "New challenge"}
+            </Button>
+          </div>
+        }
+      />
 
       <section
         className="challenge-stats"
@@ -127,10 +158,10 @@ export function ChallengeList({
                 const opponent = challengeOpponent(challenge, userId);
                 const myProgress = challenge.progress.find((item) => item.userId === userId);
                 const theirProgress = challenge.progress.find(
-                  (item) => item.userId === opponent.id,
+                  (item) => item.userId === opponent.id
                 );
                 const resultHref = ["COMPLETED", "EXPIRED", "DECLINED", "CANCELLED"].includes(
-                  challenge.status,
+                  challenge.status
                 )
                   ? `/challenges/${challenge.id}/result`
                   : `/challenges/${challenge.id}`;
@@ -158,13 +189,16 @@ export function ChallengeList({
                       <strong>{theirProgress?.currentValue ?? 0}</strong>
                     </div>
                     <Link className="challenge-card-link" href={resultHref}>
-                      {filter === "history"
-                        ? ar
-                          ? "عرض النتيجة"
-                          : "View result"
-                        : ar
+                      <span>
+                        {filter === "history"
+                          ? ar
+                            ? "عرض النتيجة"
+                            : "View result"
+                          : ar
                           ? "فتح التحدي"
                           : "Open challenge"}
+                      </span>
+                      <NavArrow className="w-4 h-4 inline-block" />
                     </Link>
                   </article>
                 );
@@ -178,9 +212,14 @@ export function ChallengeList({
                     ? "ابدأ بهدف واضح مع صديق، دون احتساب المهام القصيرة أو الجلسات اليدوية."
                     : "Start with a clear goal and a friend. Short tasks and manual sessions never count."}
                 </p>
-                <Link className="primary-button" href="/challenges/new">
+                <Button
+                  href="/challenges/new"
+                  variant="primary"
+                  size="sm"
+                  leftIcon={<Plus className="w-4 h-4" />}
+                >
                   {ar ? "إنشاء تحدٍ" : "Create a challenge"}
-                </Link>
+                </Button>
               </div>
             )}
           </div>
@@ -213,14 +252,17 @@ export function ChallengeList({
           </section>
           <section>
             <div className="panel-heading">
-              <h2>{ar ? "الشارات" : "Badges"}</h2>
-              <span>{stats.badges.length}</span>
+              <h2 className="flex items-center gap-1.5">
+                <Award className="w-4 h-4 text-accent" />
+                <span>{ar ? "الشارات" : "Badges"}</span>
+              </h2>
+              <span className="font-semibold text-sm">{stats.badges.length}</span>
             </div>
             <div className="badge-list">
               {stats.badges.length ? (
                 stats.badges.slice(0, 6).map((award) => (
-                  <article key={award.id}>
-                    <span aria-hidden="true">{badgeIcon(award.badge.iconKey)}</span>
+                  <article key={award.id} className="flex items-center gap-2">
+                    <span aria-hidden="true">{renderBadgeIcon(award.badge.iconKey)}</span>
                     <div>
                       <strong>{badgeCopy(award.badge.key, locale, award.badge).name}</strong>
                       <small>{badgeCopy(award.badge.key, locale, award.badge).description}</small>
@@ -238,10 +280,6 @@ export function ChallengeList({
           </section>
         </aside>
       </div>
-    </main>
+    </PageShell>
   );
-}
-
-function badgeIcon(icon: string) {
-  return icon === "medal" ? "◎" : icon === "target" ? "⌖" : icon === "trend-up" ? "↗" : "⚑";
 }

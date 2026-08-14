@@ -3,6 +3,9 @@ import { prisma } from "@/lib/db/prisma";
 import { requireUser } from "@/lib/auth/session";
 import { InsightList } from "@/components/insights/insight-list";
 import { insightSelect } from "@/lib/insights/service";
+import { PageShell } from "@/components/ui/page-shell";
+import { PageHeader } from "@/components/ui/page-header";
+
 export default async function InsightsPage() {
   const user = await requireUser();
   const [insights, profile] = await Promise.all([
@@ -14,31 +17,37 @@ export default async function InsightsPage() {
     prisma.user.findUnique({ where: { id: user.id }, select: { aiNudgesEnabled: true } }),
   ]);
   const locale = user.locale === "AR" ? "ar" : "en";
+  const ar = locale === "ar";
+
   return (
-    <main className="page-shell" dir={locale === "ar" ? "rtl" : "ltr"}>
-      <header className="insights-header">
-        <div>
-          <Link className="wordmark" href="/dashboard">
-            Alex Study
-          </Link>
-          <p className="eyebrow">
-            {locale === "ar" ? "رؤى مدعومة بالذكاء الاصطناعي" : "AI-supported insights"}
-          </p>
-          <h1>
-            {locale === "ar" ? "إشارة صغيرة، وليست حكمًا." : "A small signal, never a verdict."}
-          </h1>
-        </div>
-        <nav aria-label={locale === "ar" ? "تنقل الرؤى" : "Insights navigation"}>
-          <Link href="/dashboard">{locale === "ar" ? "الرئيسية" : "Dashboard"}</Link>
-          <Link href="/analytics">{locale === "ar" ? "التحليلات" : "Analytics"}</Link>
-          <Link href="/exam-plans/new">{locale === "ar" ? "خطة امتحان" : "Exam planner"}</Link>
-        </nav>
-      </header>
+    <PageShell dir={ar ? "rtl" : "ltr"}>
+      <PageHeader
+        eyebrow={ar ? "رؤى مدعومة بالذكاء الاصطناعي" : "AI-supported insights"}
+        title={ar ? "إشارة صغيرة، وليست حكمًا." : "A small signal, never a verdict."}
+        description={
+          ar
+            ? "ملاحظات وتوصيات دراسية ذكية مبنية على وتيرة جلساتك وتركيزك."
+            : "Adaptive, reflective insights based on your recent study rhythm and focus."
+        }
+        actions={
+          <div className="page-header">
+            <Link className="page-header-link" href="/dashboard">
+              {ar ? "الرئيسية" : "Dashboard"}
+            </Link>
+            <Link className="page-header-link" href="/analytics">
+              {ar ? "التحليلات" : "Analytics"}
+            </Link>
+            <Link className="page-header-link" href="/exam-plans/new">
+              {ar ? "خطة امتحان" : "Exam planner"}
+            </Link>
+          </div>
+        }
+      />
       <InsightList
         initialInsights={insights}
         locale={locale}
         aiEnabled={profile?.aiNudgesEnabled ?? true}
       />
-    </main>
+    </PageShell>
   );
 }

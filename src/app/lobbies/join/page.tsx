@@ -1,7 +1,9 @@
-import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
 import { requireUser } from "@/lib/auth/session";
 import { JoinButton } from "@/components/lobbies/join-button";
+import { PageShell } from "@/components/ui/page-shell";
+import { PageHeader } from "@/components/ui/page-header";
+
 export default async function JoinLobbyPage({
   searchParams,
 }: {
@@ -15,13 +17,16 @@ export default async function JoinLobbyPage({
     orderBy: { createdAt: "desc" },
   });
   const ar = user.locale === "AR";
+
   return (
-    <main className="lobby-form-shell">
-      <Link className="back-link" href="/lobbies">
-        ← {ar ? "الغرف" : "Lobbies"}
-      </Link>
-      <p className="eyebrow">{ar ? "انضم إلى مجموعة" : "Join a group"}</p>
-      <h1>{ar ? "اختر مساحة تناسب إيقاعك." : "Find a room that fits your rhythm."}</h1>
+    <PageShell size="narrow" dir={ar ? "rtl" : "ltr"}>
+      <PageHeader
+        backHref="/lobbies"
+        backLabel={ar ? "الغرف" : "Lobbies"}
+        isRtl={ar}
+        eyebrow={ar ? "انضم إلى مجموعة" : "Join a group"}
+        title={ar ? "اختر مساحة تناسب إيقاعك." : "Find a room that fits your rhythm."}
+      />
       <div className="join-list">
         {rooms.map((room) => (
           <article key={room.id}>
@@ -36,6 +41,6 @@ export default async function JoinLobbyPage({
           </article>
         ))}
       </div>
-    </main>
+    </PageShell>
   );
 }

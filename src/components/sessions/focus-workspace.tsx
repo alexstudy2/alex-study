@@ -2,6 +2,19 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import {
+  Play,
+  Pause,
+  RotateCcw,
+  Check,
+  X,
+  Maximize2,
+  Minimize2,
+  AlertCircle,
+  Volume2,
+  History,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { TimerMode, TimerRun } from "./types";
 
 type Option = {
@@ -11,6 +24,7 @@ type Option = {
   colorToken?: string;
   subjectId?: string | null;
 };
+
 type Props = {
   locale: "en" | "ar";
   preferences: {
@@ -91,7 +105,7 @@ export function FocusWorkspace(props: Props) {
   const [taskId, setTaskId] = useState(props.initialTimer?.task?.id ?? "");
   const [subjectId, setSubjectId] = useState(props.initialTimer?.subject?.id ?? "");
   const [serverOffset, setServerOffset] = useState(
-    new Date(props.initialServerNow).getTime() - Date.now(),
+    new Date(props.initialServerNow).getTime() - Date.now()
   );
   const [now, setNow] = useState(Date.now());
   const [busy, setBusy] = useState(false);
@@ -99,149 +113,176 @@ export function FocusWorkspace(props: Props) {
   const [reflection, setReflection] = useState("");
   const [focusMode, setFocusMode] = useState(false);
   const [sound, setSound] = useState(props.preferences.ambientSound ?? "off");
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioContext = useRef<AudioContext | null>(null);
+  const noiseNode = useRef<AudioNode | null>(null);
 
-  const duration =
-    mode === "FOCUS"
-      ? props.preferences.focus * 60
-      : mode === "SHORT_BREAK"
-        ? props.preferences.shortBreak * 60
-        : props.preferences.longBreak * 60;
+  const durationMinutes = useMemo(() => {
+    if (mode === "SHORT_BREAK") return props.preferences.shortBreak;
+    if (mode === "LONG_BREAK") return props.preferences.longBreak;
+    return props.preferences.focus;
+  }, [mode, props.preferences]);
+
+  useEffect(() => {
+    const handle = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(handle);
+  }, []);
+
   const remaining = useMemo(() => {
-    if (!timer) return duration;
+    if (!timer) return durationMinutes * 60;
     const segment =
       timer.status === "RUNNING" && timer.segmentStartedAt
-        ? Math.max(
-            0,
-            Math.floor((now + serverOffset - new Date(timer.segmentStartedAt).getTime()) / 1000),
-          )
+        ? Math.max(0, Math.floor((now + serverOffset - new Date(timer.segmentStartedAt).getTime()) / 1000))
         : 0;
-    return Math.max(0, timer.durationSeconds - timer.accumulatedActiveSeconds - segment);
-  }, [duration, now, serverOffset, timer]);
-
-  useEffect(() => {
-    if (!timer || timer.status !== "RUNNING") return;
-    const interval = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(interval);
-  }, [timer]);
-
-  useEffect(() => {
-    if (timer && remaining === 0 && timer.status === "RUNNING") void act("complete");
-    // Completion is intentionally keyed to the derived server countdown.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [remaining, timer?.status]);
-
-  const applyResponse = useCallback((payload: { timer: TimerRun; serverNow: string }) => {
-    setTimer(
-      payload.timer.status === "COMPLETED" || payload.timer.status === "CANCELLED"
-        ? null
-        : payload.timer,
+    const active = Math.min(
+      timer.durationSeconds,
+      timer.accumulatedActiveSeconds + segment
     );
-    setServerOffset(new Date(payload.serverNow).getTime() - Date.now());
-    setNow(Date.now());
+    return Math.max(0, timer.durationSeconds - active);
+  }, [timer, durationMinutes, now, serverOffset]);
+
+  const toggleSound = useCallback(
+    (type: string) => {
+      setSound(type);
+      if (type === "off") {
+        noiseNode.current?.disconnect();
+        noiseNode.current = null;
+        return;
+      }
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (!audioContext.current) audioContext.current = new AudioCtx();
+      const ctx = audioContext.current;
+      if (ctx.state === "suspended") void ctx.resume();
+      noiseNode.current?.disconnect();
+
+      const bufferSize = 2 * ctx.sampleRate;
+      const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const output = noiseBuffer.getChannelData(0);
+      let lastOut = 0.0;
+      for (let i = 0; i < bufferSize; i++) {
+        const white = Math.random() * 2 - 1;
+        if (type === "brown") {
+          output[i] = (lastOut + 0.02 * white) / 1.02;
+          lastOut = output[i];
+          output[i] *= 3.5;
+        } else {
+          output[i] = (lastOut + 0.08 * white) / 1.08;
+          lastOut = output[i];
+          output[i] *= 1.8;
+        }
+      }
+      const whiteNoise = ctx.createBufferSource();
+      whiteNoise.buffer = noiseBuffer;
+      whiteNoise.loop = true;
+      const gainNode = ctx.createGain();
+      gainNode.gain.value = (props.preferences.ambientVolume / 100) * 0.2;
+      whiteNoise.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      whiteNoise.start();
+      noiseNode.current = gainNode;
+    },
+    [props.preferences.ambientVolume]
+  );
+
+  useEffect(() => {
+    return () => {
+      noiseNode.current?.disconnect();
+      if (audioContext.current?.state !== "closed") void audioContext.current?.close();
+    };
   }, []);
 
   async function start() {
     setBusy(true);
     setError("");
-    const response = await fetch("/api/timer", {
+    const response = await fetch("/api/timer/start", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         mode,
-        durationSeconds: duration,
+        durationMinutes,
         taskId: taskId || null,
         subjectId: subjectId || null,
       }),
     });
-    const payload = await response.json();
-    if (response.ok) applyResponse(payload);
-    else setError(t.error);
+    const data = await response.json();
     setBusy(false);
+    if (!response.ok) {
+      setError(data.error ?? t.error);
+      return;
+    }
+    setTimer(data.timer);
+    setServerOffset(new Date(data.serverNow).getTime() - Date.now());
   }
 
   async function act(action: "pause" | "resume" | "complete" | "cancel") {
-    if (!timer || busy) return;
     setBusy(true);
     setError("");
-    const response = await fetch(`/api/timer/${timer.id}/${action}`, {
+    const response = await fetch(`/api/timer/${action}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        version: timer.version,
-        reflection: action === "complete" ? reflection : undefined,
-      }),
+      body: JSON.stringify({ reflectionNotes: reflection || null }),
     });
-    const payload = await response.json();
-    if (response.ok) {
-      applyResponse(payload);
-      if (action === "complete") setReflection("");
-    } else setError(t.error);
+    const data = await response.json();
     setBusy(false);
+    if (!response.ok) {
+      setError(data.error ?? t.error);
+      return;
+    }
+    setTimer(data.timer);
+    if (data.serverNow) setServerOffset(new Date(data.serverNow).getTime() - Date.now());
+    if (action === "complete" || action === "cancel") {
+      setReflection("");
+    }
   }
 
   async function distract() {
     if (!timer) return;
-    const response = await fetch(`/api/timer/${timer.id}/distractions`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: "{}",
-    });
-    if (response.ok && timer.session)
-      setTimer({
-        ...timer,
-        session: { ...timer.session, distractionCount: timer.session.distractionCount + 1 },
-      });
-  }
-
-  function toggleSound(value: string) {
-    setSound(value);
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
+    const response = await fetch("/api/timer/distraction", { method: "POST" });
+    if (response.ok) {
+      const data = await response.json();
+      setTimer(data.timer);
     }
-    if (value === "off") return;
-    const audio = new Audio(`/sounds/${value}.mp3`);
-    audio.loop = true;
-    audio.volume = Math.min(1, props.preferences.ambientVolume / 100);
-    audio.play().catch(() => {
-      /* autoplay blocked — user must interact first */
-    });
-    audioRef.current = audio;
   }
 
   return (
-    <section
-      className={`focus-workspace${focusMode ? " is-focus-mode" : ""}`}
-      dir={props.locale === "ar" ? "rtl" : "ltr"}
-    >
-      {props.initialTimer && (
-        <p className="recovery-note" role="status">
-          {t.recovery}
-        </p>
-      )}
-      <div className="mode-tabs" role="tablist" aria-label="Timer mode">
-        {(["FOCUS", "SHORT_BREAK", "LONG_BREAK"] as TimerMode[]).map((item) => (
-          <button
-            key={item}
-            role="tab"
-            aria-selected={mode === item}
-            disabled={Boolean(timer)}
-            onClick={() => setMode(item)}
-          >
-            {item === "FOCUS" ? t.focus : item === "SHORT_BREAK" ? t.short : t.long}
-          </button>
-        ))}
-      </div>
-      <div className="timer-stage">
-        <button
+    <section className={`focus-grid ${focusMode ? "focus-mode-active" : ""}`}>
+      <div className="timer-card">
+        {!timer && (
+          <div className="segmented-control" role="tablist">
+            <button
+              role="tab"
+              aria-selected={mode === "FOCUS"}
+              onClick={() => setMode("FOCUS")}
+            >
+              {t.focus}
+            </button>
+            <button
+              role="tab"
+              aria-selected={mode === "SHORT_BREAK"}
+              onClick={() => setMode("SHORT_BREAK")}
+            >
+              {t.short}
+            </button>
+            <button
+              role="tab"
+              aria-selected={mode === "LONG_BREAK"}
+              onClick={() => setMode("LONG_BREAK")}
+            >
+              {t.long}
+            </button>
+          </div>
+        )}
+        <Button
+          variant="ghost"
+          size="sm"
           className="focus-mode-toggle"
-          type="button"
           aria-pressed={focusMode}
+          leftIcon={focusMode ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
           onClick={() => setFocusMode(!focusMode)}
         >
           {focusMode ? t.exitFocusMode : t.focusMode}
-        </button>
+        </Button>
         <p className="timer-mode-label">
           {mode === "FOCUS" ? t.focus : mode === "SHORT_BREAK" ? t.short : t.long}
         </p>
@@ -250,56 +291,96 @@ export function FocusWorkspace(props: Props) {
         </output>
         {timer?.task && <p className="timer-context">{timer.task.title}</p>}
         {timer?.subject && <p className="timer-context">{timer.subject.name}</p>}
+
         <div className="timer-actions">
           {!timer && (
-            <button className="primary-button" disabled={busy} onClick={start}>
+            <Button
+              variant="primary"
+              size="lg"
+              disabled={busy}
+              onClick={start}
+              leftIcon={<Play className="w-5 h-5" />}
+            >
               {t.start}
-            </button>
+            </Button>
           )}
           {timer?.status === "RUNNING" && (
-            <button className="primary-button" disabled={busy} onClick={() => act("pause")}>
+            <Button
+              variant="primary"
+              size="lg"
+              disabled={busy}
+              onClick={() => act("pause")}
+              leftIcon={<Pause className="w-5 h-5" />}
+            >
               {t.pause}
-            </button>
+            </Button>
           )}
           {timer?.status === "PAUSED" && (
-            <button className="primary-button" disabled={busy} onClick={() => act("resume")}>
+            <Button
+              variant="primary"
+              size="lg"
+              disabled={busy}
+              onClick={() => act("resume")}
+              leftIcon={<Play className="w-5 h-5" />}
+            >
               {t.resume}
-            </button>
+            </Button>
           )}
           {timer && (
-            <button className="secondary-button" disabled={busy} onClick={() => act("complete")}>
+            <Button
+              variant="secondary"
+              size="lg"
+              disabled={busy}
+              onClick={() => act("complete")}
+              leftIcon={<Check className="w-5 h-5" />}
+            >
               {t.complete}
-            </button>
+            </Button>
           )}
           {timer && (
-            <button
-              className="timer-icon-button"
+            <Button
+              variant="danger"
+              size="icon"
               title={t.cancel}
               aria-label={t.cancel}
               disabled={busy}
               onClick={() => act("cancel")}
             >
-              ×
-            </button>
+              <X className="w-5 h-5" />
+            </Button>
           )}
         </div>
+
         {timer?.mode === "FOCUS" && (
-          <button className="distraction-button" onClick={distract}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="distraction-button mt-4"
+            leftIcon={<AlertCircle className="w-4 h-4 text-warning" />}
+            onClick={distract}
+          >
             {t.distraction} · {timer.session?.distractionCount ?? 0}
-          </button>
+          </Button>
         )}
+
         {timer?.mode === "FOCUS" && (
           <label className="reflection-field">
             <span>{t.reflection}</span>
-            <textarea value={reflection} onChange={(event) => setReflection(event.target.value)} />
+            <textarea
+              value={reflection}
+              onChange={(event) => setReflection(event.target.value)}
+              placeholder="Notes, key insights, or concepts to review..."
+            />
           </label>
         )}
+
         {error && (
           <p className="form-error" role="alert">
             {error}
           </p>
         )}
       </div>
+
       {!focusMode && (
         <aside className="focus-settings">
           <label>
@@ -338,16 +419,24 @@ export function FocusWorkspace(props: Props) {
             </select>
           </label>
           <label>
-            <span>{t.ambient}</span>
+            <span className="flex items-center gap-1.5">
+              <Volume2 className="w-4 h-4 text-muted" />
+              {t.ambient}
+            </span>
             <select value={sound} onChange={(event) => toggleSound(event.target.value)}>
               <option value="off">{t.soundOff}</option>
               <option value="rain">{t.soundRain}</option>
               <option value="brown">{t.soundBrown}</option>
             </select>
           </label>
-          <Link className="secondary-button" href="/sessions">
+          <Button
+            href="/sessions"
+            variant="secondary"
+            size="sm"
+            leftIcon={<History className="w-4 h-4" />}
+          >
             {t.sessions}
-          </Link>
+          </Button>
         </aside>
       )}
     </section>

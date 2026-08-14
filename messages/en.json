@@ -1,5 +1,54 @@
 {
-  "common": { "appName": "Alex Study", "foundation": "Phase 1 foundation is ready." },
+  "common": {
+    "appName": "Alex Study",
+    "foundation": "Phase 1 foundation is ready.",
+    "back": "Back",
+    "cancel": "Cancel",
+    "save": "Save",
+    "create": "Create",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "success": "Success",
+    "empty": "No items found",
+    "search": "Search...",
+    "filter": "Filter",
+    "retry": "Try again",
+    "close": "Close",
+    "confirm": "Confirm"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "tasks": "Tasks",
+    "focus": "Focus",
+    "calendar": "Calendar",
+    "friends": "Friends",
+    "goals": "Goals",
+    "sessions": "Sessions",
+    "lobbies": "Lobbies",
+    "challenges": "Challenges",
+    "insights": "Insights",
+    "examPlans": "Exam Plans",
+    "settings": "Settings",
+    "notifications": "Notifications",
+    "more": "More"
+  },
+  "dashboard": {
+    "welcome": "Welcome back",
+    "studyToday": "Studied Today",
+    "streak": "Day Streak",
+    "tasksCompleted": "Tasks Completed",
+    "upcomingExam": "Next Exam",
+    "urgentTasks": "Urgent Tasks",
+    "activeGoals": "Active Goals",
+    "startFocus": "Start Focus Session",
+    "aiNote": "Study Insight",
+    "reviewSessions": "Review sessions",
+    "viewAll": "View all",
+    "noUrgentTasks": "No urgent tasks due today.",
+    "noActiveGoals": "No active goals found."
+  },
   "tasks": {
     "title": "What comes next?",
     "new": "New task",
@@ -12,6 +61,41 @@
     },
     "empty": "No tasks in this view",
     "aiLabel": "AI-assisted",
-    "aiNotice": "Nothing is saved as a task until you review and confirm it."
+    "aiNotice": "Nothing is saved as a task until you review and confirm it.",
+    "priority": "Priority",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low",
+    "dueDate": "Due date",
+    "tags": "Tags",
+    "createTask": "Add task"
+  },
+  "focus": {
+    "title": "Focus Session",
+    "pomodoro": "Pomodoro",
+    "shortBreak": "Short Break",
+    "longBreak": "Long Break",
+    "start": "Start",
+    "pause": "Pause",
+    "resume": "Resume",
+    "reset": "Reset",
+    "finish": "Finish",
+    "distractions": "Distractions",
+    "logDistraction": "Log distraction",
+    "currentTask": "Current Focus Task"
+  },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "weekly": "Weekly Standings",
+    "rank": "Rank",
+    "student": "Student",
+    "studyTime": "Study Time",
+    "points": "XP"
+  },
+  "challenges": {
+    "title": "Challenges",
+    "newChallenge": "Create Challenge",
+    "active": "Active",
+    "history": "History"
   }
 }

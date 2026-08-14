@@ -1,4 +1,5 @@
 "use client";
+
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -18,11 +19,26 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import {
+  GripVertical,
+  ChevronUp,
+  ChevronDown,
+  Check,
+  RotateCcw,
+  Plus,
+  Trash2,
+  Calendar,
+  Clock,
+  BookOpen,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { QuickAdd } from "./quick-add";
 import { TaskForm } from "./task-form";
 import type { Subject, Task } from "./types";
 
 const filters = ["all", "today", "week", "overdue", "completed"] as const;
+
 function SortableTask({
   task,
   locale,
@@ -42,6 +58,7 @@ function SortableTask({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
   });
+
   return (
     <article
       ref={setNodeRef}
@@ -60,7 +77,7 @@ function SortableTask({
         {...listeners}
         aria-label={ar ? `اسحب لإعادة ترتيب ${task.title}` : `Drag to reorder ${task.title}`}
       >
-        ⠿
+        <GripVertical className="w-4 h-4 text-muted" aria-hidden="true" />
       </button>
       <div className="task-main">
         <div className="task-title-line">
@@ -70,9 +87,15 @@ function SortableTask({
           </span>
         </div>
         <div className="task-meta">
-          {task.subject && <span>{task.subject.name}</span>}
+          {task.subject && (
+            <span className="flex items-center gap-1">
+              <BookOpen className="w-3.5 h-3.5" />
+              {task.subject.name}
+            </span>
+          )}
           {task.dueAt && (
-            <time>
+            <time className="flex items-center gap-1">
+              <Calendar className="w-3.5 h-3.5" />
               {new Intl.DateTimeFormat(locale === "ar" ? "ar-EG" : "en-GB", {
                 dateStyle: "medium",
                 timeStyle: "short",
@@ -80,7 +103,8 @@ function SortableTask({
             </time>
           )}
           {task.estimatedMinutes && (
-            <span>
+            <span className="flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5" />
               {task.estimatedMinutes} {ar ? "د" : "min"}
             </span>
           )}
@@ -92,14 +116,35 @@ function SortableTask({
         </div>
       </div>
       <div className="row-actions">
-        <button onClick={() => move(-1)} aria-label={ar ? "تحريك لأعلى" : "Move up"}>
-          ↑
+        <button
+          onClick={() => move(-1)}
+          aria-label={ar ? "تحريك لأعلى" : "Move up"}
+          title={ar ? "تحريك لأعلى" : "Move up"}
+        >
+          <ChevronUp className="w-4 h-4" />
         </button>
-        <button onClick={() => move(1)} aria-label={ar ? "تحريك لأسفل" : "Move down"}>
-          ↓
+        <button
+          onClick={() => move(1)}
+          aria-label={ar ? "تحريك لأسفل" : "Move down"}
+          title={ar ? "تحريك لأسفل" : "Move down"}
+        >
+          <ChevronDown className="w-4 h-4" />
         </button>
-        <button className="compact-action" onClick={complete}>
-          {task.status === "COMPLETED" ? (ar ? "إعادة فتح" : "Reopen") : ar ? "إنجاز" : "Done"}
+        <button
+          className="compact-action inline-flex items-center gap-1"
+          onClick={complete}
+        >
+          {task.status === "COMPLETED" ? (
+            <>
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>{ar ? "إعادة فتح" : "Reopen"}</span>
+            </>
+          ) : (
+            <>
+              <Check className="w-3.5 h-3.5" />
+              <span>{ar ? "إنجاز" : "Done"}</span>
+            </>
+          )}
         </button>
       </div>
     </article>
@@ -123,8 +168,9 @@ export function TaskWorkspace({
   const [selected, setSelected] = useState<string[]>([]);
   const sensors = useSensors(
     useSensor(PointerSensor),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
+
   const load = useCallback(
     async (showLoading = true) => {
       if (showLoading) {
@@ -141,11 +187,13 @@ export function TaskWorkspace({
       setTasks(data.tasks);
       setSelected([]);
     },
-    [filter, ar],
+    [filter, ar]
   );
+
   useEffect(() => {
     queueMicrotask(() => void load(false));
   }, [load]);
+
   async function persistOrder(next: Task[]) {
     setTasks(next);
     const response = await fetch("/api/tasks/reorder", {
@@ -158,6 +206,7 @@ export function TaskWorkspace({
       void load();
     }
   }
+
   function dragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -165,18 +214,21 @@ export function TaskWorkspace({
     const newIndex = tasks.findIndex((t) => t.id === over.id);
     void persistOrder(arrayMove(tasks, oldIndex, newIndex));
   }
+
   function move(id: string, delta: number) {
     const index = tasks.findIndex((t) => t.id === id);
     const target = index + delta;
     if (target < 0 || target >= tasks.length) return;
     void persistOrder(arrayMove(tasks, index, target));
   }
+
   async function toggleStatus(task: Task) {
     await fetch(`/api/tasks/${task.id}/${task.status === "COMPLETED" ? "reopen" : "complete"}`, {
       method: "POST",
     });
     void load();
   }
+
   async function bulk(action: "COMPLETE" | "REOPEN" | "DELETE") {
     if (!selected.length) return;
     await fetch("/api/tasks/bulk", {
@@ -186,6 +238,7 @@ export function TaskWorkspace({
     });
     void load();
   }
+
   async function addSubject(formData: FormData) {
     const response = await fetch("/api/subjects", {
       method: "POST",
@@ -195,13 +248,15 @@ export function TaskWorkspace({
     if (response.ok) {
       const data = await response.json();
       setSubjects((current) =>
-        [...current, data.subject].sort((a, b) => a.name.localeCompare(b.name)),
+        [...current, data.subject].sort((a, b) => a.name.localeCompare(b.name))
       );
     }
   }
+
   const labels = ar
     ? ["الكل", "اليوم", "هذا الأسبوع", "متأخرة", "مكتملة"]
     : ["All", "Today", "This week", "Overdue", "Completed"];
+
   return (
     <>
       <QuickAdd locale={locale} subjects={subjects} onSaved={() => void load()} />
@@ -223,24 +278,52 @@ export function TaskWorkspace({
               </button>
             ))}
           </div>
-          <button className="primary-button" onClick={() => setShowForm(true)}>
-            + {ar ? "مهمة جديدة" : "New task"}
-          </button>
+          <Button
+            variant="primary"
+            size="sm"
+            leftIcon={<Plus className="w-4 h-4" />}
+            onClick={() => setShowForm(true)}
+          >
+            {ar ? "مهمة جديدة" : "New task"}
+          </Button>
         </div>
+
         {selected.length > 0 && (
           <div
             className="bulk-bar"
             role="region"
             aria-label={ar ? "إجراءات جماعية" : "Bulk actions"}
           >
-            <span>
+            <span className="font-medium">
               {selected.length} {ar ? "محددة" : "selected"}
             </span>
-            <button onClick={() => bulk("COMPLETE")}>{ar ? "إنجاز" : "Complete"}</button>
-            <button onClick={() => bulk("REOPEN")}>{ar ? "إعادة فتح" : "Reopen"}</button>
-            <button onClick={() => bulk("DELETE")}>{ar ? "حذف" : "Delete"}</button>
+            <Button
+              variant="subtle"
+              size="sm"
+              leftIcon={<Check className="w-3.5 h-3.5" />}
+              onClick={() => bulk("COMPLETE")}
+            >
+              {ar ? "إنجاز" : "Complete"}
+            </Button>
+            <Button
+              variant="subtle"
+              size="sm"
+              leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
+              onClick={() => bulk("REOPEN")}
+            >
+              {ar ? "إعادة فتح" : "Reopen"}
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              leftIcon={<Trash2 className="w-3.5 h-3.5" />}
+              onClick={() => bulk("DELETE")}
+            >
+              {ar ? "حذف" : "Delete"}
+            </Button>
           </div>
         )}
+
         {showForm && (
           <div className="editor-panel">
             <TaskForm
@@ -254,6 +337,7 @@ export function TaskWorkspace({
             />
           </div>
         )}
+
         {loading ? (
           <div className="task-state" role="status">
             <span className="loader" />
@@ -262,18 +346,19 @@ export function TaskWorkspace({
         ) : error ? (
           <div className="task-state error-state" role="alert">
             <p>{error}</p>
-            <button className="secondary-button" onClick={() => void load()}>
+            <Button variant="secondary" size="sm" onClick={() => void load()}>
               {ar ? "إعادة المحاولة" : "Try again"}
-            </button>
+            </Button>
           </div>
         ) : tasks.length === 0 ? (
-          <div className="task-state empty-state">
-            <p className="eyebrow">{ar ? "مساحة واضحة" : "Clear space"}</p>
-            <h2>{ar ? "لا توجد مهام في هذا العرض" : "No tasks in this view"}</h2>
-            <p>
-              {ar ? "أضف خطوة صغيرة وواضحة لتبدأ." : "Add one clear, manageable step to begin."}
-            </p>
-          </div>
+          <EmptyState
+            title={ar ? "لا توجد مهام في هذا العرض" : "No tasks in this view"}
+            description={
+              ar ? "أضف خطوة صغيرة وواضحة لتبدأ." : "Add one clear, manageable step to begin."
+            }
+            actionLabel={ar ? "إضافة مهمة" : "New task"}
+            onAction={() => setShowForm(true)}
+          />
         ) : (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={dragEnd}>
             <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
@@ -286,7 +371,7 @@ export function TaskWorkspace({
                     selected={selected.includes(task.id)}
                     toggle={() =>
                       setSelected((s) =>
-                        s.includes(task.id) ? s.filter((id) => id !== task.id) : [...s, task.id],
+                        s.includes(task.id) ? s.filter((id) => id !== task.id) : [...s, task.id]
                       )
                     }
                     complete={() => toggleStatus(task)}
@@ -298,37 +383,84 @@ export function TaskWorkspace({
           </DndContext>
         )}
       </section>
-      <aside className="subject-strip">
-        <div>
-          <p className="eyebrow">{ar ? "المواد" : "Subjects"}</p>
-          <h2>{ar ? "نظّم حسب المقرر" : "Organize by course"}</h2>
+
+      <section className="courses-panel mt-6">
+        <div className="courses-panel-header">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary-subtle text-primary">
+              <BookOpen className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-foreground m-0">
+                  {ar ? "نظّم حسب المقرر" : "Organize by course"}
+                </h2>
+                <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-surface-sunken border border-line text-muted">
+                  {subjects.length} {ar ? "مواد" : "courses"}
+                </span>
+              </div>
+              <p className="text-xs text-muted mt-0.5">
+                {ar
+                  ? "قسّم مهامك وجلسات تركيزك حسب المواد الأكاديمية."
+                  : "Categorize your tasks, goals, and focus sessions by academic course."}
+              </p>
+            </div>
+          </div>
         </div>
-        <div className="subject-chips">
-          {subjects.map((s) => (
-            <span key={s.id} data-color={s.colorToken}>
-              {s.name}
-            </span>
-          ))}
+
+        <div className="courses-grid">
+          {subjects.length === 0 ? (
+            <p className="text-sm text-muted py-2">
+              {ar ? "لا توجد مقررات دراسية مضافة بعد." : "No courses added yet."}
+            </p>
+          ) : (
+            subjects.map((s) => (
+              <div key={s.id} className="course-card" data-color={s.colorToken}>
+                <span className="course-color-indicator" data-color={s.colorToken} />
+                <span className="course-name">{s.name}</span>
+              </div>
+            ))
+          )}
         </div>
-        <form action={addSubject} className="subject-form">
-          <label className="sr-only" htmlFor="subject-name">
-            {ar ? "اسم المادة" : "Subject name"}
-          </label>
-          <input
-            id="subject-name"
-            name="name"
-            required
-            placeholder={ar ? "إضافة مادة" : "Add a subject"}
-          />
-          <select name="colorToken" aria-label={ar ? "لون المادة" : "Subject color"}>
-            <option value="teal">Teal</option>
-            <option value="coral">Coral</option>
-            <option value="amber">Amber</option>
-            <option value="violet">Violet</option>
-          </select>
-          <button className="secondary-button">{ar ? "إضافة" : "Add"}</button>
+
+        <form action={addSubject} className="add-course-form">
+          <div className="flex-1 min-w-[200px]">
+            <input
+              id="subject-name"
+              name="name"
+              required
+              className="course-input"
+              placeholder={
+                ar
+                  ? "اسم المقرر الجديد (مثال: Pathology)..."
+                  : "New course name (e.g. Pathology)..."
+              }
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <select
+              name="colorToken"
+              className="course-select"
+              aria-label={ar ? "لون المقرر" : "Course color"}
+            >
+              <option value="teal">{ar ? "فيروزي (Teal)" : "Teal"}</option>
+              <option value="coral">{ar ? "مرجاني (Coral)" : "Coral"}</option>
+              <option value="amber">{ar ? "كهرماني (Amber)" : "Amber"}</option>
+              <option value="violet">{ar ? "بنفسجي (Violet)" : "Violet"}</option>
+              <option value="blue">{ar ? "أزرق (Blue)" : "Blue"}</option>
+              <option value="emerald">{ar ? "زمردي (Emerald)" : "Emerald"}</option>
+            </select>
+            <Button
+              variant="primary"
+              size="sm"
+              type="submit"
+              leftIcon={<Plus className="w-3.5 h-3.5" />}
+            >
+              {ar ? "إضافة المقرر" : "Add course"}
+            </Button>
+          </div>
         </form>
-      </aside>
+      </section>
     </>
   );
 }
