@@ -1,0 +1,868 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProfileVisibility {
+  PRIVATE
+  COLLEGE_ONLY
+}
+
+enum AppLocale {
+  EN
+  AR
+}
+
+enum Theme {
+  SYSTEM
+  LIGHT
+  DARK
+}
+
+enum ConsentStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+enum ResetRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskDraftStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum SessionSource {
+  SOLO
+  ROOM
+  MANUAL
+}
+
+enum SessionStatus {
+  ACTIVE
+  COMPLETED
+  ABANDONED
+}
+
+enum TimerMode {
+  FOCUS
+  SHORT_BREAK
+  LONG_BREAK
+}
+
+enum TimerStatus {
+  RUNNING
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  BLOCKED
+}
+
+enum AccountabilityStatus {
+  PENDING
+  ACTIVE
+  PAUSED
+  ENDED
+  DECLINED
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+}
+
+enum DeliveryStatus {
+  PENDING
+  SENT
+  SKIPPED
+  FAILED
+}
+
+enum RoomVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum RoomRole {
+  OWNER
+  MODERATOR
+  MEMBER
+}
+
+enum ChallengeType {
+  TASK_COUNT
+  STUDY_TIME
+  SUBJECT_TASK_COUNT
+  SUBJECT_STUDY_TIME
+}
+
+enum ChallengeResolution {
+  TARGET_FIRST
+  DEADLINE_LEADER
+}
+
+enum ChallengeStatus {
+  PENDING
+  SCHEDULED
+  ACTIVE
+  COMPLETED
+  DECLINED
+  CANCELLED
+  EXPIRED
+}
+
+enum ChallengeEventType {
+  SOURCE
+  ADJUSTMENT
+}
+
+enum ChallengeSourceType {
+  TASK
+  STUDY_SESSION
+}
+
+enum LeaderboardScope {
+  ALL_COLLEGE
+  FRIENDS
+}
+
+enum LeaderboardMetric {
+  STUDY_MINUTES
+  TASKS_COMPLETED
+}
+
+enum AIJobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum ExamPlanStatus {
+  GENERATING
+  PROPOSED
+  PARTIALLY_ACCEPTED
+  ACCEPTED
+  REJECTED
+}
+
+model User {
+  id                        String                       @id @default(uuid())
+  collegeId                 String
+  name                      String
+  academicYear              Int
+  email                     String?                      @unique
+  passwordHash              String
+  imageUrl                  String?
+  timezone                  String                       @default("Africa/Cairo")
+  weekStartsOn              Int                          @default(0)
+  aiNudgesEnabled           Boolean                      @default(true)
+  leaderboardVisible        Boolean                      @default(true)
+  profileVisibility         ProfileVisibility            @default(COLLEGE_ONLY)
+  role                      String                       @default("STUDENT")
+  createdAt                 DateTime                     @default(now())
+  updatedAt                 DateTime                     @updatedAt
+  preference                UserPreference?
+  consents                  UserConsent[]
+  resetTokens               PasswordResetToken[]
+  manualResetRequests       ManualPasswordResetRequest[]
+  subjects                  Subject[]
+  tasks                     Task[]
+  sessions                  StudySession[]
+  goals                     Goal[]
+  ownedRooms                Room[]
+  roomMemberships           RoomMember[]
+  sentFriendRequests        Friendship[]                 @relation("FriendRequester")
+  receivedFriendRequests    Friendship[]                 @relation("FriendAddressee")
+  createdChallenges         Challenge[]                  @relation("ChallengeCreator")
+  opponentChallenges        Challenge[]                  @relation("ChallengeOpponent")
+  wonChallenges             Challenge[]                  @relation("ChallengeWinner")
+  challengeProgress         ChallengeProgress[]
+  badges                    UserBadge[]
+  leaderboardEntries        LeaderboardEntry[]
+  ownedLeaderboardSnapshots LeaderboardSnapshot[]        @relation("LeaderboardOwner")
+  insights                  AIInsight[]
+  aiJobs                    AIJob[]
+  examPlans                 ExamPlan[]
+  serviceUsageLogs          ServiceUsageLog[]
+  dailyMetrics              DailyUserMetric[]
+  taskDrafts                TaskDraft[]
+  timerRuns                 TimerRun[]
+  hostedTimerRuns           TimerRun[]                   @relation("TimerHost")
+  roomMessages              RoomMessage[]
+  sessionReactions          SessionReaction[]
+  notifications             Notification[]
+  accountabilityPairsA      AccountabilityPair[]         @relation("AccountabilityUserA")
+  accountabilityPairsB      AccountabilityPair[]         @relation("AccountabilityUserB")
+  createdAccountability     AccountabilityPair[]         @relation("AccountabilityCreator")
+  accountabilitySubjects    AccountabilityCheck[]        @relation("AccountabilitySubject")
+  accountabilityRecipients  AccountabilityCheck[]        @relation("AccountabilityRecipient")
+
+  @@unique([collegeId, academicYear])
+}
+
+model ScheduledJobCursor {
+  jobName          String    @id
+  cursor           String?
+  cycleCompletedAt DateTime?
+  updatedAt        DateTime  @updatedAt
+}
+
+model UserPreference {
+  id                          String    @id @default(uuid())
+  userId                      String    @unique
+  locale                      AppLocale @default(EN)
+  theme                       Theme     @default(SYSTEM)
+  defaultFocusMinutes         Int       @default(25)
+  defaultShortBreakMinutes    Int       @default(5)
+  defaultLongBreakMinutes     Int       @default(15)
+  pomodorosBeforeLongBreak    Int       @default(4)
+  autoStartBreaks             Boolean   @default(false)
+  autoStartFocus              Boolean   @default(false)
+  ambientSound                String?
+  ambientVolume               Int       @default(35)
+  emailNotifications          Boolean   @default(true)
+  inAppNotifications          Boolean   @default(true)
+  accountabilityNotifications Boolean   @default(true)
+  challengeNotifications      Boolean   @default(true)
+  aiInsightNotifications      Boolean   @default(true)
+  shareFullNameOnCards        Boolean   @default(false)
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @updatedAt
+  user                        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserConsent {
+  id        String        @id @default(uuid())
+  userId    String
+  kind      String
+  version   String
+  status    ConsentStatus @default(PENDING)
+  decidedAt DateTime?
+  createdAt DateTime      @default(now())
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kind, version])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ManualPasswordResetRequest {
+  id         String             @id @default(uuid())
+  userId     String
+  details    String
+  status     ResetRequestStatus @default(PENDING)
+  reviewedBy String?
+  reviewedAt DateTime?
+  createdAt  DateTime           @default(now())
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Subject {
+  id             String         @id @default(uuid())
+  userId         String
+  name           String
+  normalizedName String
+  colorToken     String
+  archivedAt     DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks          Task[]
+  sessions       StudySession[]
+  goals          Goal[]
+  challenges     Challenge[]
+  timerRuns      TimerRun[]
+  examPlanItems  ExamPlanItem[]
+
+  @@unique([userId, normalizedName])
+}
+
+model Task {
+  id                    String         @id @default(uuid())
+  userId                String
+  subjectId             String?
+  parentTaskId          String?
+  title                 String
+  notes                 String?
+  priority              TaskPriority   @default(MEDIUM)
+  status                TaskStatus     @default(TODO)
+  dueAt                 DateTime?
+  estimatedMinutes      Int?
+  sortOrder             Int            @default(0)
+  completedAt           DateTime?
+  recurrenceRule        Json?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  deletedAt             DateTime?
+  recurrenceSourceId    String?
+  recurrenceDate        DateTime?
+  user                  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject               Subject?       @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  parent                Task?          @relation("Subtasks", fields: [parentTaskId], references: [id], onDelete: Cascade)
+  subtasks              Task[]         @relation("Subtasks")
+  recurrenceSource      Task?          @relation("RecurrenceOccurrences", fields: [recurrenceSourceId], references: [id], onDelete: SetNull)
+  recurrenceOccurrences Task[]         @relation("RecurrenceOccurrences")
+  sessions              StudySession[]
+  timerRuns             TimerRun[]
+  examPlanItems         ExamPlanItem[] @relation("ExamPlanCreatedTask")
+
+  @@unique([recurrenceSourceId, recurrenceDate])
+  @@index([userId, status, dueAt])
+  @@index([userId, deletedAt, sortOrder])
+}
+
+model TaskDraft {
+  id               String          @id @default(uuid())
+  userId           String
+  sourceText       String
+  title            String
+  notes            String?
+  subjectId        String?
+  subjectName      String?
+  priority         TaskPriority    @default(MEDIUM)
+  dueAt            DateTime?
+  estimatedMinutes Int?
+  recurrenceRule   Json?
+  status           TaskDraftStatus @default(PENDING)
+  model            String
+  expiresAt        DateTime
+  acceptedTaskId   String?
+  createdAt        DateTime        @default(now())
+  decidedAt        DateTime?
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status, expiresAt])
+}
+
+model StudySession {
+  id                     String               @id @default(uuid())
+  userId                 String
+  taskId                 String?
+  subjectId              String?
+  roomId                 String?
+  startedAt              DateTime
+  endedAt                DateTime?
+  durationSeconds        Int                  @default(0)
+  plannedDurationSeconds Int
+  distractionCount       Int                  @default(0)
+  focusScore             Float?
+  reflection             String?
+  source                 SessionSource        @default(SOLO)
+  status                 SessionStatus        @default(COMPLETED)
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  user                   User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task                   Task?                @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  subject                Subject?             @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  room                   Room?                @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  timerRun               TimerRun?
+  distractions           SessionDistraction[]
+  reactions              SessionReaction[]
+
+  @@index([userId, startedAt])
+}
+
+model TimerRun {
+  id                       String        @id @default(uuid())
+  userId                   String
+  sessionId                String?       @unique
+  taskId                   String?
+  subjectId                String?
+  roomId                   String?
+  hostUserId               String?
+  mode                     TimerMode
+  status                   TimerStatus   @default(RUNNING)
+  durationSeconds          Int
+  startedAt                DateTime
+  segmentStartedAt         DateTime?
+  pausedAt                 DateTime?
+  accumulatedActiveSeconds Int           @default(0)
+  completedAt              DateTime?
+  cancelledAt              DateTime?
+  version                  Int           @default(1)
+  createdAt                DateTime      @default(now())
+  updatedAt                DateTime      @updatedAt
+  user                     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session                  StudySession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  task                     Task?         @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  subject                  Subject?      @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  room                     Room?         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  host                     User?         @relation("TimerHost", fields: [hostUserId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([userId, startedAt])
+  @@index([roomId, status])
+}
+
+model SessionDistraction {
+  id         String       @id @default(uuid())
+  sessionId  String
+  occurredAt DateTime     @default(now())
+  note       String?
+  session    StudySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, occurredAt])
+}
+
+model Goal {
+  id          String   @id @default(uuid())
+  userId      String
+  subjectId   String?
+  title       String
+  metric      String
+  targetValue Int
+  period      String
+  startsAt    DateTime
+  deadline    DateTime
+  status      String   @default("ACTIVE")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject     Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+}
+
+model Room {
+  id             String            @id @default(uuid())
+  ownerId        String
+  name           String
+  description    String?
+  visibility     RoomVisibility    @default(PUBLIC)
+  inviteCodeHash String?
+  chatEnabled    Boolean           @default(true)
+  maxMembers     Int               @default(25)
+  archivedAt     DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  owner          User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  members        RoomMember[]
+  sessions       StudySession[]
+  timerRuns      TimerRun[]
+  messages       RoomMessage[]
+  reactions      SessionReaction[]
+}
+
+model RoomMessage {
+  id        String    @id @default(uuid())
+  roomId    String
+  userId    String
+  body      String
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+  room      Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([roomId, createdAt])
+}
+
+model SessionReaction {
+  id        String       @id @default(uuid())
+  sessionId String
+  roomId    String?
+  senderId  String
+  reaction  String
+  createdAt DateTime     @default(now())
+  session   StudySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  room      Room?        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender    User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, senderId, reaction])
+  @@index([roomId, createdAt])
+}
+
+model RoomMember {
+  id         String    @id @default(uuid())
+  roomId     String
+  userId     String
+  role       RoomRole  @default(MEMBER)
+  joinedAt   DateTime  @default(now())
+  lastSeenAt DateTime?
+  room       Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+}
+
+model Friendship {
+  id          String           @id @default(uuid())
+  requesterId String
+  addresseeId String
+  pairKey     String           @unique
+  status      FriendshipStatus @default(PENDING)
+  blockedById String?
+  createdAt   DateTime         @default(now())
+  respondedAt DateTime?
+  requester   User             @relation("FriendRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee   User             @relation("FriendAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@index([requesterId, status])
+  @@index([addresseeId, status])
+}
+
+model AccountabilityPair {
+  id             String                @id @default(uuid())
+  userAId        String
+  userBId        String
+  createdById    String
+  pairKey        String                @unique
+  status         AccountabilityStatus  @default(PENDING)
+  lastReminderAt DateTime?
+  createdAt      DateTime              @default(now())
+  respondedAt    DateTime?
+  endedAt        DateTime?
+  updatedAt      DateTime              @updatedAt
+  userA          User                  @relation("AccountabilityUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB          User                  @relation("AccountabilityUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  createdBy      User                  @relation("AccountabilityCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  checks         AccountabilityCheck[]
+
+  @@index([userAId, status])
+  @@index([userBId, status])
+}
+
+model AccountabilityCheck {
+  id              String             @id @default(uuid())
+  pairId          String
+  subjectUserId   String
+  recipientUserId String
+  reason          String
+  deliveryStatus  DeliveryStatus     @default(PENDING)
+  notificationId  String?
+  sentAt          DateTime           @default(now())
+  pair            AccountabilityPair @relation(fields: [pairId], references: [id], onDelete: Cascade)
+  subjectUser     User               @relation("AccountabilitySubject", fields: [subjectUserId], references: [id], onDelete: Cascade)
+  recipientUser   User               @relation("AccountabilityRecipient", fields: [recipientUserId], references: [id], onDelete: Cascade)
+
+  @@index([pairId, sentAt])
+  @@index([subjectUserId, sentAt])
+}
+
+model Notification {
+  id         String                 @id @default(uuid())
+  userId     String
+  type       String
+  title      String
+  body       String
+  actionUrl  String?
+  metadata   Json?
+  readAt     DateTime?
+  createdAt  DateTime               @default(now())
+  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries NotificationDelivery[]
+
+  @@index([userId, readAt, createdAt])
+}
+
+model NotificationDelivery {
+  id             String              @id @default(uuid())
+  notificationId String
+  channel        NotificationChannel
+  status         DeliveryStatus      @default(PENDING)
+  sentAt         DateTime?
+  failureReason  String?
+  createdAt      DateTime            @default(now())
+  notification   Notification        @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@unique([notificationId, channel])
+}
+
+model Challenge {
+  id             String                   @id @default(uuid())
+  creatorId      String
+  opponentId     String
+  subjectId      String?
+  subjectKey     String?
+  subjectLabel   String?
+  type           ChallengeType
+  targetValue    Int
+  resolutionType ChallengeResolution
+  startsAt       DateTime
+  endsAt         DateTime
+  status         ChallengeStatus          @default(PENDING)
+  winnerId       String?
+  shareToken     String                   @unique
+  shareEnabled   Boolean                  @default(false)
+  acceptedAt     DateTime?
+  resolvedAt     DateTime?
+  cancelledAt    DateTime?
+  rematchOfId    String?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  creator        User                     @relation("ChallengeCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  opponent       User                     @relation("ChallengeOpponent", fields: [opponentId], references: [id], onDelete: Cascade)
+  winner         User?                    @relation("ChallengeWinner", fields: [winnerId], references: [id], onDelete: SetNull)
+  rematchOf      Challenge?               @relation("ChallengeRematches", fields: [rematchOfId], references: [id], onDelete: SetNull)
+  rematches      Challenge[]              @relation("ChallengeRematches")
+  subject        Subject?                 @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  progress       ChallengeProgress[]
+  events         ChallengeProgressEvent[]
+  badgeAwards    UserBadge[]
+
+  @@index([creatorId, status, createdAt])
+  @@index([opponentId, status, createdAt])
+  @@index([status, startsAt, endsAt])
+}
+
+model ChallengeProgress {
+  id               String                   @id @default(uuid())
+  challengeId      String
+  userId           String
+  currentValue     Int                      @default(0)
+  targetReachedAt  DateTime?
+  lastCalculatedAt DateTime                 @default(now())
+  finalValue       Int?
+  challenge        Challenge                @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user             User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events           ChallengeProgressEvent[]
+
+  @@unique([challengeId, userId])
+}
+
+model ChallengeProgressEvent {
+  id             String              @id @default(uuid())
+  challengeId    String
+  progressId     String
+  sourceType     ChallengeSourceType
+  sourceId       String
+  eventType      ChallengeEventType  @default(SOURCE)
+  deltaValue     Int
+  idempotencyKey String              @unique
+  occurredAt     DateTime
+  createdAt      DateTime            @default(now())
+  challenge      Challenge           @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  progress       ChallengeProgress   @relation(fields: [progressId], references: [id], onDelete: Cascade)
+
+  @@index([challengeId, occurredAt])
+  @@index([progressId, sourceType, sourceId])
+}
+
+model BadgeDefinition {
+  id          String      @id @default(uuid())
+  key         String      @unique
+  name        String
+  description String
+  iconKey     String
+  criteria    Json
+  createdAt   DateTime    @default(now())
+  awards      UserBadge[]
+}
+
+model UserBadge {
+  id          String          @id @default(uuid())
+  awardKey    String          @unique
+  userId      String
+  badgeId     String
+  challengeId String?
+  awardedAt   DateTime        @default(now())
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge       BadgeDefinition @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  challenge   Challenge?      @relation(fields: [challengeId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, badgeId, challengeId])
+  @@index([userId, awardedAt])
+}
+
+model LeaderboardSnapshot {
+  id           String             @id @default(uuid())
+  snapshotKey  String             @unique
+  scope        LeaderboardScope
+  ownerUserId  String?
+  academicYear Int?
+  periodStart  DateTime
+  periodEnd    DateTime
+  metric       LeaderboardMetric
+  generatedAt  DateTime           @default(now())
+  owner        User?              @relation("LeaderboardOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  entries      LeaderboardEntry[]
+
+  @@index([scope, metric, periodStart])
+  @@index([ownerUserId, metric, periodStart])
+}
+
+model LeaderboardEntry {
+  id             String              @id @default(uuid())
+  snapshotId     String
+  userId         String
+  rank           Int
+  value          Int
+  secondaryValue Int?
+  snapshot       LeaderboardSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([snapshotId, userId])
+  @@index([snapshotId, rank])
+}
+
+model AIInsight {
+  id             String    @id @default(uuid())
+  userId         String
+  aiJobId        String?   @unique
+  type           String
+  title          String
+  content        String
+  supportingData Json
+  model          String
+  validFrom      DateTime  @default(now())
+  validUntil     DateTime?
+  dismissedAt    DateTime?
+  purgeAt        DateTime
+  createdAt      DateTime  @default(now())
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  aiJob          AIJob?    @relation("AIInsightJob", fields: [aiJobId], references: [id], onDelete: SetNull)
+
+  @@index([userId, type, createdAt])
+}
+
+model AIJob {
+  id            String            @id @default(uuid())
+  userId        String
+  jobKey        String            @unique
+  type          String
+  status        AIJobStatus       @default(QUEUED)
+  inputHash     String
+  attempts      Int               @default(0)
+  maxAttempts   Int               @default(2)
+  model         String
+  promptVersion String
+  errorCode     String?
+  metadata      Json?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  failedAt      DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  insight       AIInsight?        @relation("AIInsightJob")
+  examPlan      ExamPlan?         @relation("ExamPlanJob")
+  usageLogs     ServiceUsageLog[]
+
+  @@index([userId, type, createdAt])
+  @@index([status, createdAt])
+}
+
+model ExamPlan {
+  id              String         @id @default(uuid())
+  userId          String
+  aiJobId         String?        @unique
+  inputHash       String
+  title           String
+  overview        String?
+  examAt          DateTime
+  syllabusText    String?
+  status          ExamPlanStatus @default(GENERATING)
+  locale          AppLocale      @default(EN)
+  model           String
+  promptVersion   String
+  contextPurgeAt  DateTime
+  contextPurgedAt DateTime?
+  acceptedAt      DateTime?
+  rejectedAt      DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  aiJob           AIJob?         @relation("ExamPlanJob", fields: [aiJobId], references: [id], onDelete: SetNull)
+  items           ExamPlanItem[]
+
+  @@index([userId, status, createdAt])
+  @@index([userId, inputHash, createdAt])
+}
+
+model ExamPlanItem {
+  id               String    @id @default(uuid())
+  examPlanId       String
+  subjectId        String?
+  title            String
+  notes            String?
+  plannedDate      DateTime
+  estimatedMinutes Int
+  sortOrder        Int
+  accepted         Boolean   @default(false)
+  acceptedAt       DateTime?
+  rejectedAt       DateTime?
+  createdTaskId    String?   @unique
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  examPlan         ExamPlan  @relation(fields: [examPlanId], references: [id], onDelete: Cascade)
+  subject          Subject?  @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  createdTask      Task?     @relation("ExamPlanCreatedTask", fields: [createdTaskId], references: [id], onDelete: SetNull)
+
+  @@index([examPlanId, sortOrder])
+}
+
+model DailyUserMetric {
+  id                String   @id @default(uuid())
+  userId            String
+  metricDate        DateTime
+  timezone          String   @default("Africa/Cairo")
+  studyMinutes      Int      @default(0)
+  plannedMinutes    Int      @default(0)
+  tasksCompleted    Int      @default(0)
+  tasksDue          Int      @default(0)
+  distractionCount  Int      @default(0)
+  averageFocusScore Float?
+  currentStreak     Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, metricDate])
+}
+
+model ServiceUsageLog {
+  id          String   @id @default(uuid())
+  userId      String?
+  aiJobId     String?
+  service     String
+  operation   String
+  model       String?
+  units       Int      @default(1)
+  inputUnits  Int?
+  outputUnits Int?
+  metadata    Json?
+  occurredAt  DateTime @default(now())
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  aiJob       AIJob?   @relation(fields: [aiJobId], references: [id], onDelete: SetNull)
+
+  @@index([service, occurredAt])
+  @@index([userId, service, occurredAt])
+  @@index([aiJobId, occurredAt])
+}

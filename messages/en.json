@@ -1,0 +1,17 @@
+{
+  "common": { "appName": "Alex Study", "foundation": "Phase 1 foundation is ready." },
+  "tasks": {
+    "title": "What comes next?",
+    "new": "New task",
+    "filters": {
+      "all": "All",
+      "today": "Today",
+      "week": "This week",
+      "overdue": "Overdue",
+      "completed": "Completed"
+    },
+    "empty": "No tasks in this view",
+    "aiLabel": "AI-assisted",
+    "aiNotice": "Nothing is saved as a task until you review and confirm it."
+  }
+}
