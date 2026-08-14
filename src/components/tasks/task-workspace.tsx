@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import {
   DndContext,
@@ -30,6 +30,8 @@ import {
   Calendar,
   Clock,
   BookOpen,
+  Filter,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -59,42 +61,53 @@ function SortableTask({
     id: task.id,
   });
 
+  const isCompleted = task.status === "COMPLETED";
+
   return (
     <article
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`task-row ${isDragging ? "dragging" : ""}`}
+      className={`task-row ${isDragging ? "dragging" : ""} ${isCompleted ? "task-completed" : ""}`}
     >
       <input
         type="checkbox"
         checked={selected}
         onChange={toggle}
+        className="task-checkbox"
         aria-label={ar ? `تحديد ${task.title}` : `Select ${task.title}`}
       />
+
       <button
         className="drag-handle"
         {...attributes}
         {...listeners}
         aria-label={ar ? `اسحب لإعادة ترتيب ${task.title}` : `Drag to reorder ${task.title}`}
       >
-        <GripVertical className="w-4 h-4 text-muted" aria-hidden="true" />
+        <GripVertical className="w-4 h-4 text-muted hover:text-foreground transition-colors" aria-hidden="true" />
       </button>
+
       <div className="task-main">
         <div className="task-title-line">
-          <Link href={`/tasks/${task.id}`}>{task.title}</Link>
+          <Link
+            href={`/tasks/${task.id}`}
+            className={`task-title-link ${isCompleted ? "line-through text-muted" : "text-foreground font-semibold"}`}
+          >
+            {task.title}
+          </Link>
           <span className={`priority priority-${task.priority.toLowerCase()}`}>
             {task.priority}
           </span>
         </div>
+
         <div className="task-meta">
           {task.subject && (
-            <span className="flex items-center gap-1">
-              <BookOpen className="w-3.5 h-3.5" />
+            <span className="course-pill-tag" data-color={task.subject.colorToken}>
+              <span className="course-color-dot" data-color={task.subject.colorToken} />
               {task.subject.name}
             </span>
           )}
           {task.dueAt && (
-            <time className="flex items-center gap-1">
+            <time className="flex items-center gap-1 text-xs text-muted">
               <Calendar className="w-3.5 h-3.5" />
               {new Intl.DateTimeFormat(locale === "ar" ? "ar-EG" : "en-GB", {
                 dateStyle: "medium",
@@ -103,23 +116,25 @@ function SortableTask({
             </time>
           )}
           {task.estimatedMinutes && (
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 text-xs text-muted">
               <Clock className="w-3.5 h-3.5" />
               {task.estimatedMinutes} {ar ? "د" : "min"}
             </span>
           )}
           {task.subtasks.length > 0 && (
-            <span>
+            <span className="text-xs text-muted px-1.5 py-0.5 rounded bg-surface-sunken">
               {task.subtasks.filter((s) => s.status === "COMPLETED").length}/{task.subtasks.length}
             </span>
           )}
         </div>
       </div>
+
       <div className="row-actions">
         <button
           onClick={() => move(-1)}
           aria-label={ar ? "تحريك لأعلى" : "Move up"}
           title={ar ? "تحريك لأعلى" : "Move up"}
+          className="p-1 rounded hover:bg-surface-hover text-muted hover:text-foreground transition-colors"
         >
           <ChevronUp className="w-4 h-4" />
         </button>
@@ -127,25 +142,18 @@ function SortableTask({
           onClick={() => move(1)}
           aria-label={ar ? "تحريك لأسفل" : "Move down"}
           title={ar ? "تحريك لأسفل" : "Move down"}
+          className="p-1 rounded hover:bg-surface-hover text-muted hover:text-foreground transition-colors"
         >
           <ChevronDown className="w-4 h-4" />
         </button>
-        <button
-          className="compact-action inline-flex items-center gap-1"
+        <Button
+          variant={isCompleted ? "secondary" : "subtle"}
+          size="sm"
           onClick={complete}
+          leftIcon={isCompleted ? <RotateCcw className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />}
         >
-          {task.status === "COMPLETED" ? (
-            <>
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>{ar ? "إعادة فتح" : "Reopen"}</span>
-            </>
-          ) : (
-            <>
-              <Check className="w-3.5 h-3.5" />
-              <span>{ar ? "إنجاز" : "Done"}</span>
-            </>
-          )}
-        </button>
+          {isCompleted ? (ar ? "إعادة فتح" : "Reopen") : (ar ? "إنجاز" : "Done")}
+        </Button>
       </div>
     </article>
   );
@@ -162,10 +170,13 @@ export function TaskWorkspace({
   const [tasks, setTasks] = useState<Task[]>([]);
   const [subjects, setSubjects] = useState(initialSubjects);
   const [filter, setFilter] = useState<(typeof filters)[number]>("all");
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [showAddCourse, setShowAddCourse] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -250,16 +261,106 @@ export function TaskWorkspace({
       setSubjects((current) =>
         [...current, data.subject].sort((a, b) => a.name.localeCompare(b.name))
       );
+      setShowAddCourse(false);
     }
   }
+
+  // Filter tasks by selected course if active
+  const filteredTasks = useMemo(() => {
+    if (!selectedSubjectId) return tasks;
+    return tasks.filter((t) => t.subject?.id === selectedSubjectId);
+  }, [tasks, selectedSubjectId]);
 
   const labels = ar
     ? ["الكل", "اليوم", "هذا الأسبوع", "متأخرة", "مكتملة"]
     : ["All", "Today", "This week", "Overdue", "Completed"];
 
   return (
-    <>
+    <div className="task-workspace-container">
+      {/* 1. Courses Filter Bar */}
+      <div className="courses-filter-bar">
+        <div className="courses-filter-scroll">
+          <button
+            type="button"
+            onClick={() => setSelectedSubjectId(null)}
+            className={`course-filter-chip ${selectedSubjectId === null ? "active" : ""}`}
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>{ar ? "كل المواد" : "All Courses"}</span>
+            <span className="count-badge">{tasks.length}</span>
+          </button>
+
+          {subjects.map((s) => {
+            const count = tasks.filter((t) => t.subject?.id === s.id).length;
+            const isSelected = selectedSubjectId === s.id;
+            return (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => setSelectedSubjectId(isSelected ? null : s.id)}
+                className={`course-filter-chip ${isSelected ? "active" : ""}`}
+                data-color={s.colorToken}
+              >
+                <span className="course-color-dot" data-color={s.colorToken} />
+                <span>{s.name}</span>
+                {count > 0 && <span className="count-badge">{count}</span>}
+              </button>
+            );
+          })}
+
+          <button
+            type="button"
+            onClick={() => setShowAddCourse(!showAddCourse)}
+            className="course-filter-add-btn"
+            title={ar ? "إضافة مقرر جديد" : "Add new course"}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>{ar ? "مقرر جديد" : "New Course"}</span>
+          </button>
+        </div>
+
+        {/* Inline Add Course Popover Form */}
+        {showAddCourse && (
+          <form action={addSubject} className="inline-add-course-form">
+            <div className="flex items-center gap-2 flex-1 min-w-[220px]">
+              <input
+                id="subject-name"
+                name="name"
+                required
+                autoFocus
+                className="w-full px-3 py-1.5 text-sm rounded-md border border-line bg-surface text-foreground"
+                placeholder={ar ? "اسم المادة (مثال: Pharmacology)..." : "Course name (e.g. Pharmacology)..."}
+              />
+            </div>
+            <select
+              name="colorToken"
+              className="px-2 py-1.5 text-xs rounded-md border border-line bg-surface text-foreground"
+            >
+              <option value="teal">{ar ? "فيروزي" : "Teal"}</option>
+              <option value="coral">{ar ? "مرجاني" : "Coral"}</option>
+              <option value="amber">{ar ? "كهرماني" : "Amber"}</option>
+              <option value="violet">{ar ? "بنفسجي" : "Violet"}</option>
+              <option value="blue">{ar ? "أزرق" : "Blue"}</option>
+              <option value="emerald">{ar ? "زمردي" : "Emerald"}</option>
+            </select>
+            <Button variant="primary" size="sm" type="submit">
+              {ar ? "حفظ" : "Save"}
+            </Button>
+            <button
+              type="button"
+              onClick={() => setShowAddCourse(false)}
+              className="p-1 text-muted hover:text-foreground"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </form>
+        )}
+      </div>
+
+      {/* 2. Fast Inline Task Capture */}
       <QuickAdd locale={locale} subjects={subjects} onSaved={() => void load()} />
+
+      {/* 3. Task Management Section */}
       <section className="task-board">
         <div className="task-toolbar">
           <div
@@ -278,13 +379,14 @@ export function TaskWorkspace({
               </button>
             ))}
           </div>
+
           <Button
-            variant="primary"
+            variant="secondary"
             size="sm"
             leftIcon={<Plus className="w-4 h-4" />}
-            onClick={() => setShowForm(true)}
+            onClick={() => setShowForm(!showForm)}
           >
-            {ar ? "مهمة جديدة" : "New task"}
+            {ar ? "نموذج مفصل" : "Detailed Form"}
           </Button>
         </div>
 
@@ -294,7 +396,7 @@ export function TaskWorkspace({
             role="region"
             aria-label={ar ? "إجراءات جماعية" : "Bulk actions"}
           >
-            <span className="font-medium">
+            <span className="font-medium text-sm">
               {selected.length} {ar ? "محددة" : "selected"}
             </span>
             <Button
@@ -325,7 +427,7 @@ export function TaskWorkspace({
         )}
 
         {showForm && (
-          <div className="editor-panel">
+          <div className="editor-panel p-4 border-b border-line bg-surface-sunken">
             <TaskForm
               subjects={subjects}
               locale={locale}
@@ -339,31 +441,35 @@ export function TaskWorkspace({
         )}
 
         {loading ? (
-          <div className="task-state" role="status">
+          <div className="task-state p-8 text-center text-muted" role="status">
             <span className="loader" />
-            {ar ? "جارٍ تحميل خطتك…" : "Loading your plan…"}
+            <p className="mt-2 text-sm">{ar ? "جارٍ تحميل خطتك…" : "Loading tasks…"}</p>
           </div>
         ) : error ? (
-          <div className="task-state error-state" role="alert">
-            <p>{error}</p>
+          <div className="task-state error-state p-6 text-center" role="alert">
+            <p className="text-danger mb-3">{error}</p>
             <Button variant="secondary" size="sm" onClick={() => void load()}>
               {ar ? "إعادة المحاولة" : "Try again"}
             </Button>
           </div>
-        ) : tasks.length === 0 ? (
+        ) : filteredTasks.length === 0 ? (
           <EmptyState
-            title={ar ? "لا توجد مهام في هذا العرض" : "No tasks in this view"}
+            title={ar ? "لا توجد مهام مطابقة" : "No tasks found"}
             description={
-              ar ? "أضف خطوة صغيرة وواضحة لتبدأ." : "Add one clear, manageable step to begin."
+              selectedSubjectId
+                ? ar
+                  ? "لا توجد مهام مسجلة لهذا المقرر حاليًا."
+                  : "No tasks registered under this course yet."
+                : ar
+                ? "أضف خطوة دراسية جديدة من شريط الإدخال أعلاه."
+                : "Type a task in the quick-input bar above to get started."
             }
-            actionLabel={ar ? "إضافة مهمة" : "New task"}
-            onAction={() => setShowForm(true)}
           />
         ) : (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={dragEnd}>
-            <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+            <SortableContext items={filteredTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
               <div className="task-list">
-                {tasks.map((task) => (
+                {filteredTasks.map((task) => (
                   <SortableTask
                     key={task.id}
                     task={task}
@@ -383,84 +489,6 @@ export function TaskWorkspace({
           </DndContext>
         )}
       </section>
-
-      <section className="courses-panel mt-6">
-        <div className="courses-panel-header">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary-subtle text-primary">
-              <BookOpen className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-foreground m-0">
-                  {ar ? "نظّم حسب المقرر" : "Organize by course"}
-                </h2>
-                <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-surface-sunken border border-line text-muted">
-                  {subjects.length} {ar ? "مواد" : "courses"}
-                </span>
-              </div>
-              <p className="text-xs text-muted mt-0.5">
-                {ar
-                  ? "قسّم مهامك وجلسات تركيزك حسب المواد الأكاديمية."
-                  : "Categorize your tasks, goals, and focus sessions by academic course."}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="courses-grid">
-          {subjects.length === 0 ? (
-            <p className="text-sm text-muted py-2">
-              {ar ? "لا توجد مقررات دراسية مضافة بعد." : "No courses added yet."}
-            </p>
-          ) : (
-            subjects.map((s) => (
-              <div key={s.id} className="course-card" data-color={s.colorToken}>
-                <span className="course-color-indicator" data-color={s.colorToken} />
-                <span className="course-name">{s.name}</span>
-              </div>
-            ))
-          )}
-        </div>
-
-        <form action={addSubject} className="add-course-form">
-          <div className="flex-1 min-w-[200px]">
-            <input
-              id="subject-name"
-              name="name"
-              required
-              className="course-input"
-              placeholder={
-                ar
-                  ? "اسم المقرر الجديد (مثال: Pathology)..."
-                  : "New course name (e.g. Pathology)..."
-              }
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <select
-              name="colorToken"
-              className="course-select"
-              aria-label={ar ? "لون المقرر" : "Course color"}
-            >
-              <option value="teal">{ar ? "فيروزي (Teal)" : "Teal"}</option>
-              <option value="coral">{ar ? "مرجاني (Coral)" : "Coral"}</option>
-              <option value="amber">{ar ? "كهرماني (Amber)" : "Amber"}</option>
-              <option value="violet">{ar ? "بنفسجي (Violet)" : "Violet"}</option>
-              <option value="blue">{ar ? "أزرق (Blue)" : "Blue"}</option>
-              <option value="emerald">{ar ? "زمردي (Emerald)" : "Emerald"}</option>
-            </select>
-            <Button
-              variant="primary"
-              size="sm"
-              type="submit"
-              leftIcon={<Plus className="w-3.5 h-3.5" />}
-            >
-              {ar ? "إضافة المقرر" : "Add course"}
-            </Button>
-          </div>
-        </form>
-      </section>
-    </>
+    </div>
   );
 }

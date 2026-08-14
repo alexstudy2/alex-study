@@ -641,228 +641,328 @@
   max-width: 86rem;
 }
 
-/* ================= Quick Add (AI Draft) Panel ================= */
-.quick-add-panel {
+/* ================= Minimalist Task Workspace & Courses ================= */
+.task-workspace-container {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  padding: var(--space-5) var(--space-6);
-  border-radius: var(--radius-xl);
-  border: 1px solid var(--line);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 6%, var(--surface)), var(--surface));
-  box-shadow: var(--shadow-sm);
-  margin-bottom: var(--space-6);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-.quick-add-panel:focus-within {
-  border-color: color-mix(in srgb, var(--primary) 45%, transparent);
-  box-shadow: var(--shadow-md);
-}
-
-.quick-add-info {
+/* 1. Courses Filter Bar */
+.courses-filter-bar {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
 }
 
-.quick-add-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  font-size: var(--text-xs);
-  font-weight: 700;
-  color: var(--primary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.quick-add-title {
-  font-size: clamp(1.2rem, 2.5vw, 1.45rem);
-  font-weight: 700;
-  color: var(--foreground);
-  margin: 0;
-  line-height: 1.25;
-}
-
-.quick-add-subtitle {
-  font-size: var(--text-xs);
-  color: var(--muted);
-  margin: 0;
-  max-width: 65ch;
-  line-height: 1.5;
-}
-
-.quick-add-input-wrapper {
-  width: 100%;
-}
-
-.quick-add-input-row {
+.courses-filter-scroll {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  flex-wrap: wrap;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
 }
 
-.quick-add-input {
-  flex: 1;
-  min-width: 260px;
-  min-height: 42px;
-  padding: 0.6rem 1rem;
-  border-radius: var(--radius-md);
+.courses-filter-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.course-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.4rem 0.85rem;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  background: var(--surface-sunken);
   border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--foreground);
-  font-size: var(--text-sm);
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
   transition: all var(--transition-fast);
 }
 
-.quick-add-input:focus {
-  outline: none;
+.course-filter-chip:hover {
+  background: var(--surface-hover);
+  color: var(--foreground);
+  border-color: var(--line-strong);
+}
+
+.course-filter-chip.active {
+  background: var(--primary);
+  color: #ffffff;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
+  box-shadow: var(--shadow-xs);
 }
 
-.quick-add-input::placeholder {
+.course-filter-chip .count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--foreground) 10%, transparent);
+  color: inherit;
+}
+
+.course-filter-chip.active .count-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.course-filter-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0.4rem 0.85rem;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  background: transparent;
+  border: 1px dashed var(--line-strong);
   color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
 }
 
-.draft-editor-card {
+.course-filter-add-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--surface-hover);
+}
+
+.inline-add-course-form {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-4);
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
   border-radius: var(--radius-lg);
-  border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
   background: var(--surface);
+  border: 1px solid var(--line);
   box-shadow: var(--shadow-sm);
 }
 
-/* ================= Organize by Course Panel ================= */
-.courses-panel {
+/* 2. Fast Inline Task Quick Capture */
+.task-quick-capture {
+  width: 100%;
+}
+
+.quick-capture-form {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
+  transition: all var(--transition-fast);
+}
+
+.quick-capture-form:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.quick-capture-input-row {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  padding: var(--space-5);
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  flex-wrap: wrap;
+}
+
+.quick-capture-text {
+  flex: 1;
+  min-width: 220px;
+  min-height: 40px;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  outline: none;
+}
+
+.quick-capture-text::placeholder {
+  color: var(--muted);
+}
+
+.quick-capture-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.quick-capture-select {
+  padding: 0.35rem 0.65rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--surface-sunken);
+  color: var(--foreground);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.quick-capture-select:focus {
+  border-color: var(--primary);
+}
+
+/* 3. Task Board & Rows */
+.task-board {
   border-radius: var(--radius-xl);
   border: 1px solid var(--line);
   background: var(--surface);
   box-shadow: var(--shadow-xs);
+  overflow: hidden;
 }
 
-.courses-panel-header {
+.task-toolbar {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding-bottom: var(--space-3);
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--line);
+  background: var(--surface);
 }
 
-.courses-grid {
+.task-list {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
+  flex-direction: column;
 }
 
-.course-card {
+.task-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  transition: background var(--transition-fast);
+}
+
+.task-row:last-child {
+  border-bottom: 0;
+}
+
+.task-row:hover {
+  background: var(--surface-hover);
+}
+
+.task-row.task-completed {
+  opacity: 0.65;
+}
+
+.task-checkbox {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1.5px solid var(--line-strong);
+  cursor: pointer;
+  accent-color: var(--primary);
+}
+
+.task-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.task-title-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.task-title-link {
+  font-size: var(--text-sm);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.task-title-link:hover {
+  color: var(--primary);
+}
+
+.task-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.course-pill-tag {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: 0.45rem 0.85rem;
+  gap: 5px;
+  padding: 2px 8px;
   border-radius: var(--radius-full);
-  border: 1px solid var(--line);
-  background: var(--surface-sunken);
-  font-size: var(--text-sm);
+  font-size: 11px;
   font-weight: 600;
+  background: var(--surface-sunken);
+  border: 1px solid var(--line);
   color: var(--foreground);
-  transition: all var(--transition-fast);
 }
 
-.course-card:hover {
-  background: var(--surface-hover);
-  border-color: var(--line-strong);
-  transform: translateY(-1px);
-}
-
-.course-color-indicator {
-  width: 8px;
-  height: 8px;
+.course-color-dot {
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  flex-shrink: 0;
   background: var(--primary);
+  flex-shrink: 0;
 }
 
-.course-color-indicator[data-color="teal"] {
+.course-color-dot[data-color="teal"] {
   background: #0d9488;
 }
 
-.course-color-indicator[data-color="coral"] {
+.course-color-dot[data-color="coral"] {
   background: #f43f5e;
 }
 
-.course-color-indicator[data-color="amber"] {
+.course-color-dot[data-color="amber"] {
   background: #f59e0b;
 }
 
-.course-color-indicator[data-color="violet"] {
+.course-color-dot[data-color="violet"] {
   background: #8b5cf6;
 }
 
-.course-color-indicator[data-color="blue"] {
+.course-color-dot[data-color="blue"] {
   background: #3b82f6;
 }
 
-.course-color-indicator[data-color="emerald"] {
+.course-color-dot[data-color="emerald"] {
   background: #10b981;
 }
 
-.course-name {
-  font-size: var(--text-sm);
-}
-
-.add-course-form {
+.row-actions {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--line);
+  gap: var(--space-1);
 }
 
-.course-input {
-  width: 100%;
-  min-height: 38px;
-  padding: 0.45rem 0.75rem;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--line);
-  background: var(--surface-sunken);
-  color: var(--foreground);
-  font-size: var(--text-sm);
-  transition: all var(--transition-fast);
+.drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  cursor: grab;
+  padding: 4px;
+  border-radius: var(--radius-sm);
 }
 
-.course-input:focus {
-  outline: none;
-  background: var(--surface);
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
-}
-
-.course-select {
-  min-height: 38px;
-  padding: 0.45rem 0.75rem;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--line);
-  background: var(--surface-sunken);
-  color: var(--foreground);
-  font-size: var(--text-sm);
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.course-select:focus {
-  outline: none;
-  background: var(--surface);
-  border-color: var(--primary);
+.drag-handle:active {
+  cursor: grabbing;
 }
