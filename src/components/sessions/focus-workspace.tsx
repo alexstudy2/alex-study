@@ -99,7 +99,7 @@ export function FocusWorkspace(props: Props) {
   const [reflection, setReflection] = useState("");
   const [focusMode, setFocusMode] = useState(false);
   const [sound, setSound] = useState(props.preferences.ambientSound ?? "off");
-  const audioRef = useRef<AudioContext | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const duration =
     mode === "FOCUS"
@@ -196,18 +196,18 @@ export function FocusWorkspace(props: Props) {
 
   function toggleSound(value: string) {
     setSound(value);
-    audioRef.current?.close();
-    audioRef.current = null;
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
     if (value === "off") return;
-    const context = new AudioContext();
-    const oscillator = context.createOscillator();
-    const gain = context.createGain();
-    oscillator.type = value === "rain" ? "sine" : "triangle";
-    oscillator.frequency.value = value === "rain" ? 180 : 90;
-    gain.gain.value = Math.min(0.04, props.preferences.ambientVolume / 2500);
-    oscillator.connect(gain).connect(context.destination);
-    oscillator.start();
-    audioRef.current = context;
+    const audio = new Audio(`/sounds/${value}.mp3`);
+    audio.loop = true;
+    audio.volume = Math.min(1, props.preferences.ambientVolume / 100);
+    audio.play().catch(() => {
+      /* autoplay blocked — user must interact first */
+    });
+    audioRef.current = audio;
   }
 
   return (

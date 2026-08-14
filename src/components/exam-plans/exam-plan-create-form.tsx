@@ -68,7 +68,7 @@ export function ExamPlanCreateForm({
   }
 
   return (
-    <main className="exam-plan-shell" dir={ar ? "rtl" : "ltr"}>
+    <main className="page-shell" dir={ar ? "rtl" : "ltr"}>
       <header className="exam-plan-header">
         <div>
           <Link className="wordmark" href="/dashboard">

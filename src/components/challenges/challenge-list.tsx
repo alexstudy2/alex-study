@@ -42,7 +42,7 @@ export function ChallengeList({
   );
 
   return (
-    <main className="challenge-shell" dir={ar ? "rtl" : "ltr"}>
+    <main className="page-shell" dir={ar ? "rtl" : "ltr"}>
       <header className="challenge-header">
         <div>
           <Link className="wordmark" href="/dashboard">
@@ -56,7 +56,7 @@ export function ChallengeList({
               : "Only eligible activity counts, corrections stay visible, and you choose how the result is decided."}
           </p>
         </div>
-        <nav className="challenge-header-actions" aria-label={ar ? "التحديات" : "Challenges"}>
+        <nav className="page-header" aria-label={ar ? "التحديات" : "Challenges"}>
           <Link className="secondary-button" href="/leaderboard">
             {ar ? "لوحة المتصدرين" : "Leaderboard"}
           </Link>

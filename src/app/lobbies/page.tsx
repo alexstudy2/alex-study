@@ -17,7 +17,7 @@ export default async function LobbiesPage() {
   });
   const ar = user.locale === "AR";
   return (
-    <main className="lobbies-shell" dir={ar ? "rtl" : "ltr"}>
+    <main className="page-shell" dir={ar ? "rtl" : "ltr"}>
       <header className="lobbies-header">
         <div>
           <Link className="wordmark" href="/dashboard">

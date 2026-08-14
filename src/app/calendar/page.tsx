@@ -8,7 +8,7 @@ export default async function CalendarPage() {
   const events = await calendarEvents(user.id, now, "month");
   const locale = user.locale === "AR" ? "ar" : "en";
   return (
-    <main className="calendar-shell">
+    <main className="page-shell">
       <header className="calendar-header">
         <div>
           <Link className="wordmark" href="/dashboard">

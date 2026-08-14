@@ -53,6 +53,9 @@ export function CalendarWorkspace({
   const monthStart = startOfMonth(toZonedTime(anchor, "Africa/Cairo"));
   const gridStart = addDays(monthStart, -monthStart.getDay());
   const days = Array.from({ length: 42 }, (_, index) => addDays(gridStart, index));
+  const weekAnchor = toZonedTime(anchor, "Africa/Cairo");
+  const weekStart = addDays(weekAnchor, -weekAnchor.getDay());
+  const weekDays = Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
   return (
     <section className="calendar-workspace" dir={ar ? "rtl" : "ltr"}>
       <div className="calendar-toolbar">
@@ -129,6 +132,49 @@ export function CalendarWorkspace({
                     </Link>
                   ))}
                   {items.length > 3 && <span className="more-events">+{items.length - 3}</span>}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ) : view === "week" ? (
+        <div className="week-grid">
+          {weekDays.map((day) => {
+            const key = format(day, "yyyy-MM-dd");
+            const items = groups.get(key) ?? [];
+            const isToday = key === format(toZonedTime(new Date(), "Africa/Cairo"), "yyyy-MM-dd");
+            return (
+              <article className={`week-day${isToday ? " today" : ""}`} key={key}>
+                <header className="week-day-header">
+                  <span className="week-day-name">
+                    {new Intl.DateTimeFormat(ar ? "ar-EG" : "en-GB", {
+                      weekday: "short",
+                      timeZone: "Africa/Cairo",
+                    }).format(day)}
+                  </span>
+                  <time className="week-day-number">{day.getDate()}</time>
+                </header>
+                <div className="week-day-events">
+                  {items.length ? (
+                    items.map((event) => (
+                      <Link
+                        className={`calendar-event ${event.type}`}
+                        href={event.type === "task" ? `/tasks/${event.id}` : `/sessions/${event.id}`}
+                        key={`${event.type}-${event.id}`}
+                      >
+                        <span className="event-time">
+                          {new Intl.DateTimeFormat(ar ? "ar-EG" : "en-GB", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            timeZone: "Africa/Cairo",
+                          }).format(new Date(event.startsAt))}
+                        </span>
+                        <span>{event.title}</span>
+                      </Link>
+                    ))
+                  ) : (
+                    <p className="empty-day">{ar ? "—" : "—"}</p>
+                  )}
                 </div>
               </article>
             );

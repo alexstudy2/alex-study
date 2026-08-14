@@ -70,7 +70,7 @@ export function LeaderboardWorkspace({
 
   const myRow = data.rows.find((row) => row.userId === userId);
   return (
-    <main className="leaderboard-shell" dir={ar ? "rtl" : "ltr"}>
+    <main className="page-shell" dir={ar ? "rtl" : "ltr"}>
       <header className="leaderboard-header">
         <div>
           <Link className="wordmark" href="/dashboard">
@@ -85,7 +85,7 @@ export function LeaderboardWorkspace({
           </p>
         </div>
         <nav
-          className="challenge-header-actions"
+          className="page-header"
           aria-label={ar ? "التنقل الاجتماعي" : "Social navigation"}
         >
           <Link className="secondary-button" href="/friends">

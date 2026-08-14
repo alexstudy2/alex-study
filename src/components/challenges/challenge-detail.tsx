@@ -114,7 +114,7 @@ export function ChallengeDetail({
             {resolutionLabel(challenge.resolutionType, locale)}
           </p>
         </div>
-        <div className="challenge-header-actions">
+        <div className="page-header">
           <span className="challenge-status" data-status={challenge.status}>
             {statusLabel(challenge.status, locale)}
           </span>

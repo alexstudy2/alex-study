@@ -36,10 +36,10 @@ export function ForgotPasswordForm({ locale }: { locale: Locale }) {
         {ar ? "الرقم الجامعي" : "College ID"}
         <input name="collegeId" autoComplete="username" required />
       </label>
-      <p className="form-feedback" role="status" aria-live="polite">
+      <p id="forgot-password-message" className="form-feedback" role="status" aria-live="polite">
         {message}
       </p>
-      <button className="primary-button" disabled={pending}>
+      <button className="primary-button" disabled={pending} aria-describedby={message ? "forgot-password-message" : undefined}>
         {pending ? (ar ? "جار الإرسال..." : "Sending...") : ar ? "متابعة" : "Continue"}
       </button>
     </form>
@@ -91,10 +91,10 @@ export function ManualResetForm({ locale }: { locale: Locale }) {
           }
         />
       </label>
-      <p className="form-feedback" role="status" aria-live="polite">
+      <p id="manual-reset-message" className="form-feedback" role="status" aria-live="polite">
         {message}
       </p>
-      <button className="primary-button" disabled={pending}>
+      <button className="primary-button" disabled={pending} aria-describedby={message ? "manual-reset-message" : undefined}>
         {pending ? (ar ? "جار الإرسال..." : "Sending...") : ar ? "إرسال الطلب" : "Send request"}
       </button>
     </form>
@@ -153,10 +153,10 @@ export function ResetPasswordForm({ token, locale }: { token: string; locale: Lo
           required
         />
       </label>
-      <p className="form-error" role="alert" aria-live="polite">
+      <p id="reset-password-message" className="form-error" role="alert" aria-live="polite">
         {message}
       </p>
-      <button className="primary-button" disabled={pending}>
+      <button className="primary-button" disabled={pending} aria-describedby={message ? "reset-password-message" : undefined}>
         {pending
           ? ar
             ? "جار التحديث..."

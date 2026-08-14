@@ -9,7 +9,7 @@ export default async function AnalyticsPage() {
   const data = await analyticsAggregate(user.id, from, to);
   const locale = user.locale === "AR" ? "ar" : "en";
   return (
-    <main className="analytics-shell">
+    <main className="page-shell">
       <header className="analytics-header">
         <div>
           <Link className="wordmark" href="/dashboard">

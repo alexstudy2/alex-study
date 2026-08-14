@@ -73,7 +73,7 @@ export default async function DashboardPage() {
     : null;
   const completedWeek = weekTasks.filter((item) => item.status === "COMPLETED").length;
   return (
-    <main className="dashboard-shell" dir={ar ? "rtl" : "ltr"}>
+    <main className="page-shell" dir={ar ? "rtl" : "ltr"}>
       <header className="dashboard-header">
         <div>
           <p className="eyebrow">
@@ -92,7 +92,7 @@ export default async function DashboardPage() {
           </h1>
           <p>{ar ? "خطة اليوم، بهدوء ووضوح." : "Today’s plan, calm and legible."}</p>
         </div>
-        <div className="header-quick-actions">
+        <div className="page-header">
           <Link className="primary-button" href="/tasks">
             {ar ? "+ إضافة مهمة" : "+ New task"}
           </Link>
@@ -175,20 +175,31 @@ export default async function DashboardPage() {
             <Link href="/goals">{ar ? "كل الأهداف" : "All goals"}</Link>
           </div>
           <div className="dashboard-goals">
-            {goals
-              .filter((goal) => goal.status === "ACTIVE")
-              .slice(0, 3)
-              .map((goal) => (
-                <Link href={`/goals/${goal.id}`} key={goal.id}>
-                  <strong>{goal.title}</strong>
-                  <span>
-                    {goal.progress.currentValue} / {goal.targetValue}
-                  </span>
-                  <div className="dashboard-progress">
-                    <i style={{ width: `${goal.progress.percentage}%` }} />
-                  </div>
+            {goals.filter((goal) => goal.status === "ACTIVE").length ? (
+              goals
+                .filter((goal) => goal.status === "ACTIVE")
+                .slice(0, 3)
+                .map((goal) => (
+                  <Link href={`/goals/${goal.id}`} key={goal.id}>
+                    <strong>{goal.title}</strong>
+                    <span>
+                      {goal.progress.currentValue} / {goal.targetValue}
+                    </span>
+                    <div className="dashboard-progress">
+                      <i style={{ width: `${goal.progress.percentage}%` }} />
+                    </div>
+                  </Link>
+                ))
+            ) : (
+              <div className="quiet-state" style={{ padding: "16px", textAlign: "center" }}>
+                <p style={{ margin: "0 0 8px", color: "var(--text-muted)" }}>
+                  {ar ? "لا توجد أهداف نشطة." : "No active goals."}
+                </p>
+                <Link href="/goals" style={{ textDecoration: "underline", color: "var(--accent-base)" }}>
+                  {ar ? "أنشئ هدفك الأول" : "Create your first goal"}
                 </Link>
-              ))}
+              </div>
+            )}
           </div>
         </div>
       </section>

@@ -1,6 +1,6 @@
 export default function Loading() {
   return (
-    <main className="tasks-shell">
+    <main className="page-shell">
       <div className="task-state">
         <span className="loader" />
         Loading tasks…

@@ -16,7 +16,7 @@ export default async function GoalsPage() {
   ]);
   const locale = user.locale === "AR" ? "ar" : "en";
   return (
-    <main className="goals-shell">
+    <main className="page-shell">
       <header className="goals-header">
         <div>
           <Link className="wordmark" href="/dashboard">

@@ -56,10 +56,10 @@ export function SignInForm({ locale }: { locale: Locale }) {
         type="password"
         autoComplete="current-password"
       />
-      <p className="form-error" aria-live="polite">
+      <p id="signin-error" className="form-error" aria-live="polite">
         {error}
       </p>
-      <button className="primary-button" disabled={pending}>
+      <button className="primary-button" disabled={pending} aria-describedby={error ? "signin-error" : undefined}>
         {pending ? (ar ? "جار تسجيل الدخول..." : "Signing in...") : ar ? "تسجيل الدخول" : "Sign in"}
       </button>
     </form>
@@ -137,10 +137,10 @@ export function RegisterForm({ locale }: { locale: Locale }) {
           <option value="AR">العربية</option>
         </select>
       </label>
-      <p className="form-error" aria-live="polite">
+      <p id="register-error" className="form-error" aria-live="polite">
         {error}
       </p>
-      <button className="primary-button" disabled={pending}>
+      <button className="primary-button" disabled={pending} aria-describedby={error ? "register-error" : undefined}>
         {pending
           ? ar
             ? "جار إنشاء الحساب..."

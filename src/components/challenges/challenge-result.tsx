@@ -119,7 +119,7 @@ export function ChallengeResult({
           <p>{resultSummary(challenge, winner?.name ?? null, locale)}</p>
         </div>
         <nav
-          className="challenge-header-actions"
+          className="page-header"
           aria-label={ar ? "إجراءات النتيجة" : "Result actions"}
         >
           <Link className="secondary-button" href={`/challenges/${challenge.id}`}>

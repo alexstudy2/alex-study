@@ -87,14 +87,21 @@ export function AppShell({
     : { SYSTEM: "System theme", LIGHT: "Light theme", DARK: "Dark theme" };
   const ThemeIcon = theme === "SYSTEM" ? Monitor : theme === "LIGHT" ? Sun : Moon;
   async function cycleTheme() {
+    const previous = theme;
     const next = theme === "SYSTEM" ? "LIGHT" : theme === "LIGHT" ? "DARK" : "SYSTEM";
     setTheme(next);
     applyTheme(next);
-    await fetch("/api/me/preferences", {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ theme: next }),
-    });
+    try {
+      const response = await fetch("/api/me/preferences", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ theme: next }),
+      });
+      if (!response.ok) throw new Error("API failure");
+    } catch {
+      setTheme(previous);
+      applyTheme(previous);
+    }
   }
   return (
     <div className="app-frame" dir={ar ? "rtl" : "ltr"}>

@@ -1,5 +1,7 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
+
 type Data = {
   summary: {
     studyMinutes: number;
@@ -36,9 +38,29 @@ export function AnalyticsView({ initialData, locale }: { initialData: Data; loca
     if (response.ok) setData(await response.json());
     setBusy(false);
   }
+
+  if (data.summary.studyMinutes === 0 || !data.daily || data.daily.length === 0) {
+    return (
+      <section className="analytics-view empty-state" dir={ar ? "rtl" : "ltr"} style={{ textAlign: "center", padding: "4rem 1rem" }}>
+        <h2 style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>{ar ? "لا توجد بيانات بعد" : "No data yet"}</h2>
+        <p style={{ color: "var(--muted)", marginBottom: "1.5rem" }}>{ar ? "ابدأ أول جلسة تركيز لك" : "Start your first focus session"}</p>
+        <Link href="/focus" className="primary-button" style={{ display: "inline-block", textDecoration: "none" }}>
+          {ar ? "اذهب للتركيز" : "Go to Focus"}
+        </Link>
+      </section>
+    );
+  }
+
   const max = Math.max(1, ...data.daily.map((x) => x.minutes));
   return (
     <section className="analytics-view" dir={ar ? "rtl" : "ltr"}>
+      <style>{`
+        @media (max-width: 768px) {
+          .analytics-summary {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+        }
+      `}</style>
       <div className="analytics-toolbar">
         <label>
           {ar ? "الفترة" : "Range"}
@@ -71,7 +93,7 @@ export function AnalyticsView({ initialData, locale }: { initialData: Data; loca
           aria-label={ar ? "رسم لدقائق الدراسة اليومية" : "Daily study minutes chart"}
         >
           {data.daily.map((day) => (
-            <div key={day.date}>
+            <div key={day.date} title={`${day.date}: ${day.minutes} ${ar ? "دقيقة" : "min"}`}>
               <i style={{ height: `${Math.max(2, (day.minutes / max) * 100)}%` }} />
               <span>{day.date.slice(5)}</span>
             </div>
@@ -109,6 +131,7 @@ export function AnalyticsView({ initialData, locale }: { initialData: Data; loca
                 <i
                   style={{
                     width: `${(item.minutes / Math.max(1, data.summary.studyMinutes)) * 100}%`,
+                    backgroundColor: `var(--${item.colorToken})`,
                   }}
                 />
               </div>

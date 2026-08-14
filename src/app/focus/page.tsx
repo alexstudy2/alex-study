@@ -31,7 +31,7 @@ export default async function FocusPage() {
   ]);
   const locale = user.locale === "AR" ? "ar" : "en";
   return (
-    <main id="main-content" className="focus-shell">
+    <main id="main-content" className="page-shell">
       <header className="focus-header">
         <div>
           <Link className="wordmark" href="/dashboard">

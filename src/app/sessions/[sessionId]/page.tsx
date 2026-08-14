@@ -18,7 +18,7 @@ export default async function SessionDetailPage({
   if (!session) notFound();
   const ar = user.locale === "AR";
   return (
-    <main className="session-detail-shell" dir={ar ? "rtl" : "ltr"}>
+    <main className="page-shell" dir={ar ? "rtl" : "ltr"}>
       <Link className="back-link" href="/sessions">
         ← {ar ? "كل الجلسات" : "All sessions"}
       </Link>

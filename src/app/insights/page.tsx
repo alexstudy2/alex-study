@@ -15,7 +15,7 @@ export default async function InsightsPage() {
   ]);
   const locale = user.locale === "AR" ? "ar" : "en";
   return (
-    <main className="insights-shell" dir={locale === "ar" ? "rtl" : "ltr"}>
+    <main className="page-shell" dir={locale === "ar" ? "rtl" : "ltr"}>
       <header className="insights-header">
         <div>
           <Link className="wordmark" href="/dashboard">

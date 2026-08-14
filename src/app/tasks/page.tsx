@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
 import { requireUser } from "@/lib/auth/session";
-import Link from "next/link";
 import { TaskWorkspace } from "@/components/tasks/task-workspace";
 export default async function TasksPage() {
   const user = await requireUser();
@@ -11,7 +10,7 @@ export default async function TasksPage() {
   });
   const locale = user.locale === "AR" ? "ar" : "en";
   return (
-    <main id="main-content" className="tasks-shell">
+    <main id="main-content" className="page-shell">
       <header className="tasks-header">
         <div>
           <p className="eyebrow">{locale === "ar" ? "مخطط الدراسة" : "Study planner"}</p>
