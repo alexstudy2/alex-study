@@ -5,12 +5,13 @@ import { requireUser } from "@/lib/auth/session";
 import { getTaskDateWindow } from "@/lib/tasks/dates";
 import { goalsWithProgress } from "@/lib/goals/queries";
 import { PageShell } from "@/components/ui/page-shell";
-import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
+import { QuickAddDashboard } from "@/components/dashboard/quick-add-dashboard";
+import { DashboardTaskItem } from "@/components/dashboard/dashboard-task-item";
+import { TodayStudyCard } from "@/components/dashboard/today-study-card";
 import {
   CalendarDays,
   CheckCircle2,
-  Clock,
   Play,
   Plus,
   Sparkles,
@@ -32,7 +33,7 @@ export default async function DashboardPage() {
   const today = getTaskDateWindow("today", now)!;
   const week = getTaskDateWindow("week", now)!;
 
-  const [dueTasks, weekTasks, todaySessions, weekSessions, goals, insight, timer] =
+  const [todayTasks, weekTasks, todaySessions, weekSessions, goals, insight, timer] =
     await Promise.all([
       prisma.task.findMany({
         where: {
@@ -40,11 +41,18 @@ export default async function DashboardPage() {
           deletedAt: null,
           parentTaskId: null,
           status: { notIn: ["COMPLETED", "CANCELLED"] },
-          dueAt: today,
+          OR: [
+            { dueAt: today },
+            { status: "IN_PROGRESS" },
+            {
+              timerRuns: {
+                some: { mode: "FOCUS", status: { in: ["RUNNING", "PAUSED"] } },
+              },
+            },
+          ],
         },
         include: { subject: true },
-        orderBy: [{ priority: "desc" }, { dueAt: "asc" }],
-        take: 5,
+        orderBy: [{ dueAt: "asc" }, { createdAt: "asc" }],
       }),
       prisma.task.findMany({
         where: { userId: user.id, deletedAt: null, parentTaskId: null, dueAt: week },
@@ -70,17 +78,21 @@ export default async function DashboardPage() {
       }),
       prisma.timerRun.findFirst({
         where: { userId: user.id, status: { in: ["RUNNING", "PAUSED"] } },
-        select: { mode: true, status: true },
+        select: {
+          mode: true,
+          status: true,
+          durationSeconds: true,
+          accumulatedActiveSeconds: true,
+          segmentStartedAt: true,
+        },
       }),
     ]);
 
   const ar = user.locale === "AR";
-  const actual = Math.round(
-    todaySessions.reduce((sum, item) => sum + item.durationSeconds, 0) / 60
-  );
+  const completedTodaySeconds = todaySessions.reduce((sum, item) => sum + item.durationSeconds, 0);
   const planned =
     todaySessions.reduce((sum, item) => sum + item.plannedDurationSeconds, 0) / 60 +
-    dueTasks.reduce((sum, item) => sum + (item.estimatedMinutes ?? 0), 0);
+    todayTasks.reduce((sum, item) => sum + (item.estimatedMinutes ?? 0), 0);
   const weekMinutes = Math.round(
     weekSessions.reduce((sum, item) => sum + item.durationSeconds, 0) / 60
   );
@@ -100,184 +112,211 @@ export default async function DashboardPage() {
   }).format(now);
 
   const NavArrow = ar ? ArrowLeft : ArrowRight;
-
   return (
     <PageShell dir={ar ? "rtl" : "ltr"}>
-      <PageHeader
-        eyebrow={`Alex Study · ${dateFormatted}`}
-        title={ar ? `أهلًا، ${user.name?.split(" ")[0]}` : `Welcome back, ${user.name?.split(" ")[0]}`}
-        description={ar ? "خطة اليوم، بهدوء ووضوح." : "Today's plan, calm and legible."}
-        actions={
-          <>
-            <Button
-              href="/tasks"
-              variant="primary"
-              size="sm"
-              leftIcon={<Plus className="w-4 h-4" />}
-            >
-              {ar ? "إضافة مهمة" : "New task"}
-            </Button>
+      {/* 1. Header Hero Card */}
+      <section className="dashboard-hero-card mb-6">
+        <div className="dashboard-hero-content">
+          <div className="flex flex-col gap-1.5">
+            <span className="eyebrow flex items-center gap-1.5">
+              <CalendarDays className="w-4 h-4 text-primary" />
+              {dateFormatted}
+            </span>
+            <h1 className="dashboard-hero-title">
+              {ar ? `مرحبًا ${user.name?.split(" ")[0]}` : `Welcome, ${user.name?.split(" ")[0]}`}
+            </h1>
+            <p className="dashboard-hero-sub">
+              {ar
+                ? "حدد أولوياتك لليوم وابدأ جلسة تركيز للتقدم بخطوات ثابتة."
+                : "Set your daily priorities and start a focused session to make steady progress."}
+            </p>
+          </div>
+
+          <div className="dashboard-hero-actions">
             <Button
               href="/focus"
-              variant="secondary"
-              size="sm"
+              variant="primary"
+              size="md"
               leftIcon={<Play className="w-4 h-4" />}
             >
-              {ar ? "بدء الجلسة" : "Start focus"}
+              {ar ? "بدء التركيز" : "Start Focus"}
             </Button>
-          </>
-        }
-      />
+            <Button
+              href="/tasks"
+              variant="secondary"
+              size="md"
+              leftIcon={<Plus className="w-4 h-4" />}
+            >
+              {ar ? "إدارة المهام" : "Manage Tasks"}
+            </Button>
+          </div>
+        </div>
+      </section>
 
+      {/* 2. Active Timer Alert (Conditional) */}
       {timer && (
         <Link className="active-timer-banner" href="/focus">
           <div className="flex items-center gap-2">
             <TimerIcon className="w-5 h-5 text-accent animate-pulse" />
-            <span>
+            <span className="font-bold">
               {timer.status === "PAUSED"
                 ? ar
-                  ? "مؤقت متوقف مؤقتًا"
-                  : "Timer paused"
+                  ? "المؤقت متوقف مؤقتًا — استكمل جلستك"
+                  : "Timer is paused — resume session"
                 : ar
-                ? "جلسة جارية"
-                : "Session in progress"}
+                ? "جلسة تركيز جارية الآن"
+                : "Focus session in progress"}
             </span>
           </div>
-          <strong className="flex items-center gap-1.5 text-accent">
+          <strong className="flex items-center gap-1.5 text-accent font-bold">
             {ar ? "العودة إلى المؤقت" : "Return to timer"}
             <NavArrow className="w-4 h-4" />
           </strong>
         </Link>
       )}
 
-      <section className="dashboard-grid">
-        <article className="today-card">
-          <p className="eyebrow">{ar ? "اليوم" : "Today"}</p>
-          <div className="plan-number">
-            <strong>{actual}</strong>
-            <span>
-              / {Math.round(planned)} {ar ? "دقيقة" : "minutes"}
-            </span>
-          </div>
-          <div className="dashboard-progress">
-            <span style={{ width: `${Math.min(100, planned ? (actual / planned) * 100 : 0)}%` }} />
-          </div>
-          <Button
-            href="/focus"
-            variant="accent"
-            size="sm"
-            leftIcon={<Play className="w-4 h-4" />}
-          >
-            {ar ? "ابدأ التركيز" : "Start focus"}
-          </Button>
-        </article>
+      {/* 3. Quick-Add Doodle Bar */}
+      <QuickAddDashboard ar={ar} />
 
-        <article className="metric-card">
-          <span>{ar ? "هذا الأسبوع" : "This week"}</span>
-          <strong>{weekMinutes}</strong>
-          <small>{ar ? "دقيقة دراسة" : "study minutes"}</small>
-        </article>
-
-        <article className="metric-card">
-          <span>{ar ? "المهام المكتملة" : "Tasks completed"}</span>
-          <strong>{completedWeek}</strong>
-          <small>{ar ? "من المهام المؤرخة" : "dated this week"}</small>
-        </article>
-
-        <article className="metric-card accent">
-          <span>{ar ? "متوسط التركيز" : "Average Focus Score"}</span>
-          <strong>{averageScore ?? "—"}</strong>
-          <small>{ar ? "لجلسات اليوم" : "for today’s sessions"}</small>
-        </article>
-      </section>
-
-      <section className="dashboard-columns">
-        <div>
-          <div className="section-heading">
-            <h2 className="flex items-center gap-2">
-              <ListTodo className="w-5 h-5 text-primary" />
-              <span>{ar ? "ما يستحق انتباهك" : "What needs attention"}</span>
-            </h2>
-            <Link href="/tasks" className="text-sm font-semibold flex items-center gap-1 text-primary hover:underline">
-              {ar ? "كل المهام" : "All tasks"}
-              <NavArrow className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-          <div className="dashboard-task-list">
-            {dueTasks.length ? (
-              dueTasks.map((task) => (
-                <Link href={`/tasks/${task.id}`} key={task.id}>
-                  <span>{task.subject?.name ?? (ar ? "عام" : "General")}</span>
-                  <strong>{task.title}</strong>
-                  <em>{task.estimatedMinutes ? `${task.estimatedMinutes} min` : "—"}</em>
-                </Link>
-              ))
-            ) : (
-              <div className="quiet-state">
-                {ar ? "لا توجد مهام مستحقة اليوم." : "Nothing is due today."}
+      {/* 4. Two-Column Dashboard Content Layout */}
+      <div className="dashboard-layout-grid">
+        {/* Left Column: Today's Tasks & Checklist */}
+        <section className="dashboard-left-col flex flex-col gap-6">
+          {/* Today's Tasks Card */}
+          <div className="dashboard-card">
+            <div className="dashboard-card-header">
+              <div className="flex items-center gap-2">
+                <ListTodo className="w-5 h-5 text-primary" />
+                <h2 className="text-lg font-bold">
+                  {ar ? "مهام اليوم" : "Today's Tasks"}
+                </h2>
+                <span className="counter-pill">{todayTasks.length}</span>
               </div>
-            )}
-          </div>
-        </div>
+              <Link
+                href="/tasks"
+                className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+              >
+                {ar ? "عرض الكل" : "View all"}
+                <NavArrow className="w-3.5 h-3.5" />
+              </Link>
+            </div>
 
-        <div>
-          <div className="section-heading">
-            <h2 className="flex items-center gap-2">
-              <Target className="w-5 h-5 text-accent" />
-              <span>{ar ? "الأهداف النشطة" : "Active goals"}</span>
-            </h2>
-            <Link href="/goals" className="text-sm font-semibold flex items-center gap-1 text-accent-strong hover:underline">
-              {ar ? "كل الأهداف" : "All goals"}
-              <NavArrow className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-          <div className="dashboard-goals">
-            {goals.filter((goal) => goal.status === "ACTIVE").length ? (
-              goals
-                .filter((goal) => goal.status === "ACTIVE")
-                .slice(0, 3)
-                .map((goal) => (
-                  <Link href={`/goals/${goal.id}`} key={goal.id}>
-                    <strong>{goal.title}</strong>
-                    <span>
-                      {goal.progress.currentValue} / {goal.targetValue}
-                    </span>
-                    <div className="dashboard-progress">
-                      <i style={{ width: `${goal.progress.percentage}%` }} />
-                    </div>
-                  </Link>
+            <div className="dashboard-tasks-container mt-3 flex flex-col gap-2">
+              {todayTasks.length > 0 ? (
+                todayTasks.map((task) => (
+                  <DashboardTaskItem key={task.id} task={task} ar={ar} />
                 ))
-            ) : (
-              <div className="quiet-state" style={{ padding: "16px", textAlign: "center" }}>
-                <p style={{ margin: "0 0 8px", color: "var(--muted)" }}>
-                  {ar ? "لا توجد أهداف نشطة." : "No active goals."}
-                </p>
-                <Link href="/goals" style={{ textDecoration: "underline", color: "var(--accent)" }}>
-                  {ar ? "أنشئ هدفك الأول" : "Create your first goal"}
+              ) : (
+                <div className="dashboard-empty-box text-center p-6 border-2 border-dashed border-line rounded-lg">
+                  <CheckCircle2 className="w-8 h-8 text-primary mx-auto mb-2 opacity-80" />
+                  <strong className="text-sm block text-foreground">
+                    {ar ? "لا توجد مهام مستحقة لليوم" : "No tasks due today"}
+                  </strong>
+                  <p className="text-xs text-muted mt-1">
+                    {ar
+                      ? "أضف مهمة جديدة من الشريط بالأعلى أو ابدأ جلسة تركيز حرة."
+                      : "Add a new task from the bar above or begin an open focus sprint."}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* AI Insight / Daily Study Note */}
+          {insight && (
+            <aside className="dashboard-memo-card">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="ai-label flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" />
+                  AI Note
+                </span>
+                <Link
+                  href="/insights"
+                  className="text-xs font-bold text-secondary hover:underline flex items-center gap-1"
+                >
+                  {ar ? "سجل الرؤى" : "All notes"}
+                  <NavArrow className="w-3 h-3" />
                 </Link>
               </div>
-            )}
-          </div>
-        </div>
-      </section>
+              <h3 className="text-base font-bold text-secondary mb-1">
+                {insight.title}
+              </h3>
+              <p className="text-sm text-foreground leading-relaxed">
+                {insight.content}
+              </p>
+            </aside>
+          )}
+        </section>
 
-      {insight && (
-        <aside className="insight-card">
-          <div>
-            <span className="ai-label flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5" />
-              AI
-            </span>
-            <p className="eyebrow">{ar ? "ملاحظة دراسية" : "Study note"}</p>
-            <h2>{insight.title}</h2>
-            <p>{insight.content}</p>
+        {/* Right Column: Today's Rhythm, Pulse & Goals */}
+        <section className="dashboard-right-col flex flex-col gap-6">
+          <TodayStudyCard
+            ar={ar}
+            completedTodaySeconds={completedTodaySeconds}
+            plannedMinutes={planned}
+            weekMinutes={weekMinutes}
+            completedWeek={completedWeek}
+            averageScore={averageScore}
+            serverNow={now.toISOString()}
+            timer={timer}
+          />
+
+          {/* Active Goals Card */}
+          <div className="dashboard-card">
+            <div className="dashboard-card-header">
+              <div className="flex items-center gap-2">
+                <Target className="w-5 h-5 text-accent" />
+                <h2 className="text-lg font-bold">
+                  {ar ? "الأهداف النشطة" : "Active Goals"}
+                </h2>
+              </div>
+              <Link
+                href="/goals"
+                className="text-xs font-bold text-accent-strong hover:underline flex items-center gap-1"
+              >
+                {ar ? "إدارة الأهداف" : "All goals"}
+                <NavArrow className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            <div className="dashboard-goals-list mt-3 flex flex-col gap-2">
+              {goals.filter((g) => g.status === "ACTIVE").length > 0 ? (
+                goals
+                  .filter((g) => g.status === "ACTIVE")
+                  .slice(0, 3)
+                  .map((goal) => (
+                    <Link
+                      href={`/goals/${goal.id}`}
+                      key={goal.id}
+                      className="goal-item-card flex flex-col gap-1.5 p-3 rounded-md border border-secondary bg-surface hover:shadow-doodle transition-all text-inherit no-underline"
+                    >
+                      <div className="flex items-center justify-between text-xs">
+                        <strong className="truncate font-bold text-foreground">
+                          {goal.title}
+                        </strong>
+                        <span className="font-mono text-muted text-[11px] shrink-0">
+                          {goal.progress.currentValue} / {goal.targetValue}
+                        </span>
+                      </div>
+                      <div className="dashboard-progress mb-0 h-1.5">
+                        <span style={{ width: `${goal.progress.percentage}%` }} />
+                      </div>
+                    </Link>
+                  ))
+              ) : (
+                <div className="text-center p-4 border border-dashed border-line rounded-md">
+                  <Link
+                    href="/goals"
+                    className="text-xs font-bold text-accent-strong hover:underline"
+                  >
+                    {ar ? "+ أنشئ هدفًا دراسيًا جديدًا" : "+ Create a new study goal"}
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
-          <Link href="/sessions" className="flex items-center gap-1 font-semibold">
-            {ar ? "راجع جلساتك" : "Review sessions"}
-            <NavArrow className="w-4 h-4" />
-          </Link>
-        </aside>
-      )}
+        </section>
+      </div>
     </PageShell>
   );
 }

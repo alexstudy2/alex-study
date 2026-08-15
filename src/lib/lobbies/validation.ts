@@ -11,6 +11,10 @@ export const roomTimerSchema = z.object({
   mode: z.enum(["FOCUS", "SHORT_BREAK", "LONG_BREAK"]),
   durationSeconds: z.number().int().min(60).max(14400),
 });
+export const lobbyTaskSchema = z.object({
+  title: z.string().trim().max(180).nullable().optional(),
+  completed: z.boolean().optional(),
+});
 export const reactionSchema = z.object({
   sessionId: z.string().uuid(),
   reaction: z.enum(["👏", "🔥", "💪", "✅"]),

@@ -1,8 +1,5 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
-import { IBM_Plex_Sans_Arabic } from "next/font/google";
-import { GeistSans } from "geist/font/sans";
-import { GeistMono } from "geist/font/mono";
+import { Delius_Swash_Caps, Delius, JetBrains_Mono, IBM_Plex_Sans_Arabic } from "next/font/google";
 import { getLocale, getMessages } from "next-intl/server";
 import { AppShell } from "@/components/navigation/app-shell";
 import { Providers } from "@/components/providers";
@@ -10,9 +7,23 @@ import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import "./globals.css";
 
-const cinzel = localFont({
-  src: "../../fonts/Cinzel-VariableFont_wght.ttf",
-  variable: "--font-cinzel",
+const deliusSwashCaps = Delius_Swash_Caps({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-delius",
+  display: "swap",
+});
+
+const deliusBody = Delius({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-delius-body",
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
   display: "swap",
 });
 
@@ -26,7 +37,7 @@ const ibmPlexArabic = IBM_Plex_Sans_Arabic({
 export const metadata: Metadata = {
   applicationName: "Alex Study",
   title: { default: "Alex Study", template: "%s | Alex Study" },
-  description: "Study companion for Alexandria University medical students",
+  description: "Playful, calm study companion for Alexandria University medical students",
   manifest: "/manifest.webmanifest",
   robots: { index: false, follow: false },
 };
@@ -49,7 +60,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     <html
       lang={locale}
       dir={locale === "ar" ? "rtl" : "ltr"}
-      className={`${cinzel.variable} ${GeistSans.variable} ${GeistMono.variable} ${ibmPlexArabic.variable}`}
+      className={`${deliusSwashCaps.variable} ${deliusBody.variable} ${jetbrainsMono.variable} ${ibmPlexArabic.variable}`}
       data-theme={profile?.preference?.theme.toLowerCase() ?? undefined}
     >
       <body className="min-h-full flex flex-col">

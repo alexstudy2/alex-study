@@ -515,6 +515,9 @@ model RoomMember {
   role       RoomRole  @default(MEMBER)
   joinedAt   DateTime  @default(now())
   lastSeenAt DateTime?
+  lobbyTaskTitle     String?
+  lobbyTaskCompleted Boolean   @default(false)
+  lobbyTaskUpdatedAt DateTime?
   room       Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 

@@ -8,10 +8,6 @@ import {
   X,
   Check,
   Ban,
-  Calendar,
-  Clock,
-  CheckCircle2,
-  TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -33,6 +29,15 @@ export function GoalWorkspace({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const ar = locale === "ar";
+  const [dateDefaults] = useState(() => {
+    const start = new Date();
+    const deadline = new Date(start);
+    deadline.setDate(deadline.getDate() + 7);
+    return {
+      start: start.toISOString().slice(0, 10),
+      deadline: deadline.toISOString().slice(0, 10),
+    };
+  });
 
   async function create(form: FormData) {
     setBusy(true);
@@ -142,7 +147,7 @@ export function GoalWorkspace({
                 name="startsAt"
                 type="date"
                 required
-                defaultValue={new Date().toISOString().slice(0, 10)}
+                defaultValue={dateDefaults.start}
               />
             </label>
             <label>
@@ -151,7 +156,7 @@ export function GoalWorkspace({
                 name="deadline"
                 type="date"
                 required
-                defaultValue={new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10)}
+                defaultValue={dateDefaults.deadline}
               />
             </label>
           </div>

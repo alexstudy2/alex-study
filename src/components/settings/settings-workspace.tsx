@@ -3,8 +3,25 @@
 import { useState } from "react";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import {
+  User,
+  Sliders,
+  Bell,
+  Shield,
+  AlertTriangle,
+  LogOut,
+  Download,
+  Check,
+  Sparkles,
+  Sun,
+  Moon,
+  Monitor,
+  Lock,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 type Locale = "en" | "ar";
+type Theme = "SYSTEM" | "LIGHT" | "DARK";
 type Initial = {
   name: string;
   collegeId: string;
@@ -15,7 +32,7 @@ type Initial = {
   profileVisibility: "PRIVATE" | "COLLEGE_ONLY";
   preference: {
     locale: "EN" | "AR";
-    theme: "SYSTEM" | "LIGHT" | "DARK";
+    theme: Theme;
     defaultFocusMinutes: number;
     defaultShortBreakMinutes: number;
     defaultLongBreakMinutes: number;
@@ -52,15 +69,18 @@ const fallbackPreference: NonNullable<Initial["preference"]> = {
   shareFullNameOnCards: false,
 };
 
-function applyTheme(theme: "SYSTEM" | "LIGHT" | "DARK") {
+function applyTheme(theme: Theme) {
   if (theme === "SYSTEM") document.documentElement.removeAttribute("data-theme");
   else document.documentElement.dataset.theme = theme.toLowerCase();
 }
+
+type TabKey = "profile" | "timer" | "notifications" | "privacy" | "account";
 
 export function SettingsWorkspace({ initial, locale }: { initial: Initial; locale: Locale }) {
   const ar = locale === "ar";
   const router = useRouter();
   const { update } = useSession();
+  const [activeTab, setActiveTab] = useState<TabKey>("profile");
   const [profile, setProfile] = useState(initial);
   const [preference, setPreference] = useState(initial.preference ?? fallbackPreference);
   const [status, setStatus] = useState("");
@@ -70,61 +90,22 @@ export function SettingsWorkspace({ initial, locale }: { initial: Initial; local
   const [deleteError, setDeleteError] = useState("");
 
   const text = {
-    title: ar ? "إعدادات الحساب" : "Account settings",
+    title: ar ? "إعدادات الحساب والدراسة" : "Account & Study Settings",
     intro: ar
       ? "تحكم في حسابك، إيقاع المؤقت، الخصوصية، والإشعارات من مكان واحد."
-      : "Control your account, study rhythm, privacy, and notifications in one place.",
-    account: ar ? "الحساب" : "Account",
-    profile: ar ? "الملف الشخصي" : "Profile",
-    name: ar ? "الاسم الكامل" : "Full name",
-    year: ar ? "السنة الدراسية" : "Academic year",
-    email: ar ? "البريد الاحتياطي" : "Recovery email",
-    collegeId: ar ? "الرقم الجامعي" : "College ID",
-    preferences: ar ? "التفضيلات" : "Preferences",
-    language: ar ? "اللغة" : "Language",
-    theme: ar ? "المظهر" : "Theme",
-    system: ar ? "النظام" : "System",
-    light: ar ? "فاتح" : "Light",
-    dark: ar ? "داكن" : "Dark",
-    timer: ar ? "المؤقت" : "Timer",
-    focus: ar ? "دقائق التركيز" : "Focus minutes",
-    short: ar ? "الاستراحة القصيرة" : "Short break",
-    long: ar ? "الاستراحة الطويلة" : "Long break",
-    cycles: ar ? "الجولات قبل الاستراحة الطويلة" : "Cycles before long break",
-    autoBreak: ar ? "بدء الاستراحات تلقائيا" : "Auto-start breaks",
-    autoFocus: ar ? "بدء التركيز تلقائيا" : "Auto-start focus",
-    ambient: ar ? "الصوت المحيط" : "Ambient sound",
-    volume: ar ? "مستوى الصوت" : "Volume",
-    notifications: ar ? "الإشعارات" : "Notifications",
-    emailNotifications: ar ? "إشعارات البريد الإلكتروني" : "Email notifications",
-    inApp: ar ? "الإشعارات داخل التطبيق" : "In-app notifications",
-    accountability: ar ? "تذكيرات المساءلة" : "Accountability reminders",
-    challenges: ar ? "تحديثات التحديات" : "Challenge updates",
-    insightNotifications: ar ? "تحديثات الرؤى الذكية" : "AI insight updates",
-    privacy: ar ? "الخصوصية" : "Privacy",
-    visibility: ar ? "ظهور الملف الشخصي" : "Profile visibility",
-    collegeOnly: ar ? "طلاب الكلية فقط" : "College students only",
-    private: ar ? "خاص" : "Private",
-    leaderboard: ar ? "الظهور في لوحة المتصدرين" : "Show me on leaderboards",
-    fullName: ar
-      ? "إظهار الاسم الكامل في بطاقات التحدي العامة"
-      : "Show full name on public challenge cards",
-    ai: ar ? "الرؤى الذكية" : "AI insights",
-    aiEnabled: ar ? "السماح بالرؤى الذكية الشخصية" : "Allow personal AI insights",
-    save: ar ? "حفظ التغييرات" : "Save changes",
-    saved: ar ? "تم الحفظ" : "Saved",
-    export: ar ? "تنزيل نسخة من بياناتي" : "Download my data",
-    danger: ar ? "منطقة حساسة" : "Sensitive actions",
-    delete: ar ? "حذف الحساب" : "Delete account",
-    deleteCopy: ar
-      ? "يحذف هذا كل بيانات الحساب نهائيا. اكتب DELETE وأدخل كلمة المرور للتأكيد."
-      : "This permanently deletes your account data. Type DELETE and enter your password to confirm.",
-    confirm: ar ? "عبارة التأكيد" : "Confirmation phrase",
-    password: ar ? "كلمة المرور" : "Password",
-    deleteButton: ar ? "حذف نهائي" : "Permanently delete",
+      : "Manage your profile, study rhythms, privacy, and notifications in one place.",
+    save: ar ? "حفظ التغييرات" : "Save Changes",
+    saved: ar ? "تم حفظ التغييرات بنجاح!" : "Changes saved successfully!",
     error: ar ? "تعذر حفظ التغييرات." : "Could not save changes.",
-    selectLanguage: ar ? "العربية" : "English",
+    export: ar ? "تنزيل نسخة من بياناتي (JSON)" : "Download My Data (JSON)",
+    signOut: ar ? "تسجيل الخروج" : "Sign Out",
+    deleteButton: ar ? "حذف الحساب نهائيًا" : "Permanently Delete Account",
   };
+
+  function flashSaved() {
+    setStatus(text.saved);
+    setTimeout(() => setStatus(""), 3500);
+  }
 
   async function saveProfile(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -156,7 +137,7 @@ export function SettingsWorkspace({ initial, locale }: { initial: Initial; local
       locale: payload.locale,
     });
     document.cookie = `alex-study-locale=${String(payload.locale).toLowerCase()}; path=/; max-age=31536000; samesite=lax`;
-    setStatus(text.saved);
+    flashSaved();
     router.refresh();
   }
 
@@ -166,7 +147,7 @@ export function SettingsWorkspace({ initial, locale }: { initial: Initial; local
     setStatus("");
     const values = Object.fromEntries(new FormData(event.currentTarget));
     const payload = {
-      theme: String(values.theme) as "SYSTEM" | "LIGHT" | "DARK",
+      theme: preference.theme,
       defaultFocusMinutes: Number(values.defaultFocusMinutes),
       defaultShortBreakMinutes: Number(values.defaultShortBreakMinutes),
       defaultLongBreakMinutes: Number(values.defaultLongBreakMinutes),
@@ -187,8 +168,25 @@ export function SettingsWorkspace({ initial, locale }: { initial: Initial; local
       return;
     }
     setPreference((current) => ({ ...current, ...payload }));
-    setStatus(text.saved);
+    flashSaved();
     router.refresh();
+  }
+
+  async function patchPreferenceField(field: string, value: unknown) {
+    setBusy(true);
+    setStatus("");
+    const response = await fetch("/api/me/preferences", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ [field]: value }),
+    });
+    setBusy(false);
+    if (response.ok) {
+      setPreference((current) => ({ ...current, [field]: value }));
+      flashSaved();
+    } else {
+      setStatus(text.error);
+    }
   }
 
   async function patchJson(url: string, payload: Record<string, unknown>) {
@@ -204,7 +202,7 @@ export function SettingsWorkspace({ initial, locale }: { initial: Initial; local
       setStatus(text.error);
       return false;
     }
-    setStatus(text.saved);
+    flashSaved();
     return true;
   }
 
@@ -224,7 +222,7 @@ export function SettingsWorkspace({ initial, locale }: { initial: Initial; local
     anchor.download = "alex-study-export.json";
     anchor.click();
     URL.revokeObjectURL(url);
-    setStatus(text.saved);
+    flashSaved();
   }
 
   async function deleteAccount(event: React.FormEvent<HTMLFormElement>) {
@@ -243,364 +241,605 @@ export function SettingsWorkspace({ initial, locale }: { initial: Initial; local
           ? ar
             ? "كلمة المرور غير صحيحة."
             : "The password is incorrect."
-          : text.error,
+          : text.error
       );
       return;
     }
     await signOut({ callbackUrl: "/sign-in?deleted=1" });
   }
 
+  const tabs: { key: TabKey; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+    { key: "profile", label: ar ? "الملف الشخصي" : "Profile", icon: User },
+    { key: "timer", label: ar ? "المؤقت والمظهر" : "Timer & Theme", icon: Sliders },
+    { key: "notifications", label: ar ? "الإشعارات" : "Notifications", icon: Bell },
+    { key: "privacy", label: ar ? "الخصوصية والذكاء" : "Privacy & AI", icon: Shield },
+    { key: "account", label: ar ? "الحساب والخروج" : "Account & Danger", icon: AlertTriangle },
+  ];
+
   return (
-    <main className="settings-shell">
-      <header className="settings-header">
-        <div>
-          <p className="eyebrow">Alex Study</p>
-          <h1>{text.title}</h1>
-          <p>{text.intro}</p>
+    <div className="settings-page-wrapper" dir={ar ? "rtl" : "ltr"}>
+      {/* 1. Header Banner */}
+      <header className="settings-hero-header">
+        <div className="flex flex-col gap-1">
+          <span className="eyebrow flex items-center gap-1.5">
+            <Sliders className="w-4 h-4 text-primary" />
+            {ar ? "تفضيلات أليكس ستادي" : "Alex Study Preferences"}
+          </span>
+          <h1 className="settings-hero-title">{text.title}</h1>
+          <p className="settings-hero-subtitle">{text.intro}</p>
         </div>
-        <span className="settings-status" role="status" aria-live="polite">
-          {status}
-        </span>
+
+        {status && (
+          <div className="settings-status-badge" role="status" aria-live="polite">
+            <Check className="w-4 h-4 text-success" />
+            <span>{status}</span>
+          </div>
+        )}
       </header>
-      <nav className="settings-nav" aria-label={ar ? "أقسام الإعدادات" : "Settings sections"}>
-        {[
-          ["account", text.account],
-          ["preferences", text.preferences],
-          ["notifications", text.notifications],
-          ["privacy", text.privacy],
-          ["danger", text.danger],
-        ].map(([id, label]) => (
-          <a key={id} href={`#${id}`}>
-            {label}
-          </a>
-        ))}
+
+      {/* 2. Doodle Segmented Category Navigation */}
+      <nav className="settings-category-tabs" role="tablist" aria-label={ar ? "أقسام الإعدادات" : "Settings tabs"}>
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.key;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => setActiveTab(tab.key)}
+              className={`settings-tab-btn ${isActive ? "active" : ""}`}
+            >
+              <Icon className="w-4 h-4" />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
       </nav>
-      <section id="account" className="settings-section">
-        <div className="settings-section-heading">
-          <p className="eyebrow">01</p>
-          <h2>{text.account}</h2>
-        </div>
-        <form className="settings-form" onSubmit={saveProfile}>
-          <label>
-            {text.name}
-            <input name="name" defaultValue={profile.name} autoComplete="name" required />
-          </label>
-          <label>
-            {text.collegeId}
-            <input value={profile.collegeId} readOnly aria-describedby="college-id-note" />
-            <small id="college-id-note">
-              {ar
-                ? "يستخدم لتسجيل الدخول ولا يظهر علنا."
-                : "Used for sign-in and never shown publicly."}
-            </small>
-          </label>
-          <label>
-            {text.year}
-            <select name="academicYear" defaultValue={profile.academicYear}>
-              {[1, 2, 3, 4, 5, 6].map((year) => (
-                <option key={year} value={year}>
-                  {ar
-                    ? year === 6
-                      ? "سنة الامتياز (Internship)"
-                      : `السنة ${year}`
-                    : year === 6
-                      ? "Internship (Intern)"
-                      : `Year ${year}`}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            {text.email}
-            <input
-              name="email"
-              defaultValue={profile.email ?? ""}
-              type="email"
-              autoComplete="email"
-            />
-          </label>
-          <fieldset>
-            <legend>{text.language}</legend>
-            <div className="segmented-settings">
-              <label>
-                <input
-                  type="radio"
-                  name="locale"
-                  value="EN"
-                  defaultChecked={profile.preference?.locale !== "AR"}
-                />
-                <span>English</span>
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  name="locale"
-                  value="AR"
-                  defaultChecked={profile.preference?.locale === "AR"}
-                />
-                <span>العربية</span>
-              </label>
+
+      {/* 3. Tab Contents */}
+      <div className="settings-content-body">
+        {/* TAB 1: Profile & Language */}
+        {activeTab === "profile" && (
+          <section className="settings-notebook-card">
+            <div className="card-header-line">
+              <User className="w-5 h-5 text-primary" />
+              <div>
+                <h2 className="text-base font-extrabold text-foreground m-0">
+                  {ar ? "المعلومات الشخصية واللغة" : "Personal Profile & Language"}
+                </h2>
+                <p className="text-xs text-muted m-0">
+                  {ar ? "بيانات حسابك الأكاديمي ولغة الواجهة." : "Your academic identity and display language."}
+                </p>
+              </div>
             </div>
-          </fieldset>
-          <button className="primary-button" disabled={busy}>
-            {text.save}
-          </button>
-        </form>
-      </section>
-      <section id="preferences" className="settings-section">
-        <div className="settings-section-heading">
-          <p className="eyebrow">02</p>
-          <h2>{text.preferences}</h2>
-        </div>
-        <form className="settings-form" onSubmit={savePreferences}>
-          <fieldset>
-            <legend>{text.theme}</legend>
-            <div className="segmented-settings">
-              {(
-                [
-                  ["SYSTEM", text.system],
-                  ["LIGHT", text.light],
-                  ["DARK", text.dark],
-                ] as const
-              ).map(([value, label]) => (
-                <label key={value}>
+
+            <form onSubmit={saveProfile} className="settings-doodle-form mt-4">
+              <div className="form-row-grid">
+                <label className="doodle-form-field">
+                  <span className="field-label">{ar ? "الاسم الكامل" : "Full Name"}</span>
                   <input
-                    type="radio"
-                    name="theme"
-                    value={value}
-                    defaultChecked={preference.theme === value}
-                    onChange={() => {
-                      setPreference((current) => ({ ...current, theme: value }));
-                      applyTheme(value);
-                    }}
+                    name="name"
+                    defaultValue={profile.name}
+                    autoComplete="name"
+                    required
+                    className="doodle-input"
                   />
-                  <span>{label}</span>
+                </label>
+
+                <label className="doodle-form-field">
+                  <span className="field-label flex items-center gap-1">
+                    <Lock className="w-3.5 h-3.5 text-muted" />
+                    {ar ? "الرقم الجامعي (ثابت)" : "College ID (Fixed)"}
+                  </span>
+                  <input
+                    value={profile.collegeId}
+                    readOnly
+                    className="doodle-input bg-surface-sunken opacity-80 cursor-not-allowed"
+                  />
+                </label>
+              </div>
+
+              <div className="form-row-grid">
+                <label className="doodle-form-field">
+                  <span className="field-label">{ar ? "السنة الدراسية" : "Academic Year"}</span>
+                  <select
+                    name="academicYear"
+                    defaultValue={profile.academicYear}
+                    className="doodle-select"
+                  >
+                    {[1, 2, 3, 4, 5, 6].map((year) => (
+                      <option key={year} value={year}>
+                        {ar
+                          ? year === 6
+                            ? "سنة الامتياز (Internship)"
+                            : `السنة ${year}`
+                          : year === 6
+                            ? "Internship (Intern)"
+                            : `Year ${year}`}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="doodle-form-field">
+                  <span className="field-label">{ar ? "البريد الإلكتروني الاحتياطي" : "Recovery Email"}</span>
+                  <input
+                    name="email"
+                    defaultValue={profile.email ?? ""}
+                    type="email"
+                    autoComplete="email"
+                    placeholder="student@example.com"
+                    className="doodle-input"
+                  />
+                </label>
+              </div>
+
+              {/* Language Selection */}
+              <div className="doodle-form-field">
+                <span className="field-label">{ar ? "لغة التطبيق" : "Application Language"}</span>
+                <div className="doodle-language-picker">
+                  <label className={`lang-option ${profile.preference?.locale !== "AR" ? "selected" : ""}`}>
+                    <input
+                      type="radio"
+                      name="locale"
+                      value="EN"
+                      defaultChecked={profile.preference?.locale !== "AR"}
+                      className="sr-only"
+                    />
+                    <span className="font-bold">English (EN)</span>
+                  </label>
+                  <label className={`lang-option ${profile.preference?.locale === "AR" ? "selected" : ""}`}>
+                    <input
+                      type="radio"
+                      name="locale"
+                      value="AR"
+                      defaultChecked={profile.preference?.locale === "AR"}
+                      className="sr-only"
+                    />
+                    <span className="font-bold">العربية (AR)</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="form-submit-row">
+                <Button variant="primary" size="md" type="submit" isLoading={busy}>
+                  {text.save}
+                </Button>
+              </div>
+            </form>
+          </section>
+        )}
+
+        {/* TAB 2: Timer & Theme */}
+        {activeTab === "timer" && (
+          <section className="settings-notebook-card">
+            <div className="card-header-line">
+              <Sliders className="w-5 h-5 text-primary" />
+              <div>
+                <h2 className="text-base font-extrabold text-foreground m-0">
+                  {ar ? "تفضيلات المؤقت والمظهر" : "Study Timer & Appearance"}
+                </h2>
+                <p className="text-xs text-muted m-0">
+                  {ar ? "اضبط فترات البومودورو والمظهر البصري للموقع." : "Customize your study sessions, intervals, and theme."}
+                </p>
+              </div>
+            </div>
+
+            {/* Theme Picker */}
+            <div className="mt-4 mb-6">
+              <span className="field-label block mb-2">{ar ? "مظهر الموقع" : "Visual Theme"}</span>
+              <div className="grid grid-cols-3 gap-3">
+                {([
+                  { value: "LIGHT", label: ar ? "المظهر الفاتح" : "Light Theme", icon: Sun },
+                  { value: "DARK", label: ar ? "المظهر الداكن" : "Dark Theme", icon: Moon },
+                  { value: "SYSTEM", label: ar ? "مظهر النظام" : "System Match", icon: Monitor },
+                ] satisfies { value: Theme; label: string; icon: typeof Sun }[]).map((t) => {
+                  const Icon = t.icon;
+                  const isCurrent = preference.theme === t.value;
+                  return (
+                    <button
+                      key={t.value}
+                      type="button"
+                      onClick={() => {
+                        setPreference((c) => ({ ...c, theme: t.value }));
+                        applyTheme(t.value);
+                        void patchPreferenceField("theme", t.value);
+                      }}
+                      className={`theme-card-btn ${isCurrent ? "active" : ""}`}
+                    >
+                      <Icon className="w-5 h-5 mb-1 text-secondary" />
+                      <span className="text-xs font-bold">{t.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Timer Durations Form */}
+            <form onSubmit={savePreferences} className="settings-doodle-form">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                <label className="doodle-form-field">
+                  <span className="field-label">{ar ? "التركيز (دقيقة)" : "Focus (mins)"}</span>
+                  <input
+                    type="number"
+                    name="defaultFocusMinutes"
+                    min="5"
+                    max="120"
+                    defaultValue={preference.defaultFocusMinutes}
+                    className="doodle-input font-mono font-bold"
+                  />
+                </label>
+
+                <label className="doodle-form-field">
+                  <span className="field-label">{ar ? "راحة قصيرة (دقيقة)" : "Short Break"}</span>
+                  <input
+                    type="number"
+                    name="defaultShortBreakMinutes"
+                    min="1"
+                    max="30"
+                    defaultValue={preference.defaultShortBreakMinutes}
+                    className="doodle-input font-mono font-bold"
+                  />
+                </label>
+
+                <label className="doodle-form-field">
+                  <span className="field-label">{ar ? "راحة طويلة (دقيقة)" : "Long Break"}</span>
+                  <input
+                    type="number"
+                    name="defaultLongBreakMinutes"
+                    min="5"
+                    max="60"
+                    defaultValue={preference.defaultLongBreakMinutes}
+                    className="doodle-input font-mono font-bold"
+                  />
+                </label>
+
+                <label className="doodle-form-field">
+                  <span className="field-label">{ar ? "الجولات قبل الطويلة" : "Cycles"}</span>
+                  <input
+                    type="number"
+                    name="pomodorosBeforeLongBreak"
+                    min="1"
+                    max="10"
+                    defaultValue={preference.pomodorosBeforeLongBreak}
+                    className="doodle-input font-mono font-bold"
+                  />
+                </label>
+              </div>
+
+              {/* Ambient Sound Settings */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                <label className="doodle-form-field">
+                  <span className="field-label">{ar ? "الصوت المحيط الافتراضي" : "Ambient Sound"}</span>
+                  <select
+                    name="ambientSound"
+                    defaultValue={preference.ambientSound ?? "off"}
+                    className="doodle-select"
+                  >
+                    <option value="off">{ar ? "بدون صوت محيط" : "Off (Silent)"}</option>
+                    <option value="rain">{ar ? "صوت المطر الهادئ" : "Rain"}</option>
+                    <option value="whitenoise">{ar ? "الضوضاء البيضاء" : "White Noise"}</option>
+                    <option value="waves">{ar ? "أمواج البحر" : "Ocean Waves"}</option>
+                    <option value="cafe">{ar ? "أجواء المقهى" : "Cafe Ambience"}</option>
+                  </select>
+                </label>
+
+                <label className="doodle-form-field">
+                  <span className="field-label">{ar ? "مستوى الصوت (0 - 100)" : "Volume"}</span>
+                  <input
+                    type="number"
+                    name="ambientVolume"
+                    min="0"
+                    max="100"
+                    defaultValue={preference.ambientVolume}
+                    className="doodle-input font-mono font-bold"
+                  />
+                </label>
+              </div>
+
+              {/* Auto start switches */}
+              <div className="flex flex-col gap-3 mt-4 pt-3 border-t-2 border-dashed border-line">
+                <label className="doodle-switch-label">
+                  <input
+                    type="checkbox"
+                    name="autoStartBreaks"
+                    defaultChecked={preference.autoStartBreaks}
+                    className="doodle-switch-input"
+                  />
+                  <div>
+                    <strong className="text-xs block text-foreground">
+                      {ar ? "بدء الاستراحات تلقائيًا" : "Auto-start breaks"}
+                    </strong>
+                    <span className="text-[11px] text-muted">
+                      {ar ? "يبدأ عداد الراحة بمجرد انتهاء جلسة التركيز." : "Timer moves to break without manual click."}
+                    </span>
+                  </div>
+                </label>
+
+                <label className="doodle-switch-label">
+                  <input
+                    type="checkbox"
+                    name="autoStartFocus"
+                    defaultChecked={preference.autoStartFocus}
+                    className="doodle-switch-input"
+                  />
+                  <div>
+                    <strong className="text-xs block text-foreground">
+                      {ar ? "بدء جلسة التركيز التالية تلقائيًا" : "Auto-start next focus session"}
+                    </strong>
+                    <span className="text-[11px] text-muted">
+                      {ar ? "يبدأ التركيز التالي فور انتهاء فترة الراحة." : "Continue study rhythm seamlessly."}
+                    </span>
+                  </div>
+                </label>
+              </div>
+
+              <div className="form-submit-row">
+                <Button variant="primary" size="md" type="submit" isLoading={busy}>
+                  {text.save}
+                </Button>
+              </div>
+            </form>
+          </section>
+        )}
+
+        {/* TAB 3: Notifications */}
+        {activeTab === "notifications" && (
+          <section className="settings-notebook-card">
+            <div className="card-header-line">
+              <Bell className="w-5 h-5 text-primary" />
+              <div>
+                <h2 className="text-base font-extrabold text-foreground m-0">
+                  {ar ? "إشعارات التطبيق والبريد" : "Notification Preferences"}
+                </h2>
+                <p className="text-xs text-muted m-0">
+                  {ar ? "حدد ما يصلك من تذكيرات وتحديثات دورية." : "Control reminders, alerts, and summaries."}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-4 mt-4">
+              {[
+                {
+                  field: "emailNotifications",
+                  title: ar ? "إشعارات البريد الإلكتروني" : "Email Notifications",
+                  desc: ar ? "ملخص أسبوعي وتنبيهات المهام الحرجة." : "Weekly recap and critical deadlines via email.",
+                  checked: preference.emailNotifications,
+                },
+                {
+                  field: "inAppNotifications",
+                  title: ar ? "الإشعارات داخل الموقع" : "In-App Notifications",
+                  desc: ar ? "تنبيهات في شريط الإشعارات أثناء التصفح." : "Live banners and badge updates while on Alex Study.",
+                  checked: preference.inAppNotifications,
+                },
+                {
+                  field: "accountabilityNotifications",
+                  title: ar ? "تذكيرات المساءلة والالتزام" : "Accountability Check-ins",
+                  desc: ar ? "رسائل تشجيعية عند انقطاعك عن المذاكرة." : "Friendly nudges when your streak is about to pause.",
+                  checked: preference.accountabilityNotifications,
+                },
+                {
+                  field: "challengeNotifications",
+                  title: ar ? "تحديثات التحديات الطلابية" : "Challenge Updates",
+                  desc: ar ? "تنبيهات عند انضمام زميل أو انتهاء تحدٍ." : "Alerts when peers join or challenges conclude.",
+                  checked: preference.challengeNotifications,
+                },
+                {
+                  field: "aiInsightNotifications",
+                  title: ar ? "تحديثات الرؤى الذكية اليومية" : "AI Insight Notes",
+                  desc: ar ? "إشعار عند توفر تحليل جديد لعاداتك الدراسية." : "Notify when a new study rhythm analysis is ready.",
+                  checked: preference.aiInsightNotifications,
+                },
+              ].map((item) => (
+                <label key={item.field} className="doodle-switch-label p-3 rounded-lg border border-secondary bg-surface-sunken">
+                  <input
+                    type="checkbox"
+                    checked={item.checked}
+                    onChange={(e) => {
+                      const val = e.target.checked;
+                      void patchPreferenceField(item.field, val);
+                    }}
+                    className="doodle-switch-input"
+                  />
+                  <div>
+                    <strong className="text-sm block text-foreground">{item.title}</strong>
+                    <span className="text-xs text-muted">{item.desc}</span>
+                  </div>
                 </label>
               ))}
             </div>
-          </fieldset>
-          <div className="settings-grid">
-            <label>
-              {text.focus}
-              <input
-                type="number"
-                name="defaultFocusMinutes"
-                min="5"
-                max="120"
-                defaultValue={preference.defaultFocusMinutes}
-              />
-            </label>
-            <label>
-              {text.short}
-              <input
-                type="number"
-                name="defaultShortBreakMinutes"
-                min="1"
-                max="30"
-                defaultValue={preference.defaultShortBreakMinutes}
-              />
-            </label>
-            <label>
-              {text.long}
-              <input
-                type="number"
-                name="defaultLongBreakMinutes"
-                min="5"
-                max="60"
-                defaultValue={preference.defaultLongBreakMinutes}
-              />
-            </label>
-            <label>
-              {text.cycles}
-              <input
-                type="number"
-                name="pomodorosBeforeLongBreak"
-                min="1"
-                max="12"
-                defaultValue={preference.pomodorosBeforeLongBreak}
-              />
-            </label>
+          </section>
+        )}
+
+        {/* TAB 4: Privacy & AI */}
+        {activeTab === "privacy" && (
+          <section className="settings-notebook-card">
+            <div className="card-header-line">
+              <Shield className="w-5 h-5 text-primary" />
+              <div>
+                <h2 className="text-base font-extrabold text-foreground m-0">
+                  {ar ? "الخصوصية والذكاء الاصطناعي" : "Privacy & AI Insights"}
+                </h2>
+                <p className="text-xs text-muted m-0">
+                  {ar ? "تحكم في مستوى ظهور ملفك وتخصيص نصائح الذكاء الاصطناعي." : "Manage your public presence and AI study companion."}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-4 mt-4">
+              {/* AI Nudges Toggle */}
+              <label className="doodle-switch-label p-3 rounded-lg border border-secondary bg-surface-sunken">
+                <input
+                  type="checkbox"
+                  checked={profile.aiNudgesEnabled}
+                  onChange={async (e) => {
+                    const val = e.target.checked;
+                    setProfile((c) => ({ ...c, aiNudgesEnabled: val }));
+                    await patchJson("/api/me/ai", { enabled: val });
+                  }}
+                  className="doodle-switch-input"
+                />
+                <div>
+                  <strong className="text-sm block text-foreground flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-primary" />
+                    {ar ? "تفعيل الرؤى والنصائح الذكية الشخصية" : "Enable Personal AI Study Insights"}
+                  </strong>
+                  <span className="text-xs text-muted">
+                    {ar
+                      ? "يسمح للنظام بتحليل جلساتك لتقديم اقتراحات مخصصة لإدارة الضغط والوقت."
+                      : "Analyzes focus logs to suggest optimal study hours and rest intervals."}
+                  </span>
+                </div>
+              </label>
+
+              {/* Leaderboard Visible */}
+              <label className="doodle-switch-label p-3 rounded-lg border border-secondary bg-surface-sunken">
+                <input
+                  type="checkbox"
+                  checked={profile.leaderboardVisible}
+                  onChange={async (e) => {
+                    const val = e.target.checked;
+                    setProfile((c) => ({ ...c, leaderboardVisible: val }));
+                    await patchJson("/api/me", { leaderboardVisible: val });
+                  }}
+                  className="doodle-switch-input"
+                />
+                <div>
+                  <strong className="text-sm block text-foreground">
+                    {ar ? "الظهور في لوحة المتصدرين العامة" : "Show on Public Leaderboards"}
+                  </strong>
+                  <span className="text-xs text-muted">
+                    {ar
+                      ? "إظهار اسمك وساعات دراستك لطلاب الكلية لتحفيز المنافسة الشريفة."
+                      : "Allow peers to see your focus minutes on academic rankings."}
+                  </span>
+                </div>
+              </label>
+
+              {/* Data Export Box */}
+              <div className="p-4 rounded-xl border-2 border-dashed border-secondary bg-surface mt-2 flex items-center justify-between flex-wrap gap-3">
+                <div>
+                  <strong className="text-sm block text-foreground">
+                    {ar ? "نسخة من بياناتك الدراسية" : "Download Your Study Data"}
+                  </strong>
+                  <span className="text-xs text-muted">
+                    {ar ? "تنزيل ملف JSON كامل يحوي كل مهامك وجلساتك وإحصائياتك." : "Export complete JSON of tasks, sessions, and logs."}
+                  </span>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  leftIcon={<Download className="w-4 h-4" />}
+                  onClick={() => void downloadExport()}
+                  disabled={busy}
+                >
+                  {text.export}
+                </Button>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* TAB 5: Account & Danger */}
+        {activeTab === "account" && (
+          <div className="flex flex-col gap-6">
+            {/* Sign Out Card */}
+            <section className="settings-notebook-card">
+              <div className="card-header-line">
+                <LogOut className="w-5 h-5 text-secondary" />
+                <div>
+                  <h2 className="text-base font-extrabold text-foreground m-0">
+                    {ar ? "تسجيل الخروج من الجلسة" : "Session Sign Out"}
+                  </h2>
+                  <p className="text-xs text-muted m-0">
+                    {ar ? "إنهاء الجلسة الحالية على هذا الجهاز والعودة لصفحة الدخول." : "Log out from your current device session."}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-line flex items-center justify-between">
+                <span className="text-xs text-muted font-bold">
+                  {ar ? "هل ترغب في تسجيل الخروج الآن؟" : "Ready to log out of your session?"}
+                </span>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  leftIcon={<LogOut className="w-4 h-4 text-danger" />}
+                  onClick={() => void signOut({ callbackUrl: "/sign-in" })}
+                >
+                  {text.signOut}
+                </Button>
+              </div>
+            </section>
+
+            {/* Danger Zone: Delete Account */}
+            <section className="settings-notebook-card danger-zone-card">
+              <div className="card-header-line">
+                <AlertTriangle className="w-5 h-5 text-danger" />
+                <div>
+                  <h2 className="text-base font-extrabold text-danger m-0">
+                    {ar ? "منطقة حساسة: حذف الحساب نهائيًا" : "Danger Zone: Permanent Account Deletion"}
+                  </h2>
+                  <p className="text-xs text-muted m-0">
+                    {ar
+                      ? "هذا الإجراء نهائي ولا يمكن الرجوع عنه. سيتم مسح كافة المهام والجلسات والإحصائيات."
+                      : "This action is irreversible and permanently wipes all your tasks, logs, and progress."}
+                  </p>
+                </div>
+              </div>
+
+              <form onSubmit={deleteAccount} className="settings-doodle-form mt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className="doodle-form-field">
+                    <span className="field-label">{ar ? "كلمة المرور الحالية" : "Current Password"}</span>
+                    <input
+                      type="password"
+                      autoComplete="current-password"
+                      value={deletePassword}
+                      onChange={(e) => setDeletePassword(e.target.value)}
+                      required
+                      placeholder="••••••••"
+                      className="doodle-input"
+                    />
+                  </label>
+
+                  <label className="doodle-form-field">
+                    <span className="field-label">
+                      {ar ? "اكتب DELETE للتأكيد" : "Type DELETE to confirm"}
+                    </span>
+                    <input
+                      value={deleteConfirmation}
+                      onChange={(e) => setDeleteConfirmation(e.target.value)}
+                      required
+                      placeholder="DELETE"
+                      className="doodle-input font-mono font-bold"
+                    />
+                  </label>
+                </div>
+
+                {deleteError && (
+                  <p className="text-xs font-bold text-danger mt-2" role="alert">
+                    {deleteError}
+                  </p>
+                )}
+
+                <div className="form-submit-row mt-3">
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    type="submit"
+                    disabled={busy || deleteConfirmation !== "DELETE"}
+                  >
+                    {text.deleteButton}
+                  </Button>
+                </div>
+              </form>
+            </section>
           </div>
-          <div className="settings-grid">
-            <label className="setting-toggle">
-              <input
-                type="checkbox"
-                name="autoStartBreaks"
-                defaultChecked={preference.autoStartBreaks}
-              />
-              <span>{text.autoBreak}</span>
-            </label>
-            <label className="setting-toggle">
-              <input
-                type="checkbox"
-                name="autoStartFocus"
-                defaultChecked={preference.autoStartFocus}
-              />
-              <span>{text.autoFocus}</span>
-            </label>
-            <label>
-              {text.ambient}
-              <select name="ambientSound" defaultValue={preference.ambientSound ?? "off"}>
-                <option value="off">Off</option>
-                <option value="rain">Rain</option>
-                <option value="brown">Brown noise</option>
-              </select>
-            </label>
-            <label>
-              {text.volume}
-              <input
-                type="range"
-                name="ambientVolume"
-                min="0"
-                max="100"
-                defaultValue={preference.ambientVolume}
-              />
-            </label>
-          </div>
-          <button className="primary-button" disabled={busy}>
-            {text.save}
-          </button>
-        </form>
-      </section>
-      <section id="notifications" className="settings-section">
-        <div className="settings-section-heading">
-          <p className="eyebrow">03</p>
-          <h2>{text.notifications}</h2>
-        </div>
-        <div className="settings-toggle-list">
-          {(
-            [
-              ["emailNotifications", text.emailNotifications],
-              ["inAppNotifications", text.inApp],
-              ["accountabilityNotifications", text.accountability],
-              ["challengeNotifications", text.challenges],
-              ["aiInsightNotifications", text.insightNotifications],
-            ] as const
-          ).map(([key, label]) => (
-            <label key={key}>
-              <input
-                type="checkbox"
-                checked={preference[key]}
-                onChange={async (event) => {
-                  const value = event.target.checked;
-                  setPreference((current) => ({ ...current, [key]: value }));
-                  await patchJson("/api/me/notifications", { [key]: value });
-                }}
-              />
-              <span>{label}</span>
-            </label>
-          ))}
-        </div>
-      </section>
-      <section id="privacy" className="settings-section">
-        <div className="settings-section-heading">
-          <p className="eyebrow">04</p>
-          <h2>{text.privacy}</h2>
-        </div>
-        <div className="settings-form">
-          <label>
-            {text.visibility}
-            <select
-              value={profile.profileVisibility}
-              onChange={async (event) => {
-                const value = event.target.value as Initial["profileVisibility"];
-                setProfile((current) => ({ ...current, profileVisibility: value }));
-                await patchJson("/api/me/privacy", { profileVisibility: value });
-              }}
-            >
-              <option value="COLLEGE_ONLY">{text.collegeOnly}</option>
-              <option value="PRIVATE">{text.private}</option>
-            </select>
-          </label>
-          <label className="setting-toggle">
-            <input
-              type="checkbox"
-              checked={profile.leaderboardVisible}
-              onChange={async (event) => {
-                const value = event.target.checked;
-                setProfile((current) => ({ ...current, leaderboardVisible: value }));
-                await patchJson("/api/me/privacy", { leaderboardVisible: value });
-              }}
-            />
-            <span>{text.leaderboard}</span>
-          </label>
-          <label className="setting-toggle">
-            <input
-              type="checkbox"
-              checked={preference.shareFullNameOnCards}
-              onChange={async (event) => {
-                const value = event.target.checked;
-                setPreference((current) => ({ ...current, shareFullNameOnCards: value }));
-                await patchJson("/api/me/privacy", { shareFullNameOnCards: value });
-              }}
-            />
-            <span>{text.fullName}</span>
-          </label>
-          <div className="settings-action-row">
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => void downloadExport()}
-              disabled={busy}
-            >
-              {text.export}
-            </button>
-          </div>
-        </div>
-      </section>
-      <section id="ai" className="settings-section">
-        <div className="settings-section-heading">
-          <p className="eyebrow">05</p>
-          <h2>{text.ai}</h2>
-        </div>
-        <label className="setting-toggle">
-          <input
-            type="checkbox"
-            checked={profile.aiNudgesEnabled}
-            onChange={async (event) => {
-              const value = event.target.checked;
-              setProfile((current) => ({ ...current, aiNudgesEnabled: value }));
-              await patchJson("/api/me/ai", { enabled: value });
-            }}
-          />
-          <span>{text.aiEnabled}</span>
-        </label>
-      </section>
-      <section id="danger" className="settings-section settings-danger">
-        <div className="settings-section-heading">
-          <p className="eyebrow">06</p>
-          <h2>{text.danger}</h2>
-        </div>
-        <p>{text.deleteCopy}</p>
-        <form className="settings-form" onSubmit={deleteAccount}>
-          <label>
-            {text.password}
-            <input
-              type="password"
-              autoComplete="current-password"
-              value={deletePassword}
-              onChange={(event) => setDeletePassword(event.target.value)}
-              required
-            />
-          </label>
-          <label>
-            {text.confirm}
-            <input
-              value={deleteConfirmation}
-              onChange={(event) => setDeleteConfirmation(event.target.value)}
-              required
-            />
-          </label>
-          {deleteError && (
-            <p className="form-error" role="alert">
-              {deleteError}
-            </p>
-          )}
-          <button className="danger-button" disabled={busy || deleteConfirmation !== "DELETE"}>
-            {text.deleteButton}
-          </button>
-        </form>
-      </section>
-    </main>
+        )}
+      </div>
+    </div>
   );
 }

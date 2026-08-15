@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Sparkles, Calendar, BookOpen, Clock, ArrowRight, ArrowLeft } from "lucide-react";
+import { Sparkles, ArrowRight, ArrowLeft } from "lucide-react";
 import { PageShell } from "@/components/ui/page-shell";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
@@ -59,6 +59,10 @@ export function ExamPlanCreateForm({
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
+  const [step, setStep] = useState(1);
+  const [title, setTitle] = useState("");
+  const [examAt, setExamAt] = useState(defaultExamDate());
+  const [syllabusText, setSyllabusText] = useState("");
 
   async function generate(formData: FormData) {
     setPending(true);
@@ -124,48 +128,136 @@ export function ExamPlanCreateForm({
             </div>
           </div>
           {aiEnabled ? (
-            <form action={generate} className="exam-plan-form">
-              <label>
-                {ar ? "عنوان الامتحان أو المقرر" : "Exam or course title"}
-                <input
-                  name="title"
-                  required
-                  maxLength={120}
-                  placeholder={ar ? "مثال: امتحان الباطنة النهائي" : "e.g. Final Internal Medicine Exam"}
-                />
-              </label>
-              <label>
-                {ar ? "تاريخ الامتحان (بتوقيت القاهرة)" : "Exam date (Cairo time)"}
-                <input name="examAt" type="date" required defaultValue={defaultExamDate()} />
-              </label>
-              <label>
-                {ar ? "موضوعات المنهج أو المحاور" : "Syllabus or topics"}
-                <textarea
-                  name="syllabusText"
-                  required
-                  rows={6}
-                  placeholder={
-                    ar
-                      ? "الصق الفصول أو الموضوعات الرئيسية هنا..."
-                      : "Paste major chapters, modules, or key topics here..."
-                  }
-                />
-              </label>
-              {message && (
-                <p className="form-error" role="alert">
-                  {message}
-                </p>
+            <div className="wizard-container">
+              <div className="wizard-steps">
+                <div className={`wizard-step ${step >= 1 ? "active" : ""} ${step > 1 ? "done" : ""}`}>1</div>
+                <div className="wizard-step-line" />
+                <div className={`wizard-step ${step >= 2 ? "active" : ""} ${step > 2 ? "done" : ""}`}>2</div>
+                <div className="wizard-step-line" />
+                <div className={`wizard-step ${step >= 3 ? "active" : ""}`}>3</div>
+              </div>
+
+              {step === 1 && (
+                <div className="wizard-step-content">
+                  <label className="ui-label">
+                    {ar ? "عنوان الامتحان أو المقرر" : "Exam or course title"}
+                    <input
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      maxLength={120}
+                      placeholder={ar ? "مثال: امتحان الباطنة النهائي" : "e.g. Final Internal Medicine Exam"}
+                      className="ui-input"
+                    />
+                  </label>
+                  <label className="ui-label" style={{ marginTop: "var(--space-3)" }}>
+                    {ar ? "تاريخ الامتحان (بتوقيت القاهرة)" : "Exam date (Cairo time)"}
+                    <input 
+                      type="date" 
+                      value={examAt} 
+                      onChange={(e) => setExamAt(e.target.value)} 
+                      className="ui-input"
+                    />
+                  </label>
+                  <div className="wizard-step-actions">
+                    <Button 
+                      type="button" 
+                      onClick={() => setStep(2)} 
+                      disabled={!title || !examAt}
+                      rightIcon={!ar ? <NavArrow className="w-4 h-4" /> : undefined}
+                      leftIcon={ar ? <NavArrow className="w-4 h-4" /> : undefined}
+                    >
+                      {ar ? "التالي" : "Next"}
+                    </Button>
+                  </div>
+                </div>
               )}
-              <Button
-                type="submit"
-                variant="primary"
-                size="md"
-                isLoading={pending}
-                leftIcon={<Sparkles className="w-4 h-4" />}
-              >
-                {ar ? "توليد مقترح الخطة" : "Generate plan proposal"}
-              </Button>
-            </form>
+
+              {step === 2 && (
+                <div className="wizard-step-content">
+                  <label className="ui-label">
+                    {ar ? "موضوعات المنهج أو المحاور" : "Syllabus or topics"}
+                    <textarea
+                      value={syllabusText}
+                      onChange={(e) => setSyllabusText(e.target.value)}
+                      rows={6}
+                      placeholder={
+                        ar
+                          ? "الصق الفصول أو الموضوعات الرئيسية هنا..."
+                          : "Paste major chapters, modules, or key topics here..."
+                      }
+                      className="ui-textarea"
+                    />
+                  </label>
+                  <div className="wizard-step-actions">
+                    <Button 
+                      type="button" 
+                      variant="secondary" 
+                      onClick={() => setStep(1)}
+                      leftIcon={!ar ? (ar ? <ArrowRight className="w-4 h-4" /> : <ArrowLeft className="w-4 h-4" />) : undefined}
+                      rightIcon={ar ? (ar ? <ArrowRight className="w-4 h-4" /> : <ArrowLeft className="w-4 h-4" />) : undefined}
+                    >
+                      {ar ? "رجوع" : "Back"}
+                    </Button>
+                    <Button 
+                      type="button" 
+                      onClick={() => setStep(3)} 
+                      disabled={!syllabusText.trim()}
+                      rightIcon={!ar ? <NavArrow className="w-4 h-4" /> : undefined}
+                      leftIcon={ar ? <NavArrow className="w-4 h-4" /> : undefined}
+                    >
+                      {ar ? "التالي" : "Next"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {step === 3 && (
+                <div className="wizard-step-content">
+                  <div className="ui-card ui-card-content" style={{ background: 'var(--surface-sunken)', marginBottom: 'var(--space-4)' }}>
+                    <h3 style={{ marginBottom: 'var(--space-2)', fontSize: 'var(--text-lg)', fontFamily: 'var(--font-heading)' }}>
+                      {ar ? "ملخص الامتحان" : "Exam Summary"}
+                    </h3>
+                    <p style={{ marginBottom: 'var(--space-1)' }}><strong>{ar ? "المادة:" : "Course:"}</strong> {title}</p>
+                    <p style={{ marginBottom: 'var(--space-1)' }}><strong>{ar ? "الموعد:" : "Date:"}</strong> {examAt}</p>
+                    <p><strong>{ar ? "الموضوعات:" : "Topics:"}</strong> {syllabusText.split('\n').filter(l => l.trim()).length} {ar ? "أسطر" : "lines"}</p>
+                  </div>
+                  
+                  {message && (
+                    <p className="form-error" role="alert">
+                      {message}
+                    </p>
+                  )}
+                  
+                  <div className="wizard-step-actions">
+                    <Button 
+                      type="button" 
+                      variant="secondary" 
+                      onClick={() => setStep(2)}
+                      leftIcon={!ar ? (ar ? <ArrowRight className="w-4 h-4" /> : <ArrowLeft className="w-4 h-4" />) : undefined}
+                      rightIcon={ar ? (ar ? <ArrowRight className="w-4 h-4" /> : <ArrowLeft className="w-4 h-4" />) : undefined}
+                    >
+                      {ar ? "رجوع" : "Back"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="md"
+                      isLoading={pending}
+                      leftIcon={<Sparkles className="w-4 h-4" />}
+                      onClick={() => {
+                        const fd = new FormData();
+                        fd.append("title", title);
+                        fd.append("examAt", examAt);
+                        fd.append("syllabusText", syllabusText);
+                        generate(fd);
+                      }}
+                    >
+                      {ar ? "توليد مقترح الخطة" : "Generate plan proposal"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           ) : (
             <div className="quiet-state">
               <p>

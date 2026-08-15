@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useState } from "react";
 import {
-  Trophy,
   Medal,
   Target,
   TrendingUp,
@@ -12,7 +11,6 @@ import {
   ArrowRight,
   ArrowLeft,
   Award,
-  Sparkles,
 } from "lucide-react";
 import { PageShell } from "@/components/ui/page-shell";
 import { PageHeader } from "@/components/ui/page-header";
@@ -78,8 +76,8 @@ export function ChallengeList({
         title={ar ? "تنافس على عادات حقيقية." : "Compete on habits that hold up."}
         description={
           ar
-            ? "يُحتسب النشاط المؤهل فقط، وتظل التعديلات ظاهرة، ويمكنك اختيار طريقة الحسم."
-            : "Only eligible activity counts, corrections stay visible, and you choose how the result is decided."}
+            ? "تحديات ودية مع زملاء الكلية."
+            : "Friendly study challenges with classmates."}
         actions={
           <div className="page-header">
             <Link className="page-header-link" href="/leaderboard">
@@ -108,18 +106,6 @@ export function ChallengeList({
         <article>
           <span>{ar ? "المكتملة" : "Completed"}</span>
           <strong>{stats.completed}</strong>
-        </article>
-        <article>
-          <span>{ar ? "النتائج المتقدمة" : "Leading finishes"}</span>
-          <strong>{stats.wins}</strong>
-        </article>
-        <article>
-          <span>{ar ? "التعادلات" : "Draws"}</span>
-          <strong>{stats.draws}</strong>
-        </article>
-        <article>
-          <span>{ar ? "الوصول للهدف" : "Targets reached"}</span>
-          <strong>{stats.targetReached}</strong>
         </article>
         <article>
           <span>{ar ? "معدل التقدم" : "Leading rate"}</span>
@@ -209,8 +195,8 @@ export function ChallengeList({
                 <h2>{ar ? "لا توجد تحديات هنا بعد." : "No challenges here yet."}</h2>
                 <p>
                   {ar
-                    ? "ابدأ بهدف واضح مع صديق، دون احتساب المهام القصيرة أو الجلسات اليدوية."
-                    : "Start with a clear goal and a friend. Short tasks and manual sessions never count."}
+                    ? "ابدأ بهدف واضح مع صديق."
+                    : "Start with a clear goal and a friend."}
                 </p>
                 <Button
                   href="/challenges/new"
@@ -226,30 +212,6 @@ export function ChallengeList({
         </section>
 
         <aside className="challenge-side-panel">
-          <section>
-            <p className="eyebrow">{ar ? "قواعد عادلة" : "Fair-play rules"}</p>
-            <h2>{ar ? "ما الذي يُحتسب؟" : "What counts?"}</h2>
-            <ul>
-              <li>
-                {ar ? "المهمة لا تقل عن 10 دقائق." : "Tasks must be estimated at 10+ minutes."}
-              </li>
-              <li>
-                {ar
-                  ? "مهمة واحدة مؤهلة كل خمس دقائق."
-                  : "At most one eligible task every five minutes."}
-              </li>
-              <li>
-                {ar
-                  ? "الجلسات اليدوية لا تدخل المنافسة."
-                  : "Manual sessions stay outside competitive totals."}
-              </li>
-              <li>
-                {ar
-                  ? "التعديل أو الحذف ينشئ تسوية ظاهرة."
-                  : "Edits and deletions create visible adjustments."}
-              </li>
-            </ul>
-          </section>
           <section>
             <div className="panel-heading">
               <h2 className="flex items-center gap-1.5">

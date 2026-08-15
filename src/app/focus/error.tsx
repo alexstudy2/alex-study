@@ -1,12 +1,13 @@
 "use client";
+
 export default function FocusError({ reset }: { reset: () => void }) {
   return (
-    <main className="page-shell">
-      <div className="session-state">
-        <h1>Focus space unavailable · مساحة التركيز غير متاحة</h1>
-        <p>Your timer data is safe. Try loading it again. · بيانات المؤقت الخاصة بك آمنة. حاول تحميلها مرة أخرى.</p>
-        <button className="primary-button" onClick={reset}>
-          Try again · حاول مرة أخرى
+    <main className="page-shell flex items-center justify-center min-h-[60vh]">
+      <div className="session-state max-w-md w-full p-6 text-center">
+        <h2>Something went wrong</h2>
+        <p className="mt-2 text-muted">Your timer data is safe. Try loading it again.</p>
+        <button className="primary-button mt-4" onClick={reset}>
+          Try again
         </button>
       </div>
     </main>

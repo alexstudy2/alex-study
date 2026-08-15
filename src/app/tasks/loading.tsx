@@ -1,10 +1,9 @@
+import { DoodleLoader } from "@/components/ui/doodle-loader";
+
 export default function Loading() {
   return (
-    <main className="page-shell">
-      <div className="task-state">
-        <span className="loader" />
-        Loading tasks…
-      </div>
+    <main className="page-shell flex items-center justify-center min-h-[60vh]">
+      <DoodleLoader />
     </main>
   );
 }

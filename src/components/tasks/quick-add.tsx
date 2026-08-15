@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Check, X, Wand2 } from "lucide-react";
+import { Plus, Check, X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Subject, TaskDraft } from "./types";
 
@@ -28,8 +28,6 @@ export function QuickAdd({
     setPending(true);
     setMessage("");
 
-    // Check if the user wants natural language parsing or direct add
-    // If text mentions duration or dates, attempt parsing, otherwise create directly
     const hasTimeOrDate = /\b(\d+\s*(min|mins|minutes|دقيقة|ساعة|hours?)|today|tomorrow|غدا|اليوم)\b/i.test(text);
 
     if (hasTimeOrDate) {
@@ -46,7 +44,6 @@ export function QuickAdd({
       }
     }
 
-    // Direct task creation
     const response = await fetch("/api/tasks", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -107,8 +104,8 @@ export function QuickAdd({
               onChange={(e) => setText(e.target.value)}
               placeholder={
                 ar
-                  ? "أضف مهمة دراسية جديدة... اضغط Enter للإضافة"
-                  : "Add a study task... press Enter to add"
+                  ? "أضف مهمة دراسية جديدة... اضغط Enter للتأكيد"
+                  : "Add a new study task... press Enter to save"
               }
               className="quick-capture-text"
               autoComplete="off"
@@ -121,7 +118,7 @@ export function QuickAdd({
                 className="quick-capture-select"
                 aria-label={ar ? "المادة" : "Subject"}
               >
-                <option value="">{ar ? "كل المواد" : "No subject"}</option>
+                <option value="">{ar ? "بدون مادة" : "No subject"}</option>
                 {subjects.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
@@ -131,14 +128,14 @@ export function QuickAdd({
 
               <select
                 value={priority}
-                onChange={(e) => setPriority(e.target.value as any)}
+                onChange={(e) => setPriority(e.target.value as typeof priority)}
                 className="quick-capture-select"
                 aria-label={ar ? "الأولوية" : "Priority"}
               >
-                <option value="LOW">{ar ? "منخفضة" : "Low"}</option>
-                <option value="MEDIUM">{ar ? "متوسطة" : "Medium"}</option>
-                <option value="HIGH">{ar ? "عالية" : "High"}</option>
-                <option value="URGENT">{ar ? "عاجلة" : "Urgent"}</option>
+                <option value="LOW">{ar ? "أولوية منخفضة" : "Low"}</option>
+                <option value="MEDIUM">{ar ? "أولوية متوسطة" : "Medium"}</option>
+                <option value="HIGH">{ar ? "أولوية عالية" : "High"}</option>
+                <option value="URGENT">{ar ? "أولوية عاجلة" : "Urgent"}</option>
               </select>
 
               <Button
@@ -149,7 +146,7 @@ export function QuickAdd({
                 disabled={!text.trim()}
                 leftIcon={<Plus className="w-4 h-4" />}
               >
-                {ar ? "إضافة" : "Add task"}
+                {ar ? "إضافة" : "Add"}
               </Button>
             </div>
           </div>
@@ -157,35 +154,36 @@ export function QuickAdd({
       ) : (
         <form
           action={(fd) => decideDraft(true, fd)}
-          className="p-4 rounded-xl border border-line bg-surface shadow-sm grid gap-3"
+          className="p-4 rounded-xl border-2 border-secondary bg-surface shadow-doodle grid gap-3"
         >
-          <div className="flex items-center justify-between pb-2 border-b border-line">
-            <span className="text-sm font-semibold text-foreground">
-              {ar ? "مراجعة المهمة قبل الحفظ" : "Review Task Details"}
+          <div className="flex items-center justify-between pb-2 border-b-2 border-dashed border-line">
+            <span className="text-sm font-bold text-foreground flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-primary" />
+              {ar ? "مراجعة تفاصيل المهمة المستخرجة" : "Review Extracted Task Details"}
             </span>
             <span className="text-xs text-muted">
-              {ar ? "تم استخراج الوقت والمادة تلقائيًا" : "Parsed from your note"}
+              {ar ? "تم التعرف على الوقت تلقائيًا" : "Recognized automatically"}
             </span>
           </div>
 
           <div className="grid gap-3">
-            <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
+            <label className="flex flex-col gap-1 text-xs font-bold text-foreground">
               <span>{ar ? "عنوان المهمة" : "Task Title"}</span>
               <input
                 name="title"
                 required
                 defaultValue={draft.title}
-                className="w-full px-3 py-1.5 text-sm rounded-md border border-line bg-surface text-foreground"
+                className="w-full px-3 py-1.5 text-sm rounded-md border-2 border-secondary bg-surface text-foreground shadow-doodle-xs"
               />
             </label>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
+              <label className="flex flex-col gap-1 text-xs font-bold text-foreground">
                 <span>{ar ? "المادة" : "Subject"}</span>
                 <select
                   name="subjectId"
                   defaultValue={draft.subjectId ?? ""}
-                  className="w-full px-3 py-1.5 text-sm rounded-md border border-line bg-surface text-foreground"
+                  className="w-full px-3 py-1.5 text-sm rounded-md border-2 border-secondary bg-surface text-foreground shadow-doodle-xs"
                 >
                   <option value="">{draft.subjectName ?? (ar ? "بدون مادة" : "No subject")}</option>
                   {subjects.map((s) => (
@@ -196,23 +194,23 @@ export function QuickAdd({
                 </select>
               </label>
 
-              <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
+              <label className="flex flex-col gap-1 text-xs font-bold text-foreground">
                 <span>{ar ? "الأولوية" : "Priority"}</span>
                 <select
                   name="priority"
                   defaultValue={draft.priority}
-                  className="w-full px-3 py-1.5 text-sm rounded-md border border-line bg-surface text-foreground"
+                  className="w-full px-3 py-1.5 text-sm rounded-md border-2 border-secondary bg-surface text-foreground shadow-doodle-xs"
                 >
-                  <option value="LOW">{ar ? "منخفضة" : "Low"}</option>
-                  <option value="MEDIUM">{ar ? "متوسطة" : "Medium"}</option>
-                  <option value="HIGH">{ar ? "عالية" : "High"}</option>
-                  <option value="URGENT">{ar ? "عاجلة" : "Urgent"}</option>
+                  <option value="LOW">{ar ? "أولوية منخفضة" : "Low"}</option>
+                  <option value="MEDIUM">{ar ? "أولوية متوسطة" : "Medium"}</option>
+                  <option value="HIGH">{ar ? "أولوية عالية" : "High"}</option>
+                  <option value="URGENT">{ar ? "أولوية عاجلة" : "Urgent"}</option>
                 </select>
               </label>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
+              <label className="flex flex-col gap-1 text-xs font-bold text-foreground">
                 <span>{ar ? "موعد الاستحقاق" : "Due Date"}</span>
                 <input
                   name="dueAt"
@@ -220,24 +218,24 @@ export function QuickAdd({
                   defaultValue={
                     draft.dueAt ? new Date(draft.dueAt).toISOString().slice(0, 16) : ""
                   }
-                  className="w-full px-3 py-1.5 text-sm rounded-md border border-line bg-surface text-foreground"
+                  className="w-full px-3 py-1.5 text-sm rounded-md border-2 border-secondary bg-surface text-foreground shadow-doodle-xs"
                 />
               </label>
 
-              <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
+              <label className="flex flex-col gap-1 text-xs font-bold text-foreground">
                 <span>{ar ? "الوقت التقديري (دقيقة)" : "Estimated Minutes"}</span>
                 <input
                   name="estimatedMinutes"
                   type="number"
                   min="5"
                   defaultValue={draft.estimatedMinutes ?? ""}
-                  className="w-full px-3 py-1.5 text-sm rounded-md border border-line bg-surface text-foreground"
+                  className="w-full px-3 py-1.5 text-sm rounded-md border-2 border-secondary bg-surface text-foreground shadow-doodle-xs"
                 />
               </label>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 pt-2 border-t border-line">
+          <div className="flex items-center gap-2 pt-2 border-t-2 border-dashed border-line">
             <Button
               type="submit"
               variant="primary"
@@ -254,14 +252,14 @@ export function QuickAdd({
               leftIcon={<X className="w-3.5 h-3.5" />}
               onClick={() => decideDraft(false)}
             >
-              {ar ? "إلغاء" : "Discard"}
+              {ar ? "تجاهل" : "Discard"}
             </Button>
           </div>
         </form>
       )}
 
       {message && (
-        <p className="text-xs text-danger mt-1.5" role="status">
+        <p className="text-xs text-danger font-bold mt-1.5" role="status">
           {message}
         </p>
       )}

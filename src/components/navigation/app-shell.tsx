@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { AlexStudyLogo } from "@/components/ui/logo";
 import {
   Bell,
@@ -12,6 +13,7 @@ import {
   History,
   LayoutDashboard,
   ListTodo,
+  LogOut,
   Monitor,
   Moon,
   MoreHorizontal,
@@ -33,6 +35,12 @@ type NavigationItem = {
   icon: typeof LayoutDashboard;
 };
 
+type NavigationGroup = {
+  title: string;
+  titleAr: string;
+  items: NavigationItem[];
+};
+
 const publicPaths = [
   "/sign-in",
   "/sign-up",
@@ -42,25 +50,56 @@ const publicPaths = [
   "/share",
   "/onboarding",
 ];
-const primaryItems: NavigationItem[] = [
+
+const navigationGroups: NavigationGroup[] = [
+  {
+    title: "Study",
+    titleAr: "المذاكرة",
+    items: [
+      { href: "/dashboard", label: "Dashboard", labelAr: "الرئيسية", icon: LayoutDashboard },
+      { href: "/tasks", label: "Tasks", labelAr: "المهام", icon: ListTodo },
+      { href: "/focus", label: "Focus", labelAr: "التركيز", icon: Timer },
+    ],
+  },
+  {
+    title: "Planning",
+    titleAr: "التخطيط",
+    items: [
+      { href: "/calendar", label: "Calendar", labelAr: "التقويم", icon: CalendarDays },
+      { href: "/exam-plans/new", label: "Exam Plan", labelAr: "خطة امتحان", icon: ClipboardList },
+      { href: "/goals", label: "Goals", labelAr: "الأهداف", icon: Target },
+    ],
+  },
+  {
+    title: "Insights",
+    titleAr: "الرؤى والتقدم",
+    items: [
+      { href: "/sessions", label: "Sessions", labelAr: "سجل الجلسات", icon: History },
+      { href: "/insights", label: "AI Insights", labelAr: "الرؤى الذكية", icon: Brain },
+    ],
+  },
+  {
+    title: "Community",
+    titleAr: "المجتمع",
+    items: [
+      { href: "/lobbies", label: "Lobbies", labelAr: "الغرف", icon: DoorOpen },
+      { href: "/friends", label: "Friends", labelAr: "الأصدقاء", icon: Users },
+      { href: "/challenges", label: "Challenges", labelAr: "التحديات", icon: Trophy },
+    ],
+  },
+];
+
+const mobilePrimaryItems: NavigationItem[] = [
   { href: "/dashboard", label: "Dashboard", labelAr: "الرئيسية", icon: LayoutDashboard },
   { href: "/tasks", label: "Tasks", labelAr: "المهام", icon: ListTodo },
   { href: "/focus", label: "Focus", labelAr: "التركيز", icon: Timer },
   { href: "/calendar", label: "Calendar", labelAr: "التقويم", icon: CalendarDays },
-  { href: "/friends", label: "Friends", labelAr: "الأصدقاء", icon: Users },
-];
-const moreItems: NavigationItem[] = [
-  { href: "/goals", label: "Goals", labelAr: "الأهداف", icon: Target },
-  { href: "/sessions", label: "Sessions", labelAr: "الجلسات", icon: History },
-  { href: "/lobbies", label: "Lobbies", labelAr: "الغرف", icon: DoorOpen },
-  { href: "/challenges", label: "Challenges", labelAr: "التحديات", icon: Trophy },
-  { href: "/insights", label: "Insights", labelAr: "الرؤى", icon: Brain },
-  { href: "/exam-plans/new", label: "Exam plan", labelAr: "خطة امتحان", icon: ClipboardList },
 ];
 
 function isActive(pathname: string, href: string) {
   return pathname === href || (href !== "/dashboard" && pathname.startsWith(`${href}/`));
 }
+
 function applyTheme(theme: Theme) {
   if (theme === "SYSTEM") document.documentElement.removeAttribute("data-theme");
   else document.documentElement.dataset.theme = theme.toLowerCase();
@@ -86,11 +125,13 @@ export function AppShell({
 
   if (!user || pathname === "/" || publicPaths.some((path) => pathname.startsWith(path)))
     return children;
+
   const ar = user.locale === "AR";
   const themeLabels = ar
     ? { SYSTEM: "مظهر النظام", LIGHT: "المظهر الفاتح", DARK: "المظهر الداكن" }
     : { SYSTEM: "System theme", LIGHT: "Light theme", DARK: "Dark theme" };
   const ThemeIcon = theme === "SYSTEM" ? Monitor : theme === "LIGHT" ? Sun : Moon;
+
   async function cycleTheme() {
     const previous = theme;
     const next = theme === "SYSTEM" ? "LIGHT" : theme === "LIGHT" ? "DARK" : "SYSTEM";
@@ -108,6 +149,11 @@ export function AppShell({
       applyTheme(previous);
     }
   }
+
+  async function handleSignOut() {
+    await signOut({ callbackUrl: "/sign-in" });
+  }
+
   return (
     <div className="app-frame" dir={ar ? "rtl" : "ltr"}>
       <a className="skip-link" href="#main-content">
@@ -115,15 +161,19 @@ export function AppShell({
       </a>
       <aside className="app-sidebar">
         <Link className="app-wordmark" href="/dashboard" aria-label="Alex Study">
-          <AlexStudyLogo size={32} />
+          <AlexStudyLogo size={34} />
         </Link>
-        <nav aria-label={ar ? "التنقل الرئيسي" : "Primary navigation"}>
-          {primaryItems.map((item) => (
-            <ShellLink key={item.href} item={item} pathname={pathname} ar={ar} />
-          ))}
-          <div className="sidebar-rule" />
-          {moreItems.map((item) => (
-            <ShellLink key={item.href} item={item} pathname={pathname} ar={ar} />
+        <nav aria-label={ar ? "التنقل الرئيسي" : "Primary navigation"} className="sidebar-nav">
+          {navigationGroups.map((group, groupIdx) => (
+            <div key={group.title} className="sidebar-group">
+              <span className="sidebar-group-title">
+                {ar ? group.titleAr : group.title}
+              </span>
+              {group.items.map((item) => (
+                <ShellLink key={item.href} item={item} pathname={pathname} ar={ar} />
+              ))}
+              {groupIdx < navigationGroups.length - 1 && <div className="sidebar-rule" />}
+            </div>
           ))}
         </nav>
         <div className="app-sidebar-footer">
@@ -143,18 +193,30 @@ export function AppShell({
             pathname={pathname}
             ar={ar}
           />
-          <button
-            type="button"
-            onClick={() => void cycleTheme()}
-            title={themeLabels[theme]}
-            aria-label={themeLabels[theme]}
-          >
-            <ThemeIcon aria-hidden="true" />
-            <span>{themeLabels[theme]}</span>
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => void cycleTheme()}
+              title={themeLabels[theme]}
+              aria-label={themeLabels[theme]}
+              className="flex-1 flex items-center justify-center gap-2"
+            >
+              <ThemeIcon aria-hidden="true" />
+              <span>{themeLabels[theme]}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleSignOut()}
+              title={ar ? "تسجيل الخروج" : "Sign out"}
+              aria-label={ar ? "تسجيل الخروج" : "Sign out"}
+              className="flex items-center justify-center p-2 rounded-md hover:bg-danger-subtle hover:text-danger transition-colors text-muted"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
           <div className="shell-profile">
             <span aria-hidden="true">{user.name.trim().slice(0, 1).toUpperCase()}</span>
-            <strong>{user.name}</strong>
+            <strong className="truncate">{user.name}</strong>
           </div>
         </div>
       </aside>
@@ -162,7 +224,7 @@ export function AppShell({
         {children}
       </div>
       <nav className="mobile-navigation" aria-label={ar ? "التنقل الرئيسي" : "Primary navigation"}>
-        {primaryItems.slice(0, 4).map((item) => (
+        {mobilePrimaryItems.map((item) => (
           <ShellLink key={item.href} item={item} pathname={pathname} ar={ar} compact />
         ))}
         <details>
@@ -171,7 +233,9 @@ export function AppShell({
             <span>{ar ? "المزيد" : "More"}</span>
           </summary>
           <div className="mobile-more-menu">
-            {[primaryItems[4], ...moreItems].map((item) => (
+            {navigationGroups.flatMap((g) => g.items).filter(
+              (item) => !mobilePrimaryItems.some((p) => p.href === item.href)
+            ).map((item) => (
               <ShellLink key={item.href} item={item} pathname={pathname} ar={ar} />
             ))}
             <ShellLink
@@ -190,6 +254,14 @@ export function AppShell({
               pathname={pathname}
               ar={ar}
             />
+            <button
+              type="button"
+              onClick={() => void handleSignOut()}
+              className="flex items-center gap-2 p-2 text-danger font-bold rounded-md hover:bg-danger-subtle"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>{ar ? "تسجيل الخروج" : "Sign out"}</span>
+            </button>
           </div>
         </details>
       </nav>

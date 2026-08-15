@@ -33,15 +33,15 @@ export function PageHeader({
         {backHref && (
           <Link
             href={backHref}
-            className="inline-flex items-center gap-1.5 text-xs text-muted font-medium mb-1.5 hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs text-muted font-bold mb-1.5 hover:text-foreground transition-colors"
           >
-            <BackIcon className="w-3.5 h-3.5" />
+            <BackIcon className="w-4 h-4" />
             <span>{backLabel || (isRtl ? "رجوع" : "Back")}</span>
           </Link>
         )}
-        {eyebrow && <span className="eyebrow block text-xs font-semibold text-accent uppercase tracking-wider mb-1">{eyebrow}</span>}
+        {eyebrow && <span className="eyebrow block text-xs font-bold uppercase tracking-wider mb-1">{eyebrow}</span>}
         <h1>{title}</h1>
-        {description && <p>{description}</p>}
+        {description && <p className="mt-1">{description}</p>}
       </div>
 
       {(actions || children) && (

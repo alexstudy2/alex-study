@@ -3,6 +3,7 @@ import { activeSeconds, focusScore, remainingSeconds } from "@/lib/sessions/time
 import {
   distractionSchema,
   manualSessionSchema,
+  sessionPatchSchema,
   timerActionSchema,
   timerStartSchema,
 } from "@/lib/sessions/validation";
@@ -66,6 +67,10 @@ describe("session API validation and authorization inputs", () => {
         plannedDurationSeconds: 3600,
       }).success,
     ).toBe(false);
+  });
+  it("accepts editable manual session fields and rejects empty updates", () => {
+    expect(sessionPatchSchema.safeParse({ reflection: "Useful review" }).success).toBe(true);
+    expect(sessionPatchSchema.safeParse({}).success).toBe(false);
   });
   it("bounds distraction notes", () => {
     expect(distractionSchema.safeParse({ note: "x".repeat(241) }).success).toBe(false);

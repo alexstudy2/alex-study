@@ -18,7 +18,7 @@ export async function calendarEvents(userId: string, anchor: Date, view: Calenda
       orderBy: { dueAt: "asc" },
     }),
     prisma.studySession.findMany({
-      where: { userId, startedAt: { gte: start, lte: end } },
+      where: { userId, status: { not: "ABANDONED" }, startedAt: { gte: start, lte: end } },
       select: {
         id: true,
         startedAt: true,

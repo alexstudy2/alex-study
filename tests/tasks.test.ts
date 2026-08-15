@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { toZonedTime } from "date-fns-tz";
 import { getTaskDateWindow, nextRecurrenceDate } from "@/lib/tasks/dates";
 import { buildTaskWhere } from "@/lib/tasks/queries";
-import { bulkSchema, reorderSchema, taskInputSchema } from "@/lib/tasks/validation";
+import { bulkSchema, reorderSchema, subjectInputSchema, taskInputSchema } from "@/lib/tasks/validation";
 import { parsedTaskDraftSchema } from "@/lib/tasks/ai";
 
 describe("task date filters", () => {
@@ -23,6 +23,14 @@ describe("task date filters", () => {
     expect(where.userId).toBe("user-1");
     expect(where.deletedAt).toBeNull();
     expect(where.dueAt).toBeTruthy();
+  });
+  it("keeps active focus tasks visible in the today filter without a due date", () => {
+    const where = buildTaskWhere("user-1", "today", now);
+    expect(where.OR).toEqual([
+      expect.objectContaining({ dueAt: expect.any(Object) }),
+      { status: "IN_PROGRESS" },
+      { timerRuns: { some: { mode: "FOCUS", status: { in: ["RUNNING", "PAUSED"] } } } },
+    ]);
   });
 });
 
@@ -61,6 +69,10 @@ describe("task validation and ordering", () => {
         action: "PRIORITY",
       }).success,
     ).toBe(false);
+  });
+  it("accepts every course color exposed by the task UI", () => {
+    for (const colorToken of ["teal", "coral", "amber", "violet", "sky", "rose", "slate"])
+      expect(subjectInputSchema.safeParse({ name: "Course", colorToken }).success).toBe(true);
   });
 });
 

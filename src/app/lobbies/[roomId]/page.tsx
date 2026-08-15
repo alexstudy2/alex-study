@@ -54,6 +54,7 @@ export default async function LobbyDetailPage({
         role={membership.role}
         locale={locale}
         serverNow={new Date().toISOString()}
+        currentUserId={user.id}
       />
     </PageShell>
   );

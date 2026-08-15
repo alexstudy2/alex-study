@@ -1,10 +1,9 @@
+import { DoodleLoader } from "@/components/ui/doodle-loader";
+
 export default function FocusLoading() {
   return (
-    <main className="page-shell">
-      <div className="session-state">
-        <div className="loader" />
-        <p>Preparing your focus space… · جاري تجهيز مساحة التركيز...</p>
-      </div>
+    <main className="page-shell flex items-center justify-center min-h-[60vh]">
+      <DoodleLoader />
     </main>
   );
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import {
   Play,
   Pause,
@@ -13,6 +12,8 @@ import {
   AlertCircle,
   Volume2,
   History,
+  Sparkles,
+  Clock3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { TimerMode, TimerRun } from "./types";
@@ -48,22 +49,33 @@ const copy = {
     start: "Start timer",
     pause: "Pause",
     resume: "Resume",
-    complete: "Complete",
+    complete: "Complete session",
     cancel: "Cancel",
     distraction: "I got distracted",
-    task: "Task",
-    subject: "Subject",
+    task: "Associated Task",
+    subject: "Study Course",
     none: "None",
     ambient: "Ambient sound",
-    soundOff: "Off",
+    soundOff: "Off (Silent)",
     soundRain: "Rain",
     soundBrown: "Brown noise",
     reflection: "What helped you focus?",
     recovery: "Your timer was recovered from the server.",
-    focusMode: "Focus mode",
-    exitFocusMode: "Exit focus mode",
+    focusMode: "Full Screen Focus",
+    exitFocusMode: "Exit Full Screen",
     sessions: "Session history",
-    error: "The timer could not be updated. Refresh and try again.",
+    error: "The timer could not be updated. Please try again.",
+    celebrationTitle: "Great session completed!",
+    min: "min",
+    distractionsCount: "distractions",
+    startAnother: "Start another session",
+    markTaskDone: "Mark task as done",
+    taskDone: "Completed!",
+    viewSessions: "View sessions",
+    ready: "Ready when you are",
+    running: "Session in progress",
+    paused: "Timer paused",
+    remaining: "remaining",
   },
   ar: {
     focus: "تركيز",
@@ -72,22 +84,33 @@ const copy = {
     start: "ابدأ المؤقت",
     pause: "إيقاف مؤقت",
     resume: "متابعة",
-    complete: "إنهاء",
+    complete: "إنهاء الجلسة",
     cancel: "إلغاء",
     distraction: "تشتت انتباهي",
-    task: "المهمة",
-    subject: "المادة",
+    task: "المهمة المرتبطة",
+    subject: "المقرر الدراسي",
     none: "بدون",
     ambient: "الصوت المحيط",
     soundOff: "متوقف",
-    soundRain: "مطر",
+    soundRain: "صوت المطر",
     soundBrown: "ضوضاء بنية",
     reflection: "ما الذي ساعدك على التركيز؟",
     recovery: "تمت استعادة المؤقت من الخادم.",
-    focusMode: "وضع التركيز",
-    exitFocusMode: "إنهاء وضع التركيز",
+    focusMode: "ملء الشاشة",
+    exitFocusMode: "إنهاء ملء الشاشة",
     sessions: "سجل الجلسات",
-    error: "تعذر تحديث المؤقت. حدّث الصفحة وحاول مجددًا.",
+    error: "تعذر تحديث المؤقت. يرجى المحاولة مجددًا.",
+    celebrationTitle: "أحسنت! اكتملت الجلسة بنجاح",
+    min: "دقيقة",
+    distractionsCount: "تشتت",
+    startAnother: "ابدأ جلسة أخرى",
+    markTaskDone: "إنجاز المهمة",
+    taskDone: "تم الإنجاز!",
+    viewSessions: "سجل الجلسات",
+    ready: "جاهز عندما تكون مستعدًا",
+    running: "الجلسة قيد التشغيل",
+    paused: "المؤقت متوقف مؤقتًا",
+    remaining: "متبقي",
   },
 };
 
@@ -104,17 +127,76 @@ export function FocusWorkspace(props: Props) {
   const [timer, setTimer] = useState(props.initialTimer);
   const [taskId, setTaskId] = useState(props.initialTimer?.task?.id ?? "");
   const [subjectId, setSubjectId] = useState(props.initialTimer?.subject?.id ?? "");
+  const [clientStartedAt] = useState(() => new Date().getTime());
   const [serverOffset, setServerOffset] = useState(
-    new Date(props.initialServerNow).getTime() - Date.now()
+    () => new Date(props.initialServerNow).getTime() - clientStartedAt
   );
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(clientStartedAt);
   const [busy, setBusy] = useState(false);
+  const [distractionBusy, setDistractionBusy] = useState(false);
+  const [distractionConfirmed, setDistractionConfirmed] = useState(false);
   const [error, setError] = useState("");
   const [reflection, setReflection] = useState("");
+  const [celebration, setCelebration] = useState<{
+    duration: number;
+    distractions: number;
+    taskTitle?: string;
+    taskId?: string;
+    subjectName?: string;
+  } | null>(null);
+  const [taskCompleted, setTaskCompleted] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [sound, setSound] = useState(props.preferences.ambientSound ?? "off");
   const audioContext = useRef<AudioContext | null>(null);
   const noiseNode = useRef<AudioNode | null>(null);
+
+  const enterFullscreen = useCallback(async () => {
+    setFocusMode(true);
+    try {
+      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch {
+      // Fallback to CSS overlay if native Fullscreen API is blocked
+    }
+  }, []);
+
+  const exitFullscreen = useCallback(async () => {
+    setFocusMode(false);
+    try {
+      if (document.fullscreenElement && document.exitFullscreen) {
+        await document.exitFullscreen();
+      }
+    } catch {
+      // Ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isNativeFullscreen = Boolean(document.fullscreenElement);
+      if (!isNativeFullscreen && focusMode) {
+        setFocusMode(false);
+      }
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, [focusMode]);
+
+  useEffect(() => {
+    if (!focusMode) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        void exitFullscreen();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [focusMode, exitFullscreen]);
 
   const durationMinutes = useMemo(() => {
     if (mode === "SHORT_BREAK") return props.preferences.shortBreak;
@@ -139,6 +221,11 @@ export function FocusWorkspace(props: Props) {
     );
     return Math.max(0, timer.durationSeconds - active);
   }, [timer, durationMinutes, now, serverOffset]);
+  const totalSeconds = timer?.durationSeconds ?? durationMinutes * 60;
+  const elapsedPercent = Math.min(
+    100,
+    Math.max(0, ((totalSeconds - remaining) / Math.max(1, totalSeconds)) * 100),
+  );
 
   const toggleSound = useCallback(
     (type: string) => {
@@ -195,250 +282,463 @@ export function FocusWorkspace(props: Props) {
   async function start() {
     setBusy(true);
     setError("");
-    const response = await fetch("/api/timer/start", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        mode,
-        durationMinutes,
-        taskId: taskId || null,
-        subjectId: subjectId || null,
-      }),
-    });
-    const data = await response.json();
-    setBusy(false);
-    if (!response.ok) {
-      setError(data.error ?? t.error);
-      return;
+    try {
+      const response = await fetch("/api/timer", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          mode,
+          durationSeconds: durationMinutes * 60,
+          taskId: taskId || null,
+          subjectId: subjectId || null,
+        }),
+      });
+      const data = await response.json();
+      setBusy(false);
+      if (!response.ok) {
+        setError(data.error ?? t.error);
+        return;
+      }
+      setTimer(data.timer);
+      setServerOffset(new Date(data.serverNow).getTime() - Date.now());
+    } catch {
+      setBusy(false);
+      setError(t.error);
     }
-    setTimer(data.timer);
-    setServerOffset(new Date(data.serverNow).getTime() - Date.now());
   }
 
   async function act(action: "pause" | "resume" | "complete" | "cancel") {
+    if (!timer) return;
     setBusy(true);
     setError("");
-    const response = await fetch(`/api/timer/${action}`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ reflectionNotes: reflection || null }),
-    });
-    const data = await response.json();
-    setBusy(false);
-    if (!response.ok) {
-      setError(data.error ?? t.error);
-      return;
+    try {
+      const response = await fetch(`/api/timer/${timer.id}/${action}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          version: timer.version,
+          reflection: reflection || undefined,
+        }),
+      });
+      const data = await response.json();
+      setBusy(false);
+      if (!response.ok) {
+        setError(data.error ?? t.error);
+        return;
+      }
+      setTimer(data.timer);
+      if (data.serverNow) setServerOffset(new Date(data.serverNow).getTime() - Date.now());
+
+      if (action === "complete") {
+        setCelebration({
+          duration: data.timer.durationSeconds - remaining,
+          distractions: data.timer.session?.distractionCount ?? 0,
+          taskTitle: data.timer.task?.title,
+          taskId: data.timer.task?.id,
+          subjectName: data.timer.subject?.name,
+        });
+        setTaskCompleted(false);
+      }
+
+      if (action === "cancel") {
+        setReflection("");
+        setTimer(null);
+      }
+    } catch {
+      setBusy(false);
+      setError(t.error);
     }
-    setTimer(data.timer);
-    if (data.serverNow) setServerOffset(new Date(data.serverNow).getTime() - Date.now());
-    if (action === "complete" || action === "cancel") {
-      setReflection("");
+  }
+
+  function dismissCelebration() {
+    setCelebration(null);
+    setReflection("");
+    setTimer(null);
+  }
+
+  async function completeLinkedTask() {
+    if (!celebration?.taskId) return;
+    try {
+      const response = await fetch(`/api/tasks/${celebration.taskId}/complete`, { method: "POST" });
+      if (response.ok) setTaskCompleted(true);
+      else setError(t.error);
+    } catch {
+      setError(t.error);
     }
   }
 
   async function distract() {
-    if (!timer) return;
-    const response = await fetch("/api/timer/distraction", { method: "POST" });
-    if (response.ok) {
-      const data = await response.json();
-      setTimer(data.timer);
+    if (!timer || distractionBusy) return;
+    setDistractionBusy(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/timer/${timer.id}/distractions`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ note: null }),
+      });
+      if (response.ok) {
+        const data = (await response.json()) as { distractionCount: number };
+        setTimer((current) =>
+          current?.session
+            ? { ...current, session: { ...current.session, distractionCount: data.distractionCount } }
+            : current,
+        );
+        setDistractionConfirmed(true);
+        window.setTimeout(() => setDistractionConfirmed(false), 1200);
+      } else setError(t.error);
+    } catch {
+      setError(t.error);
+    } finally {
+      setDistractionBusy(false);
     }
   }
 
   return (
-    <section className={`focus-grid ${focusMode ? "focus-mode-active" : ""}`}>
-      <div className="timer-card">
-        {!timer && (
-          <div className="segmented-control" role="tablist">
-            <button
-              role="tab"
-              aria-selected={mode === "FOCUS"}
-              onClick={() => setMode("FOCUS")}
-            >
-              {t.focus}
-            </button>
-            <button
-              role="tab"
-              aria-selected={mode === "SHORT_BREAK"}
-              onClick={() => setMode("SHORT_BREAK")}
-            >
-              {t.short}
-            </button>
-            <button
-              role="tab"
-              aria-selected={mode === "LONG_BREAK"}
-              onClick={() => setMode("LONG_BREAK")}
-            >
-              {t.long}
-            </button>
-          </div>
-        )}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="focus-mode-toggle"
-          aria-pressed={focusMode}
-          leftIcon={focusMode ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-          onClick={() => setFocusMode(!focusMode)}
-        >
-          {focusMode ? t.exitFocusMode : t.focusMode}
-        </Button>
-        <p className="timer-mode-label">
-          {mode === "FOCUS" ? t.focus : mode === "SHORT_BREAK" ? t.short : t.long}
-        </p>
-        <output className="timer-digits" aria-live="off">
-          {formatClock(remaining)}
-        </output>
-        {timer?.task && <p className="timer-context">{timer.task.title}</p>}
-        {timer?.subject && <p className="timer-context">{timer.subject.name}</p>}
-
-        <div className="timer-actions">
-          {!timer && (
-            <Button
-              variant="primary"
-              size="lg"
-              disabled={busy}
-              onClick={start}
-              leftIcon={<Play className="w-5 h-5" />}
-            >
-              {t.start}
-            </Button>
-          )}
-          {timer?.status === "RUNNING" && (
-            <Button
-              variant="primary"
-              size="lg"
-              disabled={busy}
-              onClick={() => act("pause")}
-              leftIcon={<Pause className="w-5 h-5" />}
-            >
-              {t.pause}
-            </Button>
-          )}
-          {timer?.status === "PAUSED" && (
-            <Button
-              variant="primary"
-              size="lg"
-              disabled={busy}
-              onClick={() => act("resume")}
-              leftIcon={<Play className="w-5 h-5" />}
-            >
-              {t.resume}
-            </Button>
-          )}
-          {timer && (
-            <Button
-              variant="secondary"
-              size="lg"
-              disabled={busy}
-              onClick={() => act("complete")}
-              leftIcon={<Check className="w-5 h-5" />}
-            >
-              {t.complete}
-            </Button>
-          )}
-          {timer && (
-            <Button
-              variant="danger"
-              size="icon"
-              title={t.cancel}
-              aria-label={t.cancel}
-              disabled={busy}
-              onClick={() => act("cancel")}
-            >
-              <X className="w-5 h-5" />
-            </Button>
-          )}
-        </div>
-
-        {timer?.mode === "FOCUS" && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="distraction-button mt-4"
-            leftIcon={<AlertCircle className="w-4 h-4 text-warning" />}
-            onClick={distract}
+    <>
+      <div className={`focus-workspace-container ${focusMode ? "fullscreen-focus-active" : ""}`}>
+        {/* Sticky Note Exit Button (Visible only in Fullscreen) */}
+        {focusMode && (
+          <button
+            type="button"
+            className="fullscreen-exit-sticky-btn group"
+            onClick={exitFullscreen}
+            title={`${t.exitFocusMode} (Esc)`}
+            aria-label={`${t.exitFocusMode} (Esc)`}
           >
-            {t.distraction} · {timer.session?.distractionCount ?? 0}
-          </Button>
+            <span className="sticky-tape" aria-hidden="true" />
+            <Minimize2 className="w-5 h-5 text-secondary transition-transform duration-200 group-hover:scale-110" aria-hidden="true" />
+            <span className="fullscreen-exit-tooltip">{t.exitFocusMode}</span>
+          </button>
         )}
 
-        {timer?.mode === "FOCUS" && (
-          <label className="reflection-field">
-            <span>{t.reflection}</span>
-            <textarea
-              value={reflection}
-              onChange={(event) => setReflection(event.target.value)}
-              placeholder="Notes, key insights, or concepts to review..."
-            />
-          </label>
-        )}
+        <section className="focus-main-grid">
+          {/* 1. Master Timer Card */}
+          <div className="doodle-timer-card">
+            {/* Mode Switcher Tabs (Only when timer is stopped) */}
+            {!timer && (
+              <div className="timer-mode-segmented-tabs" role="tablist">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === "FOCUS"}
+                  onClick={() => setMode("FOCUS")}
+                  className={`timer-mode-tab ${mode === "FOCUS" ? "active" : ""}`}
+                >
+                  {t.focus} ({props.preferences.focus}m)
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === "SHORT_BREAK"}
+                  onClick={() => setMode("SHORT_BREAK")}
+                  className={`timer-mode-tab ${mode === "SHORT_BREAK" ? "active" : ""}`}
+                >
+                  {t.short} ({props.preferences.shortBreak}m)
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === "LONG_BREAK"}
+                  onClick={() => setMode("LONG_BREAK")}
+                  className={`timer-mode-tab ${mode === "LONG_BREAK" ? "active" : ""}`}
+                >
+                  {t.long} ({props.preferences.longBreak}m)
+                </button>
+              </div>
+            )}
 
-        {error && (
-          <p className="form-error" role="alert">
-            {error}
-          </p>
-        )}
+            {/* Fullscreen Toggle Button (in non-fullscreen mode) */}
+            {!focusMode && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="fullscreen-trigger-btn"
+                leftIcon={<Maximize2 className="w-4 h-4" />}
+                onClick={enterFullscreen}
+              >
+                {t.focusMode}
+              </Button>
+            )}
+
+            <div className="timer-status-row">
+              <p className="timer-active-mode-label">
+                {mode === "FOCUS" ? t.focus : mode === "SHORT_BREAK" ? t.short : t.long}
+              </p>
+              <span className={`timer-live-status ${timer?.status?.toLowerCase() ?? "ready"}`}>
+                <i aria-hidden="true" />
+                {!timer ? t.ready : timer.status === "PAUSED" ? t.paused : t.running}
+              </span>
+            </div>
+
+            <div
+              className="timer-dial"
+              style={{ "--timer-progress": `${elapsedPercent * 3.6}deg` } as React.CSSProperties}
+            >
+              <div className="timer-dial-inner">
+                <Clock3 aria-hidden="true" />
+                <output className="giant-timer-digits" aria-label={`${formatClock(remaining)} ${t.remaining}`}>
+                  {formatClock(remaining)}
+                </output>
+                <span>{t.remaining}</span>
+              </div>
+            </div>
+
+            {/* Context: Linked task / subject */}
+            {timer?.task && (
+              <p className="timer-context-pill">
+                <span className="font-semibold text-xs text-muted">{t.task}:</span> {timer.task.title}
+              </p>
+            )}
+            {timer?.subject && (
+              <p className="timer-context-pill">
+                <span className="font-semibold text-xs text-muted">{t.subject}:</span> {timer.subject.name}
+              </p>
+            )}
+
+            {/* Timer Actions Bar */}
+            <div className="timer-action-buttons">
+              {!timer && (
+                <Button
+                  variant="primary"
+                  size="lg"
+                  disabled={busy}
+                  onClick={start}
+                  leftIcon={<Play className="w-5 h-5" />}
+                >
+                  {t.start}
+                </Button>
+              )}
+              {timer?.status === "RUNNING" && (
+                <Button
+                  variant="primary"
+                  size="lg"
+                  disabled={busy}
+                  onClick={() => act("pause")}
+                  leftIcon={<Pause className="w-5 h-5" />}
+                >
+                  {t.pause}
+                </Button>
+              )}
+              {timer?.status === "PAUSED" && (
+                <Button
+                  variant="primary"
+                  size="lg"
+                  disabled={busy}
+                  onClick={() => act("resume")}
+                  leftIcon={<Play className="w-5 h-5" />}
+                >
+                  {t.resume}
+                </Button>
+              )}
+              {timer && (
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  disabled={busy}
+                  onClick={() => act("complete")}
+                  leftIcon={<Check className="w-5 h-5" />}
+                >
+                  {t.complete}
+                </Button>
+              )}
+              {timer && (
+                <Button
+                  variant="danger"
+                  size="icon"
+                  title={t.cancel}
+                  aria-label={t.cancel}
+                  disabled={busy}
+                  onClick={() => act("cancel")}
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              )}
+            </div>
+
+            {/* Distraction Counter Button */}
+            {timer?.mode === "FOCUS" && (
+              <button
+                type="button"
+                className={`doodle-distraction-btn mt-4 ${distractionConfirmed ? "confirmed" : ""}`}
+                onClick={distract}
+                disabled={distractionBusy || busy}
+                aria-busy={distractionBusy}
+              >
+                <span className="distraction-button-icon">
+                  {distractionConfirmed ? <Check aria-hidden="true" /> : <AlertCircle aria-hidden="true" />}
+                </span>
+                <span className="distraction-button-copy">
+                  <strong>{t.distraction}</strong>
+                  <small>{props.locale === "ar" ? "سجّل اللحظة وارجع للتركيز" : "Log it, then return to focus"}</small>
+                </span>
+                <span className="distraction-counter-badge">
+                  {distractionBusy ? "…" : timer.session?.distractionCount ?? 0}
+                </span>
+              </button>
+            )}
+
+            {error && (
+              <p className="text-xs font-bold text-danger mt-3" role="alert">
+                {error}
+              </p>
+            )}
+          </div>
+
+          {/* 2. Side Settings Card (Hidden in Fullscreen) */}
+          {!focusMode && (
+            <aside className="focus-sidebar-card">
+              <div className="sidebar-section-header pb-2 border-b-2 border-dashed border-line">
+                <span className="font-extrabold text-sm text-foreground">
+                  {props.locale === "ar" ? "تخصيص الجلسة" : "Session Setup"}
+                </span>
+              </div>
+
+              <div className="flex flex-col gap-3 mt-3">
+                <label className="focus-field">
+                  <span className="focus-field-label">{t.task}</span>
+                  <select
+                    disabled={Boolean(timer)}
+                    value={taskId}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setTaskId(value);
+                      const task = props.tasks.find((item) => item.id === value);
+                      if (task?.subjectId) setSubjectId(task.subjectId);
+                    }}
+                    className="focus-select"
+                  >
+                    <option value="">{t.none}</option>
+                    {props.tasks.map((task) => (
+                      <option key={task.id} value={task.id}>
+                        {task.title}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="focus-field">
+                  <span className="focus-field-label">{t.subject}</span>
+                  <select
+                    disabled={Boolean(timer)}
+                    value={subjectId}
+                    onChange={(event) => setSubjectId(event.target.value)}
+                    className="focus-select"
+                  >
+                    <option value="">{t.none}</option>
+                    {props.subjects.map((subject) => (
+                      <option key={subject.id} value={subject.id}>
+                        {subject.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="focus-field">
+                  <span className="focus-field-label flex items-center gap-1.5">
+                    <Volume2 className="w-4 h-4 text-muted" />
+                    {t.ambient}
+                  </span>
+                  <select
+                    value={sound}
+                    onChange={(event) => toggleSound(event.target.value)}
+                    className="focus-select"
+                  >
+                    <option value="off">{t.soundOff}</option>
+                    <option value="rain">{t.soundRain}</option>
+                    <option value="brown">{t.soundBrown}</option>
+                  </select>
+                </label>
+
+                <div className="pt-2 border-t border-line">
+                  <Button
+                    href="/sessions"
+                    variant="secondary"
+                    size="sm"
+                    className="w-full justify-center"
+                    leftIcon={<History className="w-4 h-4" />}
+                  >
+                    {t.sessions}
+                  </Button>
+                </div>
+              </div>
+            </aside>
+          )}
+        </section>
       </div>
 
-      {!focusMode && (
-        <aside className="focus-settings">
-          <label>
-            <span>{t.task}</span>
-            <select
-              disabled={Boolean(timer)}
-              value={taskId}
-              onChange={(event) => {
-                const value = event.target.value;
-                setTaskId(value);
-                const task = props.tasks.find((item) => item.id === value);
-                if (task?.subjectId) setSubjectId(task.subjectId);
-              }}
-            >
-              <option value="">{t.none}</option>
-              {props.tasks.map((task) => (
-                <option key={task.id} value={task.id}>
-                  {task.title}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>{t.subject}</span>
-            <select
-              disabled={Boolean(timer)}
-              value={subjectId}
-              onChange={(event) => setSubjectId(event.target.value)}
-            >
-              <option value="">{t.none}</option>
-              {props.subjects.map((subject) => (
-                <option key={subject.id} value={subject.id}>
-                  {subject.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span className="flex items-center gap-1.5">
-              <Volume2 className="w-4 h-4 text-muted" />
-              {t.ambient}
-            </span>
-            <select value={sound} onChange={(event) => toggleSound(event.target.value)}>
-              <option value="off">{t.soundOff}</option>
-              <option value="rain">{t.soundRain}</option>
-              <option value="brown">{t.soundBrown}</option>
-            </select>
-          </label>
-          <Button
-            href="/sessions"
-            variant="secondary"
-            size="sm"
-            leftIcon={<History className="w-4 h-4" />}
-          >
-            {t.sessions}
-          </Button>
-        </aside>
+      {/* 3. Celebration & Reflection Overlay */}
+      {celebration && (
+        <div className="celebration-overlay">
+          <div className="celebration-card">
+            <h2 className="text-xl font-extrabold text-foreground mb-2">
+              {t.celebrationTitle}
+            </h2>
+            <div className="celebration-stats">
+              <span className="stat-pill">
+                {Math.round(celebration.duration / 60)} {t.min}
+              </span>
+              <span className="stat-pill">
+                {celebration.distractions} {t.distractionsCount}
+              </span>
+              {celebration.subjectName && (
+                <span className="stat-pill">{celebration.subjectName}</span>
+              )}
+            </div>
+
+            <label className="reflection-field mt-4 flex flex-col gap-1 text-start">
+              <span className="text-xs font-bold text-foreground">{t.reflection}</span>
+              <textarea
+                value={reflection}
+                onChange={(event) => setReflection(event.target.value)}
+                placeholder="What went well? Any concepts to review next time..."
+                className="doodle-input resize-none"
+                rows={3}
+              />
+            </label>
+
+            <div className="celebration-actions mt-4 flex items-center justify-end gap-2 flex-wrap">
+              {celebration.taskId && !taskCompleted && (
+                <Button
+                  variant="secondary"
+                  size="md"
+                  onClick={completeLinkedTask}
+                  leftIcon={<Check className="w-4 h-4" />}
+                >
+                  {t.markTaskDone}
+                </Button>
+              )}
+              {celebration.taskId && taskCompleted && (
+                <Button
+                  variant="secondary"
+                  size="md"
+                  disabled
+                  leftIcon={<Check className="w-4 h-4 text-success" />}
+                >
+                  {t.taskDone}
+                </Button>
+              )}
+              <Button
+                variant="primary"
+                size="md"
+                onClick={dismissCelebration}
+                leftIcon={<RotateCcw className="w-4 h-4" />}
+              >
+                {t.startAnother}
+              </Button>
+              <Button
+                href="/sessions"
+                variant="ghost"
+                size="md"
+                onClick={dismissCelebration}
+                leftIcon={<History className="w-4 h-4" />}
+              >
+                {t.viewSessions}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
-    </section>
+    </>
   );
 }

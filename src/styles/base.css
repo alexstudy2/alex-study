@@ -1,5 +1,6 @@
 /**
- * Base Elements & Resets
+ * Doodle Design System — Base Elements & Resets
+ * Single Source of Truth from agents/skills/design-system/SKILL.md
  */
 
 *,
@@ -29,8 +30,8 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
-  font-size: var(--text-base);
-  line-height: 1.6;
+  font-size: var(--text-sm);
+  line-height: 1.5;
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -38,25 +39,36 @@ body {
   transition: background-color var(--transition-base), color var(--transition-base);
 }
 
+/* Doodle Typography Hierarchy */
 h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
   color: var(--foreground);
   font-weight: 700;
-  line-height: 1.25;
+  line-height: 1.2;
 }
 
+h1 { font-size: var(--text-2xl); }
+h2 { font-size: var(--text-xl); }
+h3 { font-size: var(--text-lg); }
+h4 { font-size: var(--text-base); }
+h5 { font-size: var(--text-sm); }
+h6 { font-size: var(--text-xs); }
+
 strong, b, th {
-  font-weight: 600;
+  font-weight: 700;
 }
 
 a {
-  color: var(--primary);
-  text-decoration: none;
-  text-underline-offset: 4px;
-  transition: color var(--transition-fast);
+  color: var(--secondary);
+  text-decoration: underline;
+  text-decoration-style: solid;
+  text-underline-offset: 3px;
+  transition: color var(--transition-fast), text-decoration-color var(--transition-fast);
 }
 
 a:hover {
-  color: var(--primary-strong);
+  color: var(--primary);
+  text-decoration-style: wavy;
 }
 
 button,
@@ -71,12 +83,19 @@ button {
   cursor: pointer;
 }
 
+/* Keyboard-First Visible Focus Ring (WCAG 2.2 AA) */
 :focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
+  outline: var(--focus-outline);
+  outline-offset: 3px;
 }
 
-/* Screen reader utility */
+/* Selection Highlight (Highlighter Pen effect) */
+::selection {
+  background: color-mix(in srgb, var(--primary) 35%, transparent);
+  color: var(--foreground);
+}
+
+/* Screen reader accessibility utility */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -89,21 +108,23 @@ button {
   border: 0;
 }
 
-/* Smooth scrollbar styling */
+/* Tactile Doodle Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--surface-sunken);
+  border-left: 1px solid var(--line);
 }
 
 ::-webkit-scrollbar-thumb {
   background: var(--line-strong);
+  border: 2px solid var(--surface-sunken);
   border-radius: var(--radius-full);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--muted);
+  background: var(--primary);
 }

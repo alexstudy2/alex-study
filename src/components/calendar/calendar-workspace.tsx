@@ -21,7 +21,29 @@ export function CalendarWorkspace({
   const [anchor, setAnchor] = useState(new Date(initialAnchor));
   const [view, setView] = useState<"month" | "week" | "agenda">("month");
   const [busy, setBusy] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [error, setError] = useState("");
   const ar = locale === "ar";
+
+  async function addTaskForDay(e: React.FormEvent) {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const input = form.elements.namedItem("dayTask") as HTMLInputElement;
+    const title = input.value;
+    if (!title.trim() || !selectedDay) return;
+    const res = await fetch("/api/tasks", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ title, dueAt: `${selectedDay}T09:00:00+03:00`, status: "TODO" }),
+    });
+    if (res.ok) {
+      input.value = "";
+      move(0);
+      setError("");
+    } else {
+      setError(ar ? "تعذر إضافة المهمة إلى التقويم." : "Could not add the task to the calendar.");
+    }
+  }
 
   async function move(direction: number, nextView = view) {
     const next =
@@ -29,11 +51,14 @@ export function CalendarWorkspace({
         ? addMonths(anchor, direction)
         : addDays(anchor, direction * (nextView === "week" ? 7 : 30));
     setBusy(true);
-    const response = await fetch(`/api/calendar?view=${nextView}&anchor=${next.toISOString()}`);
-    if (response.ok) {
+    const response = await fetch(`/api/calendar?view=${nextView}&anchor=${next.toISOString()}`).catch(() => null);
+    if (response?.ok) {
       const payload = await response.json();
       setEvents(payload.events);
       setAnchor(next);
+      setError("");
+    } else {
+      setError(ar ? "تعذر تحديث التقويم." : "Could not update the calendar.");
     }
     setBusy(false);
   }
@@ -41,8 +66,11 @@ export function CalendarWorkspace({
   async function change(nextView: typeof view) {
     setView(nextView);
     setBusy(true);
-    const response = await fetch(`/api/calendar?view=${nextView}&anchor=${anchor.toISOString()}`);
-    if (response.ok) setEvents((await response.json()).events);
+    const response = await fetch(`/api/calendar?view=${nextView}&anchor=${anchor.toISOString()}`).catch(() => null);
+    if (response?.ok) {
+      setEvents((await response.json()).events);
+      setError("");
+    } else setError(ar ? "تعذر تغيير عرض التقويم." : "Could not change the calendar view.");
     setBusy(false);
   }
 
@@ -120,7 +148,9 @@ export function CalendarWorkspace({
           {ar ? "جارٍ تحديث التقويم…" : "Updating calendar…"}
         </p>
       )}
+      {error && <p className="form-error" role="alert">{error}</p>}
       {view === "month" ? (
+        <>
         <div className="month-grid">
           {[0, 1, 2, 3, 4, 5, 6].map((day) => (
             <div className="weekday" key={day}>
@@ -135,8 +165,11 @@ export function CalendarWorkspace({
             const items = groups.get(key) ?? [];
             return (
               <article
-                className={`calendar-day${day.getMonth() !== monthStart.getMonth() ? " outside" : ""}`}
+                className={`calendar-day${day.getMonth() !== monthStart.getMonth() ? " outside" : ""}${key === selectedDay ? " selected" : ""}`}
                 key={key}
+                onClick={() => setSelectedDay(key === selectedDay ? null : key)}
+                role="button"
+                tabIndex={0}
               >
                 <time>{day.getDate()}</time>
                 <div>
@@ -155,6 +188,55 @@ export function CalendarWorkspace({
             );
           })}
         </div>
+        {selectedDay && (
+          <div className="day-drawer">
+            <div className="day-drawer-header">
+              <h3>
+                {new Intl.DateTimeFormat(ar ? "ar-EG" : "en-GB", {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                  timeZone: "Africa/Cairo",
+                }).format(new Date(`${selectedDay}T12:00:00+03:00`))}
+              </h3>
+              <button onClick={() => setSelectedDay(null)} aria-label={ar ? "إغلاق" : "Close"}>
+                ✕
+              </button>
+            </div>
+            <div className="day-drawer-events">
+              {(groups.get(selectedDay) ?? []).map((event) => (
+                <Link
+                  className={`calendar-event ${event.type}`}
+                  href={event.type === "task" ? `/tasks/${event.id}` : `/sessions/${event.id}`}
+                  key={`${event.type}-${event.id}`}
+                >
+                  <span className="event-time">
+                    {new Intl.DateTimeFormat(ar ? "ar-EG" : "en-GB", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      timeZone: "Africa/Cairo",
+                    }).format(new Date(event.startsAt))}
+                  </span>
+                  <span>{event.title}</span>
+                </Link>
+              ))}
+              {!(groups.get(selectedDay) ?? []).length && (
+                <p className="empty-day">{ar ? "لا توجد أحداث" : "No events for this day"}</p>
+              )}
+            </div>
+            <form className="day-drawer-add" onSubmit={addTaskForDay}>
+              <input
+                name="dayTask"
+                placeholder={ar ? "أضف مهمة لهذا اليوم..." : "Add task for this day..."}
+                required
+              />
+              <button type="submit" aria-label={ar ? "إضافة" : "Add"}>
+                +
+              </button>
+            </form>
+          </div>
+        )}
+      </>
       ) : view === "week" ? (
         <div className="week-grid">
           {weekDays.map((day) => {

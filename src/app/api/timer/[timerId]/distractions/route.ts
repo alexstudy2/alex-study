@@ -12,15 +12,16 @@ export async function POST(request: Request, context: { params: Promise<{ timerI
   if (!run) return notFound();
   if (run.mode !== "FOCUS" || !run.sessionId || !["RUNNING", "PAUSED"].includes(run.status))
     return conflict("distraction_unavailable");
-  const distraction = await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const item = await tx.sessionDistraction.create({
       data: { sessionId: run.sessionId!, note: parsed.data.note || null },
     });
-    await tx.studySession.update({
+    const session = await tx.studySession.update({
       where: { id: run.sessionId! },
       data: { distractionCount: { increment: 1 } },
+      select: { distractionCount: true },
     });
-    return item;
+    return { distraction: item, distractionCount: session.distractionCount };
   });
-  return Response.json({ distraction }, { status: 201 });
+  return Response.json(result, { status: 201 });
 }

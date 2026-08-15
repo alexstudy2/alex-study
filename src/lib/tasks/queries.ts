@@ -10,7 +10,13 @@ export function buildTaskWhere(
   if (filter === "completed") return { ...where, status: "COMPLETED" };
   where.status = { notIn: ["COMPLETED", "CANCELLED"] };
   const window = getTaskDateWindow(filter, now);
-  if (window) where.dueAt = window;
+  if (filter === "today" && window) {
+    where.OR = [
+      { dueAt: window },
+      { status: "IN_PROGRESS" },
+      { timerRuns: { some: { mode: "FOCUS", status: { in: ["RUNNING", "PAUSED"] } } } },
+    ];
+  } else if (window) where.dueAt = window;
   return where;
 }
 

@@ -8,10 +8,7 @@ import {
   Search,
   Check,
   X,
-  Shield,
   HeartHandshake,
-  Trophy,
-  Bell,
   Trash2,
   Ban,
   Pause,
@@ -20,7 +17,6 @@ import {
 import { PageShell } from "@/components/ui/page-shell";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
 
 type Person = { id: string; name: string; academicYear: number };
 type Friendship = {

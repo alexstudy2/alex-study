@@ -4,15 +4,10 @@ import Link from "next/link";
 import { useState } from "react";
 import {
   Trophy,
-  Users,
-  Flame,
-  CheckCircle2,
-  Clock,
   Eye,
   EyeOff,
   RefreshCw,
   Award,
-  Sparkles,
 } from "lucide-react";
 import { PageShell } from "@/components/ui/page-shell";
 import { PageHeader } from "@/components/ui/page-header";

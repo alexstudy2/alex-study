@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
+import { BrainCircuit, Check, ChevronRight, Clock3, Lightbulb, RefreshCw, ShieldCheck, Sparkles, X } from "lucide-react";
 type Insight = {
   id: string;
   type: string;
@@ -8,6 +9,7 @@ type Insight = {
   content: string;
   createdAt: string | Date;
   model: string;
+  supportingData?: unknown;
 };
 export function InsightList({
   initialInsights,
@@ -22,36 +24,49 @@ export function InsightList({
   const [enabled, setEnabled] = useState(aiEnabled);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [dismissed, setDismissed] = useState<string | null>(null);
   const ar = locale === "ar";
   async function generate() {
     setBusy(true);
     setMessage("");
-    const r = await fetch("/api/insights/daily-tip", { method: "POST" });
-    const p = await r.json();
-    if (r.ok)
+    const r = await fetch("/api/insights/daily-tip", { method: "POST" }).catch(() => null);
+    const p = await r?.json().catch(() => null);
+    if (r?.ok)
       setInsights((current) => [p.insight, ...current.filter((item) => item.id !== p.insight.id)]);
-    else setMessage(insightError(p.error, ar));
+    else setMessage(insightError(p?.error, ar));
     setBusy(false);
   }
   async function dismiss(id: string) {
-    const r = await fetch(`/api/insights/${id}/dismiss`, { method: "POST" });
-    if (r.ok) setInsights(insights.filter((x) => x.id !== id));
+    setDismissed(id);
+    const r = await fetch(`/api/insights/${id}/dismiss`, { method: "POST" }).catch(() => null);
+    setDismissed(null);
+    if (r?.ok) setInsights((current) => current.filter((x) => x.id !== id));
+    else setMessage(ar ? "تعذر إخفاء الرؤية." : "Could not dismiss this insight.");
   }
   return (
-    <section className="insight-workspace" dir={ar ? "rtl" : "ltr"}>
+    <section className="insight-workspace" dir={ar ? "rtl" : "ltr"} aria-busy={busy}>
+      <div className="insight-status-strip">
+        <div className="insight-status-icon"><BrainCircuit aria-hidden="true" /></div>
+        <div>
+          <strong>{enabled ? (ar ? "الرؤى مفعلة" : "Insights are on") : (ar ? "الرؤى متوقفة" : "Insights are off")}</strong>
+          <span>{ar ? "ملاحظات اختيارية مبنية على نمط دراستك فقط" : "Optional notes grounded in your study rhythm only"}</span>
+        </div>
+        <span className={`insight-status-dot ${enabled ? "on" : "off"}`} aria-label={enabled ? "Enabled" : "Disabled"} />
+      </div>
       <div className="insight-toolbar">
         <div>
-          <p className="eyebrow">AI · {ar ? "اختياري" : "optional"}</p>
+          <p className="eyebrow"><Sparkles className="insight-eyebrow-icon" aria-hidden="true" /> AI · {ar ? "اختياري" : "optional"}</p>
           <h2>{ar ? "رؤى من بياناتك فقط" : "Insights from your data only"}</h2>
           <p>
             {ar
-              ? "لا تُستخدم هذه الرؤى في الترتيب أو التحديات، ويمكن تجاهلها في أي وقت."
-              : "These insights never affect rankings or challenges, and can be dismissed at any time."}
+              ? "ملاحظات ذكية من بياناتك."
+              : "Smart notes from your study data."}
           </p>
         </div>
         <div className="insight-actions">
           {enabled && (
             <button className="primary-button" disabled={busy} onClick={generate}>
+              {busy ? <RefreshCw className="insight-button-icon spin" aria-hidden="true" /> : <Lightbulb className="insight-button-icon" aria-hidden="true" />}
               {busy
                 ? ar
                   ? "جارٍ الإنشاء…"
@@ -62,7 +77,7 @@ export function InsightList({
             </button>
           )}
           <button
-            className="secondary-button"
+            className="insight-toggle-button"
             disabled={busy}
             onClick={async () => {
               const next = !enabled;
@@ -71,9 +86,9 @@ export function InsightList({
                 method: "PATCH",
                 headers: { "content-type": "application/json" },
                 body: JSON.stringify({ enabled: next }),
-              });
+              }).catch(() => null);
               setBusy(false);
-              if (response.ok) {
+              if (response?.ok) {
                 setEnabled(next);
                 setMessage(
                   next
@@ -82,31 +97,42 @@ export function InsightList({
                       : "AI insights are on."
                     : ar
                       ? "تم إيقاف الرؤى الذكية."
-                      : "AI insights are off.",
+                  : "AI insights are off.",
                 );
-              }
+              } else setMessage(ar ? "تعذر تحديث إعداد الرؤى." : "Could not update the insights setting.");
             }}
           >
+            {enabled ? <X className="insight-button-icon" aria-hidden="true" /> : <Check className="insight-button-icon" aria-hidden="true" />}
             {enabled ? (ar ? "إيقاف الرؤى" : "Turn off AI") : ar ? "تشغيل الرؤى" : "Turn on AI"}
           </button>
           <Link className="secondary-button" href="/exam-plans/new">
+            <ChevronRight className="insight-button-icon" aria-hidden="true" />
             {ar ? "إنشاء خطة امتحان" : "Create exam plan"}
           </Link>
         </div>
       </div>
       {message && (
-        <p className="form-error" role="alert">
+        <p className="insight-alert" role="alert">
+          <ShieldCheck aria-hidden="true" />
           {message}
         </p>
       )}
-      <div className="insight-list">
+      <div className="insight-list" aria-live="polite">
         {insights.length ? (
-          insights.map((item) => (
-            <article key={item.id} data-type={item.type}>
-              <span className="ai-label">AI</span>
-              <p className="eyebrow">{insightTypeLabel(item.type, ar)}</p>
+          insights.map((item) => {
+            const supportingData = readSupportingData(item.supportingData);
+            return (
+            <article className="insight-card" key={item.id} data-type={item.type}>
+              <div className="insight-card-topline">
+                <p className="eyebrow"><span className="ai-label">AI</span> {insightTypeLabel(item.type, ar)}</p>
+                <span className="insight-confidence"><ShieldCheck aria-hidden="true" /> {confidenceLabel(supportingData.confidence, ar)}</span>
+              </div>
               <h3>{item.title}</h3>
-              <p>{item.content}</p>
+              <p className="insight-content">{item.content}</p>
+              <div className="insight-card-context">
+                <span><Clock3 aria-hidden="true" /> {supportingData.period ?? (ar ? "الفترة الأخيرة" : "Recent study rhythm")}</span>
+                <span>{item.model ? "Tracked signal" : "Personal note"}</span>
+              </div>
               <footer>
                 <time>
                   {new Intl.DateTimeFormat(ar ? "ar-EG" : "en-GB", {
@@ -114,19 +140,40 @@ export function InsightList({
                     timeZone: "Africa/Cairo",
                   }).format(new Date(item.createdAt))}
                 </time>
-                <button onClick={() => dismiss(item.id)}>{ar ? "تجاهل" : "Dismiss"}</button>
+                <button className="insight-dismiss" disabled={dismissed === item.id} onClick={() => dismiss(item.id)}>
+                  {dismissed === item.id ? <RefreshCw className="insight-button-icon spin" aria-hidden="true" /> : null}
+                  {ar ? "تجاهل" : "Dismiss"}
+                </button>
               </footer>
             </article>
-          ))
+            );
+          })
         ) : (
-          <div className="session-state">
+          <div className="insight-empty-state">
+            <div className="insight-empty-icon"><Lightbulb aria-hidden="true" /></div>
             <h3>{ar ? "لا توجد رؤى محفوظة" : "No saved insights"}</h3>
             <p>{ar ? "اطلب رؤية عندما تكون مستعدًا." : "Request one when you are ready."}</p>
+            {enabled && <button className="secondary-button" disabled={busy} onClick={generate}><Lightbulb className="insight-button-icon" aria-hidden="true" />{ar ? "اطلب أول رؤية" : "Request your first insight"}</button>}
           </div>
         )}
       </div>
     </section>
   );
+}
+
+function readSupportingData(value: unknown): { confidence?: string; period?: string } {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const data = value as Record<string, unknown>;
+  return {
+    confidence: typeof data.confidence === "string" ? data.confidence : undefined,
+    period: typeof data.period === "string" ? data.period : undefined,
+  };
+}
+
+function confidenceLabel(value: string | undefined, ar: boolean) {
+  if (value === "strong") return ar ? "إشارة قوية" : "Strong signal";
+  if (value === "moderate") return ar ? "إشارة متوسطة" : "Moderate signal";
+  return ar ? "إشارة مبدئية" : "Early signal";
 }
 
 function insightTypeLabel(type: string, ar: boolean) {

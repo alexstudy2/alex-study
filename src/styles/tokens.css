@@ -1,64 +1,64 @@
 /**
- * Alex Study Design System Tokens
- * Phase 0 & Phase 1 — Foundations
+ * Doodle Design System Tokens (Universal)
+ * Single Source of Truth from agents/skills/design-system/SKILL.md
  */
 
 :root,
 :root[data-theme="light"] {
-  /* Color Palette — Light Mode */
-  --background: #f8f9fa;
-  --foreground: #0b132b;
-  --surface: #ffffff;
-  --surface-elevated: #ffffff;
-  --surface-sunken: #f1f3f5;
-  --surface-hover: #f1f5f9;
-  
-  --muted: #5c6b73;
-  --muted-foreground: #64748b;
-  --muted-surface: #f1f5f9;
-  
-  --line: #e2e8f0;
-  --line-strong: #cbd5e1;
-  
-  --primary: #0f2c59;
-  --primary-strong: #0a1e3f;
-  --primary-foreground: #ffffff;
-  --primary-subtle: #e8eef8;
-  
-  --accent: #c5a059;
-  --accent-strong: #a8843c;
-  --accent-foreground: #ffffff;
-  --accent-subtle: #fbf5e8;
-  
-  --focus: #c5a059;
-  --focus-ring: rgba(197, 160, 89, 0.35);
-  
-  /* Status Colors */
-  --danger: #dc2626;
-  --danger-strong: #b91c1c;
-  --danger-subtle: #fef2f2;
-  --danger-foreground: #ffffff;
-  
-  --success: #16a34a;
-  --success-strong: #15803d;
-  --success-subtle: #f0fdf4;
-  --success-foreground: #ffffff;
-  
-  --warning: #d97706;
-  --warning-strong: #b45309;
-  --warning-subtle: #fffbeb;
-  --warning-foreground: #ffffff;
-  
-  --info: #2563eb;
-  --info-strong: #1d4ed8;
-  --info-subtle: #eff6ff;
-  --info-foreground: #ffffff;
+  /* ================= Brand & Color Palette ================= */
+  --primary: #49B6E5;
+  --primary-strong: #17698f;
+  --primary-foreground: #111827;
+  --primary-subtle: #EBF7FD;
 
-  /* Backward Compatibility Aliases */
-  --text-muted: var(--muted);
-  --accent-base: var(--accent);
+  --secondary: #263D5B;
+  --secondary-strong: #1a2c42;
+  --secondary-foreground: #FFFFFF;
+  --secondary-subtle: #EDF2F7;
 
-  /* Spacing Scale (4px, 8px, 12px, 16px, 20px, 24px, 32px, 40px, 48px, 64px) */
+  --success: #16A34A;
+  --success-strong: #15803D;
+  --success-foreground: #FFFFFF;
+  --success-subtle: #F0FDF4;
+
+  --warning: #D97706;
+  --warning-strong: #B45309;
+  --warning-foreground: #FFFFFF;
+  --warning-subtle: #FFFBEB;
+
+  --danger: #DC2626;
+  --danger-strong: #B91C1C;
+  --danger-foreground: #FFFFFF;
+  --danger-subtle: #FEF2F2;
+
+  --surface: #FFFFFF;
+  --surface-elevated: #FFFFFF;
+  --surface-sunken: #F4F6F8;
+  --surface-hover: #F0F7FB;
+
+  --text: #111827;
+  --foreground: #111827;
+  --background: #FAF9F6;
+
+  --muted: #475569;
+  --muted-foreground: #64748B;
+  --muted-surface: #F1F5F9;
+
+  --line: #CBD5E1;
+  --line-strong: #263D5B;
+
+  /* Accent aliases mapping to primary/warning for playful doodle flair */
+  --accent: #49B6E5;
+  --accent-strong: #263D5B;
+  --accent-foreground: #111827;
+  --accent-subtle: #EBF7FD;
+
+  /* Focus Ring: High visibility keyboard-first interaction */
+  --focus: #263D5B;
+  --focus-ring: rgba(73, 182, 229, 0.45);
+  --focus-outline: 2px dashed #263D5B;
+
+  /* ================= Spacing Scale (4/8/12/16/24/32) ================= */
   --space-1: 0.25rem;  /* 4px */
   --space-2: 0.5rem;   /* 8px */
   --space-3: 0.75rem;  /* 12px */
@@ -70,156 +70,185 @@
   --space-12: 3rem;    /* 48px */
   --space-16: 4rem;    /* 64px */
 
-  /* Border Radius Scale */
+  /* ================= Typography Scale (14/16/18/24/32/40) ================= */
+  --text-xs: 0.875rem;   /* 14px */
+  --text-sm: 1rem;       /* 16px */
+  --text-base: 1.125rem; /* 18px */
+  --text-lg: 1.5rem;     /* 24px */
+  --text-xl: 2rem;       /* 32px */
+  --text-2xl: 2.5rem;    /* 40px */
+  --text-3xl: 2.5rem;    /* 40px max display */
+  --text-4xl: 2.5rem;
+
+  /* Fonts */
+  --font-primary: var(--font-delius), "Delius Swash Caps", "Delius", cursive, sans-serif;
+  --font-display: var(--font-delius), "Delius Swash Caps", "Delius", cursive, serif;
+  --font-heading: var(--font-delius), "Delius Swash Caps", "Delius", cursive, sans-serif;
+  --font-sans: var(--font-arabic), var(--font-delius-body), var(--font-delius), "Delius", system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-mono), "JetBrains Mono", ui-monospace, monospace;
+
+  /* ================= Doodle Tactile Styling & Shadows ================= */
+  --border-doodle: 2px solid var(--secondary);
+  --border-doodle-thin: 1.5px solid var(--secondary);
+  --border-doodle-dashed: 2px dashed var(--secondary);
+
+  --shadow-doodle-xs: 1.5px 1.5px 0px var(--secondary);
+  --shadow-doodle: 2px 2px 0px var(--secondary);
+  --shadow-doodle-md: 3px 3px 0px var(--secondary);
+  --shadow-doodle-lg: 4px 4px 0px var(--secondary);
+  --shadow-doodle-xl: 6px 6px 0px var(--secondary);
+
   --radius-xs: 4px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
   --radius-2xl: 24px;
   --radius-full: 9999px;
   --radius: var(--radius-lg);
 
-  /* Shadows & Elevation */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
-  --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05);
+  /* Organic imperfect sketch border radii */
+  --radius-doodle: 255px 15px 225px 15px/15px 225px 15px 255px;
+  --radius-doodle-card: 20px 6px 18px 8px/8px 18px 6px 20px;
+  --radius-doodle-btn: 14px 4px 12px 5px/5px 12px 4px 14px;
+
+  /* Standard shadow aliases */
+  --shadow-xs: var(--shadow-doodle-xs);
+  --shadow-sm: var(--shadow-doodle);
+  --shadow-md: var(--shadow-doodle-md);
+  --shadow-lg: var(--shadow-doodle-lg);
+  --shadow-xl: var(--shadow-doodle-xl);
 
   /* Transitions */
-  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
-
-  /* Typography */
-  --font-sans: var(--font-arabic), var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  --font-heading: var(--font-cinzel), "Cinzel", "Times New Roman", serif;
-
-  /* Typography Scale */
-  --text-xs: 0.75rem;    /* 12px */
-  --text-sm: 0.875rem;   /* 14px */
-  --text-base: 1rem;     /* 16px */
-  --text-lg: 1.125rem;   /* 18px */
-  --text-xl: 1.25rem;    /* 20px */
-  --text-2xl: 1.5rem;    /* 24px */
-  --text-3xl: 1.875rem;  /* 30px */
-  --text-4xl: 2.25rem;   /* 36px */
+  --transition-fast: 120ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 260ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Dark Mode (Explicit data-theme="dark") */
+/* ================= Dark Mode (Playful Sketchbook Night) ================= */
 :root[data-theme="dark"] {
-  --background: #0a0f1d;
-  --foreground: #edf2f7;
-  --surface: #131b2e;
-  --surface-elevated: #1a253e;
-  --surface-sunken: #0c1222;
-  --surface-hover: #1f2c4a;
-  
-  --muted: #94a3b8;
-  --muted-foreground: #94a3b8;
-  --muted-surface: #182239;
-  
-  --line: #1e293b;
-  --line-strong: #334155;
-  
-  --primary: #3a86ff;
-  --primary-strong: #60a5fa;
-  --primary-foreground: #ffffff;
-  --primary-subtle: rgba(58, 134, 255, 0.15);
-  
-  --accent: #f4c430;
-  --accent-strong: #fbd24e;
-  --accent-foreground: #0b132b;
-  --accent-subtle: rgba(244, 196, 48, 0.15);
-  
-  --focus: #f4c430;
-  --focus-ring: rgba(244, 196, 48, 0.35);
-  
-  --danger: #ef4444;
-  --danger-strong: #f87171;
-  --danger-subtle: rgba(239, 68, 68, 0.15);
-  --danger-foreground: #ffffff;
-  
-  --success: #22c55e;
-  --success-strong: #4ade80;
-  --success-subtle: rgba(34, 197, 94, 0.15);
-  --success-foreground: #ffffff;
-  
-  --warning: #f59e0b;
-  --warning-strong: #fbbf24;
-  --warning-subtle: rgba(245, 158, 11, 0.15);
-  --warning-foreground: #ffffff;
-  
-  --info: #38bdf8;
-  --info-strong: #60a5fa;
-  --info-subtle: rgba(56, 189, 248, 0.15);
-  --info-foreground: #ffffff;
+  --primary: #49B6E5;
+  --primary-strong: #70c7ed;
+  --primary-foreground: #111827;
+  --primary-subtle: rgba(73, 182, 229, 0.18);
 
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+  --secondary: #E2E8F0;
+  --secondary-strong: #FFFFFF;
+  --secondary-foreground: #111827;
+  --secondary-subtle: rgba(226, 232, 240, 0.12);
+
+  --success: #22C55E;
+  --success-strong: #4ADE80;
+  --success-foreground: #111827;
+  --success-subtle: rgba(34, 197, 94, 0.18);
+
+  --warning: #F59E0B;
+  --warning-strong: #FBBF24;
+  --warning-foreground: #111827;
+  --warning-subtle: rgba(245, 158, 11, 0.18);
+
+  --danger: #EF4444;
+  --danger-strong: #F87171;
+  --danger-foreground: #FFFFFF;
+  --danger-subtle: rgba(239, 68, 68, 0.18);
+
+  --surface: #1E293B;
+  --surface-elevated: #24344D;
+  --surface-sunken: #131D2D;
+  --surface-hover: #293B56;
+
+  --text: #F8FAFC;
+  --foreground: #F8FAFC;
+  --background: #0F172A;
+
+  --muted: #94A3B8;
+  --muted-foreground: #94A3B8;
+  --muted-surface: #1E293B;
+
+  --line: #334155;
+  --line-strong: #E2E8F0;
+
+  --accent: #49B6E5;
+  --accent-strong: #70c7ed;
+  --accent-foreground: #111827;
+  --accent-subtle: rgba(73, 182, 229, 0.18);
+
+  --focus: #49B6E5;
+  --focus-ring: rgba(73, 182, 229, 0.45);
+  --focus-outline: 2px dashed #49B6E5;
+
+  --border-doodle: 2px solid #64748B;
+  --border-doodle-thin: 1.5px solid #64748B;
+  --border-doodle-dashed: 2px dashed #64748B;
+
+  --shadow-doodle-xs: 1.5px 1.5px 0px rgba(0, 0, 0, 0.5);
+  --shadow-doodle: 2px 2px 0px rgba(0, 0, 0, 0.6);
+  --shadow-doodle-md: 3px 3px 0px rgba(0, 0, 0, 0.7);
+  --shadow-doodle-lg: 4px 4px 0px rgba(0, 0, 0, 0.8);
+  --shadow-doodle-xl: 6px 6px 0px rgba(0, 0, 0, 0.9);
 }
 
-/* System Dark Mode fallback when no explicit data-theme="light" */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --background: #0a0f1d;
-    --foreground: #edf2f7;
-    --surface: #131b2e;
-    --surface-elevated: #1a253e;
-    --surface-sunken: #0c1222;
-    --surface-hover: #1f2c4a;
-    
-    --muted: #94a3b8;
-    --muted-foreground: #94a3b8;
-    --muted-surface: #182239;
-    
-    --line: #1e293b;
-    --line-strong: #334155;
-    
-    --primary: #3a86ff;
-    --primary-strong: #60a5fa;
-    --primary-foreground: #ffffff;
-    --primary-subtle: rgba(58, 134, 255, 0.15);
-    
-    --accent: #f4c430;
-    --accent-strong: #fbd24e;
-    --accent-foreground: #0b132b;
-    --accent-subtle: rgba(244, 196, 48, 0.15);
-    
-    --focus: #f4c430;
-    --focus-ring: rgba(244, 196, 48, 0.35);
-    
-    --danger: #ef4444;
-    --danger-strong: #f87171;
-    --danger-subtle: rgba(239, 68, 68, 0.15);
-    --danger-foreground: #ffffff;
-    
-    --success: #22c55e;
-    --success-strong: #4ade80;
-    --success-subtle: rgba(34, 197, 94, 0.15);
-    --success-foreground: #ffffff;
-    
-    --warning: #f59e0b;
-    --warning-strong: #fbbf24;
-    --warning-subtle: rgba(245, 158, 11, 0.15);
-    --warning-foreground: #ffffff;
-    
-    --info: #38bdf8;
-    --info-strong: #60a5fa;
-    --info-subtle: rgba(56, 189, 248, 0.15);
-    --info-foreground: #ffffff;
+    --primary: #49B6E5;
+    --primary-strong: #70c7ed;
+    --primary-foreground: #111827;
+    --primary-subtle: rgba(73, 182, 229, 0.18);
 
-    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.2);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
-    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+    --secondary: #E2E8F0;
+    --secondary-strong: #FFFFFF;
+    --secondary-foreground: #111827;
+    --secondary-subtle: rgba(226, 232, 240, 0.12);
+
+    --success: #22C55E;
+    --success-strong: #4ADE80;
+    --success-foreground: #111827;
+    --success-subtle: rgba(34, 197, 94, 0.18);
+
+    --warning: #F59E0B;
+    --warning-strong: #FBBF24;
+    --warning-foreground: #111827;
+    --warning-subtle: rgba(245, 158, 11, 0.18);
+
+    --danger: #EF4444;
+    --danger-strong: #F87171;
+    --danger-foreground: #FFFFFF;
+    --danger-subtle: rgba(239, 68, 68, 0.18);
+
+    --surface: #1E293B;
+    --surface-elevated: #24344D;
+    --surface-sunken: #131D2D;
+    --surface-hover: #293B56;
+
+    --text: #F8FAFC;
+    --foreground: #F8FAFC;
+    --background: #0F172A;
+
+    --muted: #94A3B8;
+    --muted-foreground: #94A3B8;
+    --muted-surface: #1E293B;
+
+    --line: #334155;
+    --line-strong: #E2E8F0;
+
+    --accent: #49B6E5;
+    --accent-strong: #70c7ed;
+    --accent-foreground: #111827;
+    --accent-subtle: rgba(73, 182, 229, 0.18);
+
+    --focus: #49B6E5;
+    --focus-ring: rgba(73, 182, 229, 0.45);
+    --focus-outline: 2px dashed #49B6E5;
+
+    --border-doodle: 2px solid #64748B;
+    --border-doodle-thin: 1.5px solid #64748B;
+    --border-doodle-dashed: 2px dashed #64748B;
+
+    --shadow-doodle-xs: 1.5px 1.5px 0px rgba(0, 0, 0, 0.5);
+    --shadow-doodle: 2px 2px 0px rgba(0, 0, 0, 0.6);
+    --shadow-doodle-md: 3px 3px 0px rgba(0, 0, 0, 0.7);
+    --shadow-doodle-lg: 4px 4px 0px rgba(0, 0, 0, 0.8);
+    --shadow-doodle-xl: 6px 6px 0px rgba(0, 0, 0, 0.9);
   }
 }
 
@@ -230,11 +259,12 @@
   --color-muted: var(--muted);
   --color-line: var(--line);
   --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
   --color-accent: var(--accent);
   --color-danger: var(--danger);
   --color-success: var(--success);
   --color-warning: var(--warning);
-  --color-info: var(--info);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
+  --font-heading: var(--font-heading);
 }

@@ -8,7 +8,6 @@ import {
   Plus,
   Calendar,
   Clock,
-  BookOpen,
 } from "lucide-react";
 import { PageShell } from "@/components/ui/page-shell";
 import { PageHeader } from "@/components/ui/page-header";
