@@ -31,14 +31,22 @@
   --danger-foreground: #FFFFFF;
   --danger-subtle: #FEF2F2;
 
-  --surface: #FFFFFF;
-  --surface-elevated: #FFFFFF;
-  --surface-sunken: #F4F6F8;
-  --surface-hover: #F0F7FB;
+  --surface: #FEFCE8;
+  --surface-elevated: #FEF9C3;
+  --surface-sunken: #EDE7DC;
+  --surface-hover: #FDF9C8;
+  --sidebar-background: #F8F4EE;
+
+  /* Pastel Solid Card Backgrounds (No Gradients) */
+  --card-pastel-yellow: #FEFCE8;
+  --card-pastel-sky: #F0F9FF;
+  --card-pastel-mint: #F0FDF4;
+  --card-pastel-peach: #FFF7ED;
+  --card-pastel-lavender: #FAF5FF;
 
   --text: #111827;
   --foreground: #111827;
-  --background: #FAF9F6;
+  --background: #F4EFEA;
 
   --muted: #475569;
   --muted-foreground: #64748B;
@@ -215,14 +223,21 @@
     --danger-foreground: #FFFFFF;
     --danger-subtle: rgba(239, 68, 68, 0.18);
 
-    --surface: #1E293B;
-    --surface-elevated: #24344D;
-    --surface-sunken: #131D2D;
-    --surface-hover: #293B56;
+    --surface: #182234;
+    --surface-elevated: #1E293B;
+    --surface-sunken: #0F1726;
+    --surface-hover: #223048;
+    --sidebar-background: #131C2E;
+
+    --card-pastel-yellow: #262118;
+    --card-pastel-sky: #13273E;
+    --card-pastel-mint: #132A20;
+    --card-pastel-peach: #2B1E17;
+    --card-pastel-lavender: #241834;
 
     --text: #F8FAFC;
     --foreground: #F8FAFC;
-    --background: #0F172A;
+    --background: #0E1626;
 
     --muted: #94A3B8;
     --muted-foreground: #94A3B8;

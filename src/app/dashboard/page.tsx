@@ -6,8 +6,7 @@ import { getTaskDateWindow } from "@/lib/tasks/dates";
 import { goalsWithProgress } from "@/lib/goals/queries";
 import { PageShell } from "@/components/ui/page-shell";
 import { Button } from "@/components/ui/button";
-import { QuickAddDashboard } from "@/components/dashboard/quick-add-dashboard";
-import { DashboardTaskItem } from "@/components/dashboard/dashboard-task-item";
+import { TodayTasksSticky } from "@/components/dashboard/today-tasks-sticky";
 import { TodayStudyCard } from "@/components/dashboard/today-study-card";
 import {
   CalendarDays,
@@ -175,52 +174,12 @@ export default async function DashboardPage() {
         </Link>
       )}
 
-      {/* 3. Quick-Add Doodle Bar */}
-      <QuickAddDashboard ar={ar} />
-
-      {/* 4. Two-Column Dashboard Content Layout */}
+      {/* 3. Two-Column Dashboard Content Layout */}
       <div className="dashboard-layout-grid">
         {/* Left Column: Today's Tasks & Checklist */}
         <section className="dashboard-left-col flex flex-col gap-6">
-          {/* Today's Tasks Card */}
-          <div className="dashboard-card">
-            <div className="dashboard-card-header">
-              <div className="flex items-center gap-2">
-                <ListTodo className="w-5 h-5 text-primary" />
-                <h2 className="text-lg font-bold">
-                  {ar ? "مهام اليوم" : "Today's Tasks"}
-                </h2>
-                <span className="counter-pill">{todayTasks.length}</span>
-              </div>
-              <Link
-                href="/tasks"
-                className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
-              >
-                {ar ? "عرض الكل" : "View all"}
-                <NavArrow className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-
-            <div className="dashboard-tasks-container mt-3 flex flex-col gap-2">
-              {todayTasks.length > 0 ? (
-                todayTasks.map((task) => (
-                  <DashboardTaskItem key={task.id} task={task} ar={ar} />
-                ))
-              ) : (
-                <div className="dashboard-empty-box text-center p-6 border-2 border-dashed border-line rounded-lg">
-                  <CheckCircle2 className="w-8 h-8 text-primary mx-auto mb-2 opacity-80" />
-                  <strong className="text-sm block text-foreground">
-                    {ar ? "لا توجد مهام مستحقة لليوم" : "No tasks due today"}
-                  </strong>
-                  <p className="text-xs text-muted mt-1">
-                    {ar
-                      ? "أضف مهمة جديدة من الشريط بالأعلى أو ابدأ جلسة تركيز حرة."
-                      : "Add a new task from the bar above or begin an open focus sprint."}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
+          {/* Today's Tasks Sticky Note Card */}
+          <TodayTasksSticky tasks={todayTasks} ar={ar} />
 
           {/* AI Insight / Daily Study Note */}
           {insight && (

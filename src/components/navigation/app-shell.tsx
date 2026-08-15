@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { AlexStudyLogo } from "@/components/ui/logo";
+import { StudyBackgroundSelector } from "@/components/ui/study-background-selector";
 import {
   Bell,
   Brain,
@@ -193,15 +194,23 @@ export function AppShell({
             pathname={pathname}
             ar={ar}
           />
-          <div className="flex items-center gap-1.5">
+          {/* Desktop Study Background Mood Switcher */}
+          <div className="pt-2 pb-1 border-t border-dashed border-line">
+            <span className="sidebar-group-title block mb-1">
+              {ar ? "أجواء المذاكرة" : "Study Mood"}
+            </span>
+            <StudyBackgroundSelector locale={ar ? "ar" : "en"} variant="sidebar" />
+          </div>
+
+          <div className="flex items-center justify-between gap-1.5 pt-1">
             <button
               type="button"
               onClick={() => void cycleTheme()}
               title={themeLabels[theme]}
               aria-label={themeLabels[theme]}
-              className="flex-1 flex items-center justify-center gap-2"
+              className="flex-1 flex items-center justify-center gap-2 p-1.5 rounded-md border border-line bg-surface hover:bg-surface-hover text-xs font-bold transition-colors"
             >
-              <ThemeIcon aria-hidden="true" />
+              <ThemeIcon className="w-4 h-4 text-primary" aria-hidden="true" />
               <span>{themeLabels[theme]}</span>
             </button>
             <button
@@ -233,6 +242,12 @@ export function AppShell({
             <span>{ar ? "المزيد" : "More"}</span>
           </summary>
           <div className="mobile-more-menu">
+            <div className="p-2 border-b border-line">
+              <span className="sidebar-group-title block mb-1">
+                {ar ? "أجواء المذاكرة" : "Study Mood"}
+              </span>
+              <StudyBackgroundSelector locale={ar ? "ar" : "en"} variant="sidebar" />
+            </div>
             {navigationGroups.flatMap((g) => g.items).filter(
               (item) => !mobilePrimaryItems.some((p) => p.href === item.href)
             ).map((item) => (

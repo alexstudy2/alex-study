@@ -1,0 +1,25 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/internal/jobs/cleanup",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/internal/jobs/burnout-detection",
+      "schedule": "0 20 * * *"
+    },
+    {
+      "path": "/api/internal/jobs/performance-detection",
+      "schedule": "0 21 * * *"
+    },
+    {
+      "path": "/api/internal/jobs/challenges",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/internal/jobs/weekly-leaderboards",
+      "schedule": "59 23 * * 0"
+    }
+  ]
+}

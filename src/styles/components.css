@@ -297,35 +297,6 @@
   gap: var(--space-3);
 }
 
-/* Standardized Card Padding across the App */
-.today-card,
-.metric-card,
-.goal-card,
-.insight-card,
-.room-card,
-.exam-plan-card,
-.challenge-list-card,
-.privacy-card,
-.social-panel {
-  padding: var(--space-5);
-  border: 2px solid var(--secondary);
-  border-radius: var(--radius-doodle-card);
-  background: var(--surface);
-  box-shadow: var(--shadow-doodle);
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
-}
-
-.today-card:hover,
-.metric-card:hover,
-.goal-card:hover,
-.insight-card:hover,
-.room-card:hover,
-.exam-plan-card:hover,
-.challenge-list-card:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: var(--shadow-doodle-md);
-}
-
 /* ================= Badge Styles (Doodle Highlighter Sticker) ================= */
 .ui-badge {
   display: inline-flex;
@@ -1561,6 +1532,207 @@
   background: var(--primary-subtle);
   box-shadow: var(--shadow-doodle-xs);
 }
+
+/* ================= Today's Tasks Sticky Note Card ================= */
+.today-tasks-sticky-card {
+  position: relative;
+  padding: var(--space-5);
+  border: 2.5px solid var(--secondary);
+  border-radius: var(--radius-doodle-card);
+  background-color: var(--card-pastel-yellow, #FEFCE8);
+  box-shadow: var(--shadow-doodle);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.today-tasks-sticky-card:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow-doodle-md);
+}
+
+.sticky-tape-top {
+  position: absolute;
+  top: -0.65rem;
+  left: 50%;
+  width: 4.5rem;
+  height: 1.15rem;
+  background: rgba(254, 240, 138, 0.85);
+  border: 1px dashed var(--secondary);
+  transform: translateX(-50%) rotate(-1.5deg);
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+:root[data-theme="dark"] .sticky-tape-top {
+  background: rgba(202, 138, 4, 0.5);
+  border-color: var(--line-strong);
+}
+
+.sticky-tasks-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.sticky-tasks-title {
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: 800;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.sticky-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border: 1.5px solid var(--secondary);
+  border-radius: var(--radius-full);
+  background: var(--surface-sunken);
+  color: var(--foreground);
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--shadow-doodle-xs);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.sticky-add-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow-doodle-sm);
+  background: var(--primary-subtle);
+}
+
+.sticky-view-all-link {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  text-decoration: none;
+}
+
+.sticky-view-all-link:hover {
+  text-decoration: underline;
+}
+
+/* Inline Quick Add Form */
+.sticky-inline-add-form {
+  margin-bottom: var(--space-3);
+  padding: var(--space-3);
+  background: var(--surface-sunken);
+  border: 2px dashed var(--secondary);
+  border-radius: var(--radius-md);
+}
+
+.sticky-input-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.sticky-task-input {
+  flex: 1;
+  padding: var(--space-2) var(--space-3);
+  border: 1.5px solid var(--secondary);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--foreground);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  outline: none;
+  transition: box-shadow var(--transition-fast);
+}
+
+.sticky-task-input:focus {
+  box-shadow: 0 0 0 2px var(--primary);
+}
+
+.sticky-cancel-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1.5px solid var(--secondary);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.sticky-cancel-btn:hover {
+  background: var(--danger-subtle);
+  color: var(--danger);
+}
+
+.sticky-tasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Sticky Empty State */
+.sticky-empty-state {
+  text-align: center;
+  padding: var(--space-6) var(--space-4);
+  border: 2px dashed var(--line);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+:root[data-theme="dark"] .sticky-empty-state {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.sticky-empty-doodle {
+  margin-bottom: var(--space-1);
+}
+
+.sticky-empty-title {
+  font-size: var(--text-sm);
+  font-weight: 800;
+  color: var(--foreground);
+}
+
+.sticky-empty-text {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  max-width: 280px;
+  margin: 0;
+}
+
+.sticky-empty-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-5);
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-doodle-btn);
+  background: var(--primary);
+  color: #FFFFFF;
+  font-weight: 800;
+  font-size: var(--text-xs);
+  cursor: pointer;
+  box-shadow: var(--shadow-doodle-sm);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.sticky-empty-add-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow-doodle);
+}
+
 .course-name-input, .course-color-select { min-height: 2.6rem; border: 2px solid var(--secondary); border-radius: var(--radius-md); background: var(--surface); color: var(--foreground); padding: 0.45rem 0.7rem; font: inherit; }
 .detailed-form-drawer { padding: var(--space-5); border: 2px solid var(--secondary); border-radius: var(--radius-doodle-card); background: var(--surface); box-shadow: var(--shadow-doodle); }
 
@@ -2436,18 +2608,126 @@
 .result-outcome,
 .result-participants,
 .result-share-panel,
-.result-badge-panel,
-.challenge-event-panel,
-.challenge-rule-panel,
-.exam-plan-editor,
-.exam-plan-reject-zone,
-.task-conversion-confirmation,
-.quiet-state {
-  padding: var(--space-5);
+.result-badge-panel {
+  padding: var(--space-4);
   border: 2px solid var(--secondary);
   border-radius: var(--radius-doodle-card);
   background: var(--surface);
   box-shadow: var(--shadow-doodle);
+}
+/* Standardized Card Padding across the App — With Corner Curva Drawings */
+.ui-card,
+.today-card,
+.metric-card,
+.goal-card,
+.insight-card,
+.room-card,
+.exam-plan-card,
+.challenge-list-card,
+.privacy-card,
+.social-panel,
+.dashboard-card,
+.stat-card,
+.task-card,
+.session-card,
+.focus-sidebar-card,
+.focus-timer-card,
+.doodle-timer-card,
+.lobby-card,
+.friend-card,
+.notification-card {
+  position: relative;
+  padding: var(--space-5);
+  border: 2.5px solid var(--secondary);
+  border-radius: var(--radius-doodle-card);
+  background-color: var(--surface);
+  box-shadow: var(--shadow-doodle);
+  /* Curva Hand-Drawn Corner Markings on angles */
+  background-image:
+    url("data:image/svg+xml,%3Csvg width='32' height='32' viewBox='0 0 32 32' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M6 4 C16 4, 28 16, 28 26' stroke='%23263D5B' stroke-width='2' stroke-linecap='round' stroke-dasharray='3 3'/%3E%3Ccircle cx='23' cy='9' r='2.5' fill='%23F59E0B'/%3E%3Cpath d='M12 4 L14 8' stroke='%2349B6E5' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg width='32' height='32' viewBox='0 0 32 32' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 26 C4 16, 16 4, 26 4' stroke='%23263D5B' stroke-width='2' stroke-linecap='round' stroke-dasharray='3 3'/%3E%3Cpath d='M8 22 L14 16' stroke='%23EC4899' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-position: top 5px right 5px, bottom 5px left 5px;
+  background-repeat: no-repeat, no-repeat;
+  background-size: 24px 24px, 24px 24px;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+:root[data-theme="dark"] .ui-card,
+:root[data-theme="dark"] .today-card,
+:root[data-theme="dark"] .metric-card,
+:root[data-theme="dark"] .goal-card,
+:root[data-theme="dark"] .insight-card,
+:root[data-theme="dark"] .room-card,
+:root[data-theme="dark"] .exam-plan-card,
+:root[data-theme="dark"] .challenge-list-card,
+:root[data-theme="dark"] .privacy-card,
+:root[data-theme="dark"] .social-panel,
+:root[data-theme="dark"] .dashboard-card,
+:root[data-theme="dark"] .stat-card,
+:root[data-theme="dark"] .task-card,
+:root[data-theme="dark"] .session-card,
+:root[data-theme="dark"] .focus-sidebar-card,
+:root[data-theme="dark"] .focus-timer-card,
+:root[data-theme="dark"] .doodle-timer-card,
+:root[data-theme="dark"] .lobby-card,
+:root[data-theme="dark"] .friend-card,
+:root[data-theme="dark"] .notification-card {
+  border-color: #475569;
+  background-image:
+    url("data:image/svg+xml,%3Csvg width='32' height='32' viewBox='0 0 32 32' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M6 4 C16 4, 28 16, 28 26' stroke='%2338BDF8' stroke-width='2' stroke-linecap='round' stroke-dasharray='3 3'/%3E%3Ccircle cx='23' cy='9' r='2.5' fill='%23FBBF24'/%3E%3Cpath d='M12 4 L14 8' stroke='%2338BDF8' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg width='32' height='32' viewBox='0 0 32 32' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 26 C4 16, 16 4, 26 4' stroke='%2338BDF8' stroke-width='2' stroke-linecap='round' stroke-dasharray='3 3'/%3E%3Cpath d='M8 22 L14 16' stroke='%23F472B6' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+.today-card:hover,
+.metric-card:hover,
+.goal-card:hover,
+.insight-card:hover,
+.room-card:hover,
+.exam-plan-card:hover,
+.challenge-list-card:hover,
+.stat-card:hover,
+.task-card:hover,
+.session-card:hover,
+.lobby-card:hover,
+.friend-card:hover,
+.notification-card:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow-doodle-md);
+}
+
+/* Contextual Pastel Solid Card Colors (No AI Gradients) */
+.today-card,
+.focus-sidebar-card,
+.doodle-timer-card,
+.goal-doodle-form {
+  background-color: var(--card-pastel-yellow);
+}
+
+.metric-card:nth-child(4n+1),
+.stat-card:nth-child(4n+1),
+.goal-card:nth-child(4n+1) {
+  background-color: var(--card-pastel-yellow);
+}
+
+.metric-card:nth-child(4n+2),
+.stat-card:nth-child(4n+2),
+.goal-card:nth-child(4n+2),
+.room-card {
+  background-color: var(--card-pastel-sky);
+}
+
+.metric-card:nth-child(4n+3),
+.stat-card:nth-child(4n+3),
+.goal-card:nth-child(4n+3),
+.task-card:nth-child(even) {
+  background-color: var(--card-pastel-mint);
+}
+
+.metric-card:nth-child(4n+4),
+.stat-card:nth-child(4n+4),
+.goal-card:nth-child(4n+4),
+.insight-card {
+  background-color: var(--card-pastel-peach);
 }
 
 .challenge-event-list,
@@ -2777,10 +3057,182 @@
 }
 
 .goal-progress-wrap,
-.goal-form,
 .social-columns,
 .insight-actions {
   margin-top: var(--space-3);
+}
+
+/* ================= Goal Creation Form — Doodle Style ================= */
+.goal-form-wrapper {
+  position: relative;
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-6);
+  animation: slideIn 0.25s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.goal-form-tape {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-1.5deg);
+  width: 110px;
+  height: 26px;
+  background: rgba(254, 240, 138, 0.95);
+  border: 1.5px solid var(--secondary);
+  border-radius: var(--radius-xs);
+  box-shadow: 1.5px 1.5px 0 var(--secondary);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.goal-doodle-form {
+  position: relative;
+  background: var(--surface);
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-doodle-card);
+  box-shadow: var(--shadow-doodle-md);
+  padding: var(--space-6);
+  z-index: 1;
+}
+
+.goal-form-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-bottom: var(--space-4);
+  border-bottom: 2px dashed var(--line);
+  margin-bottom: var(--space-5);
+}
+
+.goal-header-icon-bubble {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--primary-subtle);
+  border: 1.5px solid var(--secondary);
+  box-shadow: var(--shadow-doodle-xs);
+  flex-shrink: 0;
+}
+
+.goal-form-close-btn {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--surface-sunken);
+  border: 1.5px solid var(--secondary);
+  color: var(--muted);
+  cursor: pointer;
+  box-shadow: var(--shadow-doodle-xs);
+  transition: all var(--transition-fast);
+}
+
+.goal-form-close-btn:hover {
+  background: var(--danger-subtle);
+  color: var(--danger);
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow-doodle);
+}
+
+.goal-form-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.goal-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+@media (max-width: 640px) {
+  .goal-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.goal-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.goal-form-field label {
+  font-size: var(--text-xs);
+  font-weight: 800;
+  color: var(--foreground);
+}
+
+.goal-form-field input,
+.goal-form-field select {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  color: var(--foreground);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  box-shadow: var(--shadow-doodle-xs);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.goal-form-field input:focus,
+.goal-form-field select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--focus-ring), var(--shadow-doodle);
+  transform: translate(-1px, -1px);
+}
+
+.goal-metric-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
+}
+
+.goal-metric-tab-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 0.55rem 0.75rem;
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  color: var(--foreground);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: var(--shadow-doodle-xs);
+  transition: all var(--transition-fast);
+}
+
+.goal-metric-tab-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow-doodle);
+}
+
+.goal-metric-tab-btn.active {
+  background: var(--primary-subtle);
+  border-color: var(--secondary);
+  color: var(--primary-strong);
+  box-shadow: var(--shadow-doodle-sm);
+}
+
+.goal-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 2px dashed var(--line);
+  margin-top: var(--space-2);
 }
 
 .goal-detail-link,
@@ -3946,3 +4398,350 @@
   padding-top: var(--space-3);
   border-top: 2px dashed var(--line);
 }
+
+/* ================= Authentic Flat Study Backgrounds (No AI Gradients) ================= */
+.study-ambient-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  transition: background-color 0.5s ease;
+}
+
+/* Mood 1: Lofi Notebook Paper (Default) */
+.mood-notebook {
+  background-color: var(--background, #F4EFEA);
+}
+
+.mood-notebook .ambient-texture-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--secondary) 9%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--secondary) 9%, transparent) 1px, transparent 1px);
+  background-size: 28px 28px;
+  opacity: 0.9;
+}
+
+/* Mood 2: Cosmic Starfield Paper */
+.mood-cosmic {
+  background-color: #0E1626;
+}
+
+.mood-cosmic .ambient-texture-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(color-mix(in srgb, #94A3B8 35%, transparent) 1.2px, transparent 1.2px),
+    radial-gradient(color-mix(in srgb, #38BDF8 40%, transparent) 1.2px, transparent 1.2px);
+  background-size: 36px 36px, 72px 72px;
+  background-position: 0 0, 18px 18px;
+  opacity: 0.7;
+}
+
+/* Mood 3: Zen Sage Paper */
+.mood-aurora {
+  background-color: #EBF5EF;
+}
+
+.mood-aurora .ambient-texture-grid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(color-mix(in srgb, #10B981 18%, transparent) 1.4px, transparent 1.4px);
+  background-size: 24px 24px;
+  opacity: 0.8;
+}
+
+/* Mood 4: Sunset Warm Almond Paper */
+.mood-sunset {
+  background-color: #FDF3EA;
+}
+
+.mood-sunset .ambient-texture-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, #D97706 12%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, #D97706 12%, transparent) 1px, transparent 1px);
+  background-size: 30px 30px;
+  opacity: 0.8;
+}
+
+/* Layer 3: Floating Multi-Colored Curva Study Drawings */
+.ambient-doodles-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.study-curva-drawing {
+  position: absolute;
+  width: clamp(3.8rem, 6.5vw, 5.5rem);
+  height: clamp(3.8rem, 6.5vw, 5.5rem);
+  opacity: 0.85;
+  filter: drop-shadow(2px 4px 6px rgba(38, 61, 91, 0.1));
+  will-change: transform;
+}
+
+:root[data-theme="dark"] .study-curva-drawing {
+  opacity: 0.9;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.4));
+  --curva-stroke: #94A3B8;
+  --curva-flask-bg: rgba(30, 41, 59, 0.75);
+}
+
+/* Mood Color Palettes for Curva Drawings */
+.mood-notebook {
+  --curva-stroke: #263D5B;
+  --curva-book-1: #38BDF8;
+  --curva-book-2: #F472B6;
+  --curva-book-3: #FBBF24;
+  --curva-mug: #818CF8;
+  --curva-pencil: #34D399;
+  --curva-flask-bg: rgba(255, 255, 255, 0.8);
+  --curva-liquid: #06B6D4;
+  --curva-bulb: #FDE047;
+  --curva-note: #FEF08A;
+  --curva-dna-1: #EC4899;
+  --curva-dna-2: #3B82F6;
+  --curva-plane: #60A5FA;
+  --curva-plane-dark: #2563EB;
+}
+
+.mood-cosmic {
+  --curva-stroke: #CBD5E1;
+  --curva-book-1: #818CF8;
+  --curva-book-2: #C084FC;
+  --curva-book-3: #38BDF8;
+  --curva-mug: #6366F1;
+  --curva-pencil: #A78BFA;
+  --curva-flask-bg: rgba(30, 27, 75, 0.6);
+  --curva-liquid: #A855F7;
+  --curva-bulb: #FBBF24;
+  --curva-note: #E0E7FF;
+  --curva-dna-1: #F472B6;
+  --curva-dna-2: #818CF8;
+  --curva-plane: #818CF8;
+  --curva-plane-dark: #4F46E5;
+}
+
+.mood-aurora {
+  --curva-stroke: #1E293B;
+  --curva-book-1: #34D399;
+  --curva-book-2: #2DD4BF;
+  --curva-book-3: #A7F3D0;
+  --curva-mug: #10B981;
+  --curva-pencil: #06B6D4;
+  --curva-flask-bg: rgba(236, 253, 245, 0.8);
+  --curva-liquid: #10B981;
+  --curva-bulb: #6EE7B7;
+  --curva-note: #DCFCE7;
+  --curva-dna-1: #10B981;
+  --curva-dna-2: #06B6D4;
+  --curva-plane: #2DD4BF;
+  --curva-plane-dark: #0D9488;
+}
+
+.mood-sunset {
+  --curva-stroke: #451A03;
+  --curva-book-1: #FB923C;
+  --curva-book-2: #F43F5E;
+  --curva-book-3: #FDE047;
+  --curva-mug: #F59E0B;
+  --curva-pencil: #FB7185;
+  --curva-flask-bg: rgba(254, 243, 199, 0.8);
+  --curva-liquid: #EA580C;
+  --curva-bulb: #FBBF24;
+  --curva-note: #FEF3C7;
+  --curva-dna-1: #F43F5E;
+  --curva-dna-2: #F59E0B;
+  --curva-plane: #FB923C;
+  --curva-plane-dark: #D97706;
+}
+
+/* Doodle Positions & Staggered Animations */
+.doodle-pos-1 { top: 8%; left: 5%; animation: doodle-float-1 20s ease-in-out infinite; }
+.doodle-pos-2 { top: 14%; right: 7%; animation: doodle-float-2 24s ease-in-out infinite 2s; }
+.doodle-pos-3 { top: 46%; left: 3%; animation: doodle-float-3 22s ease-in-out infinite 4s; }
+.doodle-pos-4 { top: 76%; right: 6%; animation: doodle-float-1 25s ease-in-out infinite 1s; }
+.doodle-pos-5 { top: 78%; left: 6%; animation: doodle-float-2 26s ease-in-out infinite 5s; }
+.doodle-pos-6 { top: 6%; left: 45%; animation: doodle-float-3 21s ease-in-out infinite 3s; }
+.doodle-pos-7 { top: 82%; left: 42%; animation: doodle-float-1 24s ease-in-out infinite 6s; }
+.doodle-pos-8 { top: 42%; right: 4%; animation: doodle-float-2 27s ease-in-out infinite 2s; }
+
+/* Keyframe Animations (GPU translate3d + subtle rotate) */
+@keyframes doodle-float-1 {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(12px, -24px, 0) rotate(6deg);
+  }
+}
+
+@keyframes doodle-float-2 {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(-15px, 20px, 0) rotate(-7deg);
+  }
+}
+
+@keyframes doodle-float-3 {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(14px, 16px, 0) rotate(5deg);
+  }
+}
+
+@keyframes aurora-mesh-pulse {
+  0% {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  100% {
+    transform: scale(1.08) translate3d(2%, 2%, 0);
+  }
+}
+
+/* Reduced Motion Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .study-doodle,
+  .ambient-mesh-glow {
+    animation: none !important;
+  }
+  .ambient-spotlight {
+    display: none;
+  }
+}
+
+/* ================= Study Mood Selector Component ================= */
+.study-mood-trigger-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0.35rem 0.65rem;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--secondary);
+  background: var(--surface);
+  color: var(--foreground);
+  box-shadow: var(--shadow-doodle-xs);
+  cursor: pointer;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+}
+
+.study-mood-trigger-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow-doodle);
+  background: var(--surface-hover);
+}
+
+.study-mood-trigger-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: none;
+}
+
+.study-mood-dropdown-menu {
+  position: absolute;
+  bottom: calc(100% + 0.5rem);
+  left: 0;
+  z-index: 50;
+  min-width: 13.5rem;
+  background: var(--surface);
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-doodle-card);
+  box-shadow: var(--shadow-doodle-md);
+  animation: slideIn 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+  overflow: hidden;
+}
+
+[dir="rtl"] .study-mood-dropdown-menu {
+  left: auto;
+  right: 0;
+}
+
+.study-mood-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 0.45rem 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.study-mood-menu-item:hover {
+  background: var(--surface-hover);
+}
+
+.study-mood-menu-item.active {
+  background: var(--primary-subtle);
+  color: var(--primary-strong);
+}
+
+/* Sidebar variant button for Desktop */
+.study-mood-sidebar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.45rem 0.65rem;
+  border: 1.5px solid var(--secondary);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  color: var(--foreground);
+  box-shadow: var(--shadow-doodle-xs);
+  cursor: pointer;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+}
+
+.study-mood-sidebar-btn:hover {
+  background: var(--surface-hover);
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow-doodle);
+}
+
+.study-mood-sidebar-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: none;
+}
+
+.study-mood-icon-bubble {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1.5px solid var(--secondary);
+  flex-shrink: 0;
+}
+
+.study-mood-dropdown-menu.sidebar-popover {
+  bottom: calc(100% + 0.5rem);
+  left: 0;
+  right: 0;
+  width: 100%;
+  min-width: 15rem;
+}
+
+.study-mood-item-icon {
+  display: grid;
+  place-items: center;
+  width: 1.65rem;
+  height: 1.65rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  border: 1px solid var(--secondary);
+  flex-shrink: 0;
+}
+
+

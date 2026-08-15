@@ -37,35 +37,38 @@ export async function POST(request: Request) {
     return invalid({ subjectId: ["Task and subject do not match"] });
   const now = new Date();
   try {
-    const timer = await prisma.$transaction(async (tx) => {
-      const session =
-        data.mode === "FOCUS"
-          ? await tx.studySession.create({
-              data: {
-                userId: user.id,
-                taskId: task?.id ?? null,
-                subjectId: data.subjectId ?? task?.subjectId ?? null,
-                startedAt: now,
-                plannedDurationSeconds: data.durationSeconds,
-                status: "ACTIVE",
-                source: "SOLO",
-              },
-            })
-          : null;
-      return tx.timerRun.create({
-        data: {
-          userId: user.id,
-          sessionId: session?.id,
-          taskId: task?.id ?? null,
-          subjectId: data.subjectId ?? task?.subjectId ?? null,
-          mode: data.mode,
-          durationSeconds: data.durationSeconds,
-          startedAt: now,
-          segmentStartedAt: now,
-        },
-        include: timerRunInclude,
-      });
-    });
+    const timer = await prisma.$transaction(
+      async (tx) => {
+        const session =
+          data.mode === "FOCUS"
+            ? await tx.studySession.create({
+                data: {
+                  userId: user.id,
+                  taskId: task?.id ?? null,
+                  subjectId: data.subjectId ?? task?.subjectId ?? null,
+                  startedAt: now,
+                  plannedDurationSeconds: data.durationSeconds,
+                  status: "ACTIVE",
+                  source: "SOLO",
+                },
+              })
+            : null;
+        return tx.timerRun.create({
+          data: {
+            userId: user.id,
+            sessionId: session?.id,
+            taskId: task?.id ?? null,
+            subjectId: data.subjectId ?? task?.subjectId ?? null,
+            mode: data.mode,
+            durationSeconds: data.durationSeconds,
+            startedAt: now,
+            segmentStartedAt: now,
+          },
+          include: timerRunInclude,
+        });
+      },
+      { timeout: 15000, maxWait: 10000 }
+    );
     return Response.json({ timer, serverNow: now.toISOString() }, { status: 201 });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002")

@@ -6,3 +6,6 @@ export async function POST(request: Request) {
     return Response.json({ error: "unauthorized" }, { status: 401 });
   return Response.json(await runPerformanceDetection());
 }
+
+export const GET = POST;
+

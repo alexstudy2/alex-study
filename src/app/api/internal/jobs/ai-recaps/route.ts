@@ -6,3 +6,6 @@ export async function POST(request: Request) {
     return Response.json({ error: "unauthorized" }, { status: 401 });
   return Response.json(await runAIRecaps());
 }
+
+export const GET = POST;
+

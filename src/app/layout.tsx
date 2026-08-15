@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Delius_Swash_Caps, Delius, JetBrains_Mono, IBM_Plex_Sans_Arabic } from "next/font/google";
 import { getLocale, getMessages } from "next-intl/server";
 import { AppShell } from "@/components/navigation/app-shell";
+import { StudyBackground } from "@/components/ui/study-background";
 import { Providers } from "@/components/providers";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
@@ -63,7 +64,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       className={`${deliusSwashCaps.variable} ${deliusBody.variable} ${jetbrainsMono.variable} ${ibmPlexArabic.variable}`}
       data-theme={profile?.preference?.theme.toLowerCase() ?? undefined}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col relative">
+        <StudyBackground />
         <Providers messages={messages} session={session} locale={locale}>
           <AppShell
             user={

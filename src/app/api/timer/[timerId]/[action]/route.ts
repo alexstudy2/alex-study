@@ -49,55 +49,61 @@ export async function POST(
   }
   if (!["RUNNING", "PAUSED"].includes(run.status)) return conflict("timer_already_closed");
   if (action === "cancel") {
-    const timer = await prisma.$transaction(async (tx) => {
-      if (run.sessionId)
-        await tx.studySession.update({
-          where: { id: run.sessionId },
-          data: { status: "ABANDONED", endedAt: now, durationSeconds: elapsed },
+    const timer = await prisma.$transaction(
+      async (tx) => {
+        if (run.sessionId)
+          await tx.studySession.update({
+            where: { id: run.sessionId },
+            data: { status: "ABANDONED", endedAt: now, durationSeconds: elapsed },
+          });
+        return tx.timerRun.update({
+          where: { id: run.id },
+          data: {
+            status: "CANCELLED",
+            cancelledAt: now,
+            accumulatedActiveSeconds: elapsed,
+            segmentStartedAt: null,
+            version: nextVersion,
+          },
+          include: timerRunInclude,
         });
+      },
+      { timeout: 15000, maxWait: 10000 }
+    );
+    return Response.json({ timer, serverNow: now.toISOString() });
+  }
+  const timer = await prisma.$transaction(
+    async (tx) => {
+      if (run.sessionId) {
+        const session = await tx.studySession.findFirst({
+          where: { id: run.sessionId, userId: user.id },
+        });
+        if (!session) throw new Error("Timer session missing");
+        await tx.studySession.update({
+          where: { id: session.id },
+          data: {
+            status: "COMPLETED",
+            endedAt: now,
+            durationSeconds: elapsed,
+            focusScore: focusScore(elapsed, session.plannedDurationSeconds, session.distractionCount),
+            reflection: parsed.data.reflection || null,
+          },
+        });
+      }
       return tx.timerRun.update({
         where: { id: run.id },
         data: {
-          status: "CANCELLED",
-          cancelledAt: now,
+          status: "COMPLETED",
+          completedAt: now,
           accumulatedActiveSeconds: elapsed,
           segmentStartedAt: null,
           version: nextVersion,
         },
         include: timerRunInclude,
       });
-    });
-    return Response.json({ timer, serverNow: now.toISOString() });
-  }
-  const timer = await prisma.$transaction(async (tx) => {
-    if (run.sessionId) {
-      const session = await tx.studySession.findFirst({
-        where: { id: run.sessionId, userId: user.id },
-      });
-      if (!session) throw new Error("Timer session missing");
-      await tx.studySession.update({
-        where: { id: session.id },
-        data: {
-          status: "COMPLETED",
-          endedAt: now,
-          durationSeconds: elapsed,
-          focusScore: focusScore(elapsed, session.plannedDurationSeconds, session.distractionCount),
-          reflection: parsed.data.reflection || null,
-        },
-      });
-    }
-    return tx.timerRun.update({
-      where: { id: run.id },
-      data: {
-        status: "COMPLETED",
-        completedAt: now,
-        accumulatedActiveSeconds: elapsed,
-        segmentStartedAt: null,
-        version: nextVersion,
-      },
-      include: timerRunInclude,
-    });
-  });
+    },
+    { timeout: 15000, maxWait: 10000 }
+  );
   if (run.sessionId) await recalculateChallengesForUser(user.id);
   return Response.json({ timer, serverNow: now.toISOString() });
 }

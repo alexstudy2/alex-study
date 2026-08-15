@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
@@ -19,6 +19,8 @@ import {
   Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { STUDY_MOODS, MOOD_STORAGE_KEY } from "@/components/ui/study-background-selector";
+import type { StudyMood } from "@/components/ui/study-background";
 
 type Locale = "en" | "ar";
 type Theme = "SYSTEM" | "LIGHT" | "DARK";
@@ -88,6 +90,33 @@ export function SettingsWorkspace({ initial, locale }: { initial: Initial; local
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [deleteError, setDeleteError] = useState("");
+  const [studyMood, setStudyMood] = useState<StudyMood>("notebook");
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(MOOD_STORAGE_KEY) as StudyMood | null;
+      if (saved && ["notebook", "cosmic", "aurora", "sunset"].includes(saved)) {
+        setStudyMood(saved);
+      }
+    } catch {
+      // Ignore
+    }
+  }, []);
+
+  function changeStudyMood(mood: StudyMood) {
+    setStudyMood(mood);
+    try {
+      localStorage.setItem(MOOD_STORAGE_KEY, mood);
+      window.dispatchEvent(
+        new StorageEvent("storage", {
+          key: MOOD_STORAGE_KEY,
+          newValue: mood,
+        })
+      );
+    } catch {
+      // Ignore
+    }
+  }
 
   const text = {
     title: ar ? "إعدادات الحساب والدراسة" : "Account & Study Settings",
@@ -451,6 +480,33 @@ export function SettingsWorkspace({ initial, locale }: { initial: Initial; local
                     >
                       <Icon className="w-5 h-5 mb-1 text-secondary" />
                       <span className="text-xs font-bold">{t.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Study Background Mood Picker */}
+            <div className="mt-6 mb-6 pt-4 border-t-2 border-dashed border-line">
+              <span className="field-label block mb-2">
+                {ar ? "خلفية وأجواء المذاكرة التفاعلية" : "Interactive Study Background Mood"}
+              </span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {STUDY_MOODS.map((m) => {
+                  const Icon = m.icon;
+                  const isCurrent = studyMood === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => changeStudyMood(m.id)}
+                      className={`theme-card-btn ${isCurrent ? "active" : ""}`}
+                    >
+                      <Icon className="w-5 h-5 mb-1" style={{ color: m.colorToken }} />
+                      <span className="text-xs font-extrabold">{ar ? m.labelAr : m.labelEn}</span>
+                      <span className="text-[10px] text-muted truncate max-w-full text-center">
+                        {ar ? m.descAr : m.descEn}
+                      </span>
                     </button>
                   );
                 })}

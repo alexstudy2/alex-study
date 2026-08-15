@@ -44,9 +44,10 @@
 .challenge-form-shell,
 .challenge-detail-shell,
 .challenge-result-shell {
-  width: min(100% - var(--space-4), 78rem);
+  width: 100%;
+  max-width: 78rem;
   margin-inline: auto;
-  padding-block: var(--space-6) var(--space-8);
+  padding-block: var(--space-4) var(--space-8);
 }
 
 .page-shell.narrow,
@@ -224,7 +225,9 @@
 .app-frame {
   display: flex;
   min-height: 100vh;
-  background: var(--background);
+  background: transparent;
+  position: relative;
+  z-index: 1;
 }
 
 .skip-link {
@@ -246,13 +249,14 @@
 .app-sidebar {
   width: 260px;
   flex-shrink: 0;
-  background: var(--surface);
-  border-inline-end: 2px solid var(--secondary);
+  background: var(--sidebar-background, #FAF7F0);
+  border-inline-end: 2.5px solid var(--secondary);
   padding: var(--space-4);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   gap: var(--space-4);
+  box-shadow: 2px 0 0 rgba(0, 0, 0, 0.04);
 }
 
 @media (max-width: 768px) {
@@ -409,6 +413,8 @@
   flex: 1;
   min-width: 0;
   overflow-y: auto;
+  padding-inline: clamp(var(--space-4), 3.5vw, var(--space-8));
+  padding-block: var(--space-2);
 }
 
 /* Mobile Bottom Navigation */
@@ -426,8 +432,8 @@
     left: 0;
     right: 0;
     height: 60px;
-    background: var(--surface);
-    border-top: 2px solid var(--secondary);
+    background: var(--sidebar-background, #FAF7F0);
+    border-top: 2.5px solid var(--secondary);
     z-index: 50;
     padding-inline: var(--space-2);
     box-shadow: 0 -2px 0 var(--secondary);
@@ -472,7 +478,9 @@
   min-height: 100dvh;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(380px, 1fr);
-  background: var(--background);
+  background: transparent;
+  position: relative;
+  z-index: 1;
 }
 
 @media (max-width: 860px) {

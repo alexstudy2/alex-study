@@ -8,6 +8,11 @@ import {
   X,
   Check,
   Ban,
+  Clock,
+  CheckSquare,
+  Sparkles,
+  Calendar,
+  BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -28,6 +33,9 @@ export function GoalWorkspace({
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [selectedMetric, setSelectedMetric] = useState<"STUDY_MINUTES" | "TASKS_COMPLETED">(
+    "STUDY_MINUTES"
+  );
   const ar = locale === "ar";
   const [dateDefaults] = useState(() => {
     const start = new Date();
@@ -50,7 +58,7 @@ export function GoalWorkspace({
       body: JSON.stringify({
         title: form.get("title"),
         subjectId: form.get("subjectId") || null,
-        metric: form.get("metric"),
+        metric: selectedMetric,
         targetValue: Number(form.get("targetValue")),
         period: form.get("period"),
         startsAt: startsAt.toISOString(),
@@ -99,87 +107,195 @@ export function GoalWorkspace({
       </div>
 
       {open && (
-        <form className="goal-form" action={create}>
-          <label>
-            {ar ? "عنوان الهدف" : "Goal title"}
-            <input name="title" required maxLength={160} placeholder={ar ? "مثال: مراجعة 500 دقيقة تشريح" : "e.g. 500 study minutes"} />
-          </label>
-          <div className="form-grid">
-            <label>
-              {ar ? "المقياس" : "Metric"}
-              <select name="metric">
-                <option value="STUDY_MINUTES">{ar ? "دقائق الدراسة" : "Study minutes"}</option>
-                <option value="TASKS_COMPLETED">
-                  {ar ? "المهام المكتملة" : "Tasks completed"}
-                </option>
-              </select>
-            </label>
-            <label>
-              {ar ? "القيمة المستهدفة" : "Target value"}
-              <input name="targetValue" type="number" min="1" required defaultValue="100" />
-            </label>
-          </div>
-          <div className="form-grid">
-            <label>
-              {ar ? "الفترة" : "Period"}
-              <select name="period">
-                <option value="WEEKLY">{ar ? "أسبوعي" : "Weekly"}</option>
-                <option value="MONTHLY">{ar ? "شهري" : "Monthly"}</option>
-                <option value="CUSTOM">{ar ? "مخصص" : "Custom"}</option>
-              </select>
-            </label>
-            <label>
-              {ar ? "المادة" : "Subject"}
-              <select name="subjectId">
-                <option value="">{ar ? "عام / بدون مادة" : "General / No subject"}</option>
-                {subjects.map((subject) => (
-                  <option key={subject.id} value={subject.id}>
-                    {subject.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <div className="form-grid">
-            <label>
-              {ar ? "يبدأ في" : "Starts at"}
-              <input
-                name="startsAt"
-                type="date"
-                required
-                defaultValue={dateDefaults.start}
-              />
-            </label>
-            <label>
-              {ar ? "الموعد النهائي" : "Deadline"}
-              <input
-                name="deadline"
-                type="date"
-                required
-                defaultValue={dateDefaults.deadline}
-              />
-            </label>
-          </div>
-          <div className="form-actions">
-            <Button
-              type="submit"
-              variant="primary"
-              size="sm"
-              disabled={busy}
-              leftIcon={<Check className="w-4 h-4" />}
-            >
-              {ar ? "حفظ الهدف" : "Save goal"}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setOpen(false)}
-            >
-              {ar ? "إلغاء" : "Cancel"}
-            </Button>
-          </div>
-        </form>
+        <div className="goal-form-wrapper">
+          <div className="goal-form-tape" aria-hidden="true" />
+          <form className="goal-doodle-form" action={create}>
+            <div className="goal-form-header">
+              <div className="flex items-center gap-2">
+                <div className="goal-header-icon-bubble">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-foreground">
+                    {ar ? "إضافة هدف دراسي جديد" : "Create New Study Goal"}
+                  </h3>
+                  <p className="text-xs text-muted">
+                    {ar
+                      ? "حدد هدفك بدقة لزيادة التركيز ومتابعة التقدم خطوة بخطوة."
+                      : "Set a clear, measurable goal to maintain momentum."}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="goal-form-close-btn"
+                aria-label={ar ? "إغلاق" : "Close"}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="goal-form-body">
+              {/* Title Field */}
+              <div className="goal-form-field">
+                <label htmlFor="goal-title">
+                  {ar ? "عنوان الهدف" : "Goal title"}
+                  <span className="text-danger ml-1">*</span>
+                </label>
+                <input
+                  id="goal-title"
+                  name="title"
+                  required
+                  maxLength={160}
+                  placeholder={
+                    ar
+                      ? "مثال: مراجعة 500 دقيقة تشريح أو إنهاء 10 مهام"
+                      : "e.g. 500 study minutes or finish 10 tasks"
+                  }
+                />
+              </div>
+
+              {/* Metric Selector Tabs */}
+              <div className="goal-form-field">
+                <label>{ar ? "طريقة قياس الهدف (المقياس)" : "Goal Metric"}</label>
+                <div className="goal-metric-tabs">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedMetric("STUDY_MINUTES")}
+                    className={`goal-metric-tab-btn ${
+                      selectedMetric === "STUDY_MINUTES" ? "active" : ""
+                    }`}
+                  >
+                    <Clock className="w-4 h-4" />
+                    <span>{ar ? "دقائق الدراسة" : "Study Minutes"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedMetric("TASKS_COMPLETED")}
+                    className={`goal-metric-tab-btn ${
+                      selectedMetric === "TASKS_COMPLETED" ? "active" : ""
+                    }`}
+                  >
+                    <CheckSquare className="w-4 h-4" />
+                    <span>{ar ? "المهام المكتملة" : "Tasks Completed"}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Target Value & Period Grid */}
+              <div className="goal-form-grid">
+                <div className="goal-form-field">
+                  <label htmlFor="goal-target">
+                    {ar ? "القيمة المستهدفة" : "Target value"} (
+                    {selectedMetric === "STUDY_MINUTES"
+                      ? ar
+                        ? "دقيقة"
+                        : "minutes"
+                      : ar
+                      ? "مهمة"
+                      : "tasks"}
+                    )<span className="text-danger ml-1">*</span>
+                  </label>
+                  <input
+                    id="goal-target"
+                    name="targetValue"
+                    type="number"
+                    min="1"
+                    required
+                    defaultValue={selectedMetric === "STUDY_MINUTES" ? "120" : "5"}
+                  />
+                </div>
+
+                <div className="goal-form-field">
+                  <label htmlFor="goal-period">
+                    {ar ? "فترة الهدف" : "Period"}
+                  </label>
+                  <select id="goal-period" name="period" defaultValue="WEEKLY">
+                    <option value="WEEKLY">{ar ? "📅 أسبوعي (Weekly)" : "📅 Weekly"}</option>
+                    <option value="MONTHLY">{ar ? "🗓️ شهري (Monthly)" : "🗓️ Monthly"}</option>
+                    <option value="CUSTOM">{ar ? "🎯 مخصص (Custom)" : "🎯 Custom"}</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Subject & Dates Grid */}
+              <div className="goal-form-grid">
+                <div className="goal-form-field">
+                  <label htmlFor="goal-subject">
+                    <span className="flex items-center gap-1">
+                      <BookOpen className="w-3.5 h-3.5 text-primary" />
+                      {ar ? "المادة الدراسية (اختياري)" : "Subject (optional)"}
+                    </span>
+                  </label>
+                  <select id="goal-subject" name="subjectId" defaultValue="">
+                    <option value="">{ar ? "🌟 عام / كل المواد" : "🌟 General / All subjects"}</option>
+                    {subjects.map((subject) => (
+                      <option key={subject.id} value={subject.id}>
+                        {subject.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="goal-form-field">
+                    <label htmlFor="goal-start">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-muted" />
+                        {ar ? "البدء" : "Starts"}
+                      </span>
+                    </label>
+                    <input
+                      id="goal-start"
+                      name="startsAt"
+                      type="date"
+                      required
+                      defaultValue={dateDefaults.start}
+                    />
+                  </div>
+
+                  <div className="goal-form-field">
+                    <label htmlFor="goal-deadline">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-danger" />
+                        {ar ? "الانتهاء" : "Deadline"}
+                      </span>
+                    </label>
+                    <input
+                      id="goal-deadline"
+                      name="deadline"
+                      type="date"
+                      required
+                      defaultValue={dateDefaults.deadline}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Form Actions */}
+            <div className="goal-form-actions">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setOpen(false)}
+              >
+                {ar ? "إلغاء" : "Cancel"}
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                disabled={busy}
+                leftIcon={<Check className="w-4 h-4" />}
+              >
+                {busy ? (ar ? "جاري الحفظ..." : "Saving...") : ar ? "حفظ الهدف" : "Save goal"}
+              </Button>
+            </div>
+          </form>
+        </div>
       )}
 
       {error && (
@@ -217,7 +333,16 @@ export function GoalWorkspace({
               <div className="goal-progress-wrap">
                 <div className="goal-values">
                   <strong>
-                    {goal.progress.currentValue} / {goal.targetValue}
+                    {goal.progress.currentValue} / {goal.targetValue}{" "}
+                    <span className="text-xs font-normal text-muted">
+                      {goal.metric === "STUDY_MINUTES"
+                        ? ar
+                          ? "دقيقة"
+                          : "mins"
+                        : ar
+                        ? "مهمة"
+                        : "tasks"}
+                    </span>
                   </strong>
                   <span>{goal.progress.percentage}%</span>
                 </div>
