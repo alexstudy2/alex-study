@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Sparkles, BookOpen, Moon, Compass, Coffee, Check, ChevronDown } from "lucide-react";
+import { Sparkles, BookOpen, Moon, Compass, Coffee, Heart, Check, ChevronDown } from "lucide-react";
 import type { StudyMood } from "./study-background";
 
 export const MOOD_STORAGE_KEY = "alex-study-bg-mood";
@@ -23,6 +23,15 @@ export const STUDY_MOODS: {
     descAr: "ورق مربعات هادئ مع إضاءة دافئة",
     icon: BookOpen,
     colorToken: "#49B6E5",
+  },
+  {
+    id: "sakura",
+    labelEn: "Sakura Bloom",
+    labelAr: "وردي وبنفسجي (Girly)",
+    descEn: "Dreamy floral pastel paper with gentle study doodles",
+    descAr: "أجواء وردية وبنفسجية حالمة ومبهجة للمذاكرة",
+    icon: Heart,
+    colorToken: "#EC4899",
   },
   {
     id: "cosmic",
@@ -87,6 +96,7 @@ export function StudyBackgroundSelector({
     startTransition(() => {
       setCurrentMood(mood);
       try {
+        document.documentElement.dataset.mood = mood;
         localStorage.setItem(MOOD_STORAGE_KEY, mood);
         window.dispatchEvent(
           new StorageEvent("storage", {

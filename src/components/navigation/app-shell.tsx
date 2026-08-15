@@ -12,6 +12,7 @@ import {
   CalendarDays,
   ClipboardList,
   DoorOpen,
+  Heart,
   History,
   LayoutDashboard,
   ListTodo,
@@ -28,7 +29,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
-type Theme = "SYSTEM" | "LIGHT" | "DARK";
+type Theme = "SYSTEM" | "LIGHT" | "DARK" | "GIRLY";
 type ShellUser = { name: string; locale: "EN" | "AR" };
 type NavigationItem = {
   href: string;
@@ -106,6 +107,8 @@ function isActive(pathname: string, href: string) {
 function applyTheme(theme: Theme) {
   if (theme === "DARK") {
     document.documentElement.dataset.theme = "dark";
+  } else if (theme === "GIRLY") {
+    document.documentElement.dataset.theme = "girly";
   } else {
     document.documentElement.dataset.theme = "light";
   }
@@ -151,13 +154,13 @@ export function AppShell({
 
   const ar = effectiveUser.locale === "AR";
   const themeLabels = ar
-    ? { SYSTEM: "مظهر النظام", LIGHT: "المظهر الفاتح", DARK: "المظهر الداكن" }
-    : { SYSTEM: "System theme", LIGHT: "Light theme", DARK: "Dark theme" };
-  const ThemeIcon = theme === "SYSTEM" ? Monitor : theme === "LIGHT" ? Sun : Moon;
+    ? { SYSTEM: "مظهر النظام", LIGHT: "المظهر الفاتح", GIRLY: "وردي وبنفسجي (Girly)", DARK: "المظهر الداكن" }
+    : { SYSTEM: "System theme", LIGHT: "Light theme", GIRLY: "Girly Pink & Violet", DARK: "Dark theme" };
+  const ThemeIcon = theme === "DARK" ? Moon : theme === "GIRLY" ? Heart : theme === "SYSTEM" ? Monitor : Sun;
 
   async function cycleTheme() {
     const previous = theme;
-    const next: Theme = theme === "LIGHT" ? "DARK" : theme === "DARK" ? "LIGHT" : "LIGHT";
+    const next: Theme = theme === "LIGHT" ? "GIRLY" : theme === "GIRLY" ? "DARK" : "LIGHT";
     setTheme(next);
     applyTheme(next);
     try {

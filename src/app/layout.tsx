@@ -68,7 +68,13 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       lang={locale}
       dir={locale === "ar" ? "rtl" : "ltr"}
       className={`${deliusSwashCaps.variable} ${deliusBody.variable} ${jetbrainsMono.variable} ${ibmPlexArabic.variable}`}
-      data-theme={profile?.preference?.theme === "DARK" ? "dark" : "light"}
+      data-theme={
+        profile?.preference?.theme === "DARK"
+          ? "dark"
+          : profile?.preference?.theme === "GIRLY"
+            ? "girly"
+            : "light"
+      }
     >
       <body className="min-h-full flex flex-col relative">
         <StudyBackground />
@@ -78,7 +84,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
               profile ? { name: profile.name, locale: profile.preference?.locale ?? "EN" } : null
             }
             unreadCount={profile?._count.notifications ?? 0}
-            initialTheme={profile?.preference?.theme ?? "SYSTEM"}
+            initialTheme={profile?.preference?.theme ?? "LIGHT"}
           >
             {children}
           </AppShell>

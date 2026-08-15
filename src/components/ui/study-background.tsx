@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 
-export type StudyMood = "notebook" | "cosmic" | "aurora" | "sunset";
+export type StudyMood = "notebook" | "cosmic" | "aurora" | "sunset" | "sakura";
 
 const MOOD_STORAGE_KEY = "alex-study-bg-mood";
 
@@ -18,7 +18,7 @@ export function StudyBackground() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem(MOOD_STORAGE_KEY) as StudyMood | null;
-      if (saved && ["notebook", "cosmic", "aurora", "sunset"].includes(saved)) {
+      if (saved && ["notebook", "cosmic", "aurora", "sunset", "sakura"].includes(saved)) {
         setMood(saved);
       }
     } catch {
@@ -33,6 +33,11 @@ export function StudyBackground() {
     window.addEventListener("storage", handleStorage);
     return () => window.removeEventListener("storage", handleStorage);
   }, []);
+
+  // Sync dataset.mood attribute on root element for contrast styling
+  useEffect(() => {
+    document.documentElement.dataset.mood = mood;
+  }, [mood]);
 
   // Smooth mouse spotlight & subtle parallax with RAF
   useEffect(() => {

@@ -1568,6 +1568,26 @@
   border-color: var(--line-strong);
 }
 
+:root[data-mood="sakura"] .sticky-tape-top {
+  background: rgba(244, 114, 182, 0.55);
+  border-color: var(--secondary);
+}
+
+:root[data-mood="aurora"] .sticky-tape-top {
+  background: rgba(110, 231, 183, 0.55);
+  border-color: var(--secondary);
+}
+
+:root[data-mood="sunset"] .sticky-tape-top {
+  background: rgba(251, 191, 36, 0.55);
+  border-color: var(--secondary);
+}
+
+:root[data-mood="cosmic"] .sticky-tape-top {
+  background: rgba(96, 165, 250, 0.4);
+  border-color: var(--line-strong);
+}
+
 .sticky-tasks-header {
   display: flex;
   align-items: center;
@@ -4451,6 +4471,140 @@
   border-top: 2px dashed var(--line);
 }
 
+/* ================= Mood Contrast Color Schemes ================= */
+:root[data-mood="notebook"]:not([data-theme="dark"]) {
+  --background: #F4EFEA;
+  --sidebar-background: #F8F4EE;
+  --surface: #FEFCE8;
+  --surface-elevated: #FEF9C3;
+  --surface-sunken: #EDE7DC;
+  --surface-hover: #FDF9C8;
+  --card-pastel-yellow: #FEFCE8;
+  --card-pastel-sky: #F0F9FF;
+  --card-pastel-mint: #F0FDF4;
+  --card-pastel-peach: #FFF7ED;
+  --card-pastel-lavender: #FAF5FF;
+  --secondary: #263D5B;
+  --secondary-strong: #1a2c42;
+  --text: #111827;
+  --foreground: #111827;
+  --muted: #475569;
+  --line: #CBD5E1;
+  --line-strong: #263D5B;
+  --border-doodle: 2px solid #263D5B;
+}
+
+:root[data-mood="cosmic"] {
+  --background: #0E1626;
+  --sidebar-background: #131C2E;
+  --surface: #182234;
+  --surface-elevated: #1E293B;
+  --surface-sunken: #0F1726;
+  --surface-hover: #223048;
+  --card-pastel-yellow: #262118;
+  --card-pastel-sky: #13273E;
+  --card-pastel-mint: #132A20;
+  --card-pastel-peach: #2B1E17;
+  --card-pastel-lavender: #241834;
+  --primary: #49B6E5;
+  --primary-strong: #70c7ed;
+  --secondary: #E2E8F0;
+  --secondary-strong: #FFFFFF;
+  --text: #F8FAFC;
+  --foreground: #F8FAFC;
+  --muted: #94A3B8;
+  --line: #334155;
+  --line-strong: #E2E8F0;
+  --border-doodle: 2px solid #64748B;
+}
+
+:root[data-mood="sakura"]:not([data-theme="dark"]) {
+  --background: #FFF1F5;
+  --sidebar-background: #FDF2F8;
+  --surface: #FFF5F7;
+  --surface-elevated: #FFE4E6;
+  --surface-sunken: #F5E6EC;
+  --surface-hover: #FED7E2;
+  --card-pastel-yellow: #FEF9C3;
+  --card-pastel-sky: #F3E8FF;
+  --card-pastel-mint: #ECFDF5;
+  --card-pastel-peach: #FFE4E6;
+  --card-pastel-lavender: #F5D0FE;
+  --primary: #F43F5E;
+  --primary-strong: #BE123C;
+  --secondary: #6B21A8;
+  --secondary-strong: #581C87;
+  --text: #3B0764;
+  --foreground: #3B0764;
+  --muted: #86198F;
+  --line: #E9D5FF;
+  --line-strong: #7E22CE;
+  --border-doodle: 2px solid #7E22CE;
+  --shadow-doodle-xs: 1.5px 1.5px 0px rgba(107, 33, 168, 0.35);
+  --shadow-doodle: 2px 2px 0px rgba(107, 33, 168, 0.4);
+  --shadow-doodle-md: 3px 3px 0px rgba(107, 33, 168, 0.45);
+  --shadow-doodle-lg: 4px 4px 0px rgba(107, 33, 168, 0.5);
+  --shadow-doodle-xl: 6px 6px 0px rgba(107, 33, 168, 0.55);
+}
+
+:root[data-mood="aurora"]:not([data-theme="dark"]) {
+  --background: #EBF5EF;
+  --sidebar-background: #DEF2E6;
+  --surface: #F0FDF4;
+  --surface-elevated: #DCFCE7;
+  --surface-sunken: #D5EAE0;
+  --surface-hover: #E2F8EB;
+  --card-pastel-yellow: #FEF9C3;
+  --card-pastel-sky: #E0F2FE;
+  --card-pastel-mint: #DCFCE7;
+  --card-pastel-peach: #FFEDD5;
+  --card-pastel-lavender: #EDE9FE;
+  --primary: #059669;
+  --primary-strong: #047857;
+  --secondary: #164E3A;
+  --secondary-strong: #064E3B;
+  --text: #064E3B;
+  --foreground: #064E3B;
+  --muted: #047857;
+  --line: #A7F3D0;
+  --line-strong: #065F46;
+  --border-doodle: 2px solid #065F46;
+  --shadow-doodle-xs: 1.5px 1.5px 0px rgba(6, 95, 70, 0.35);
+  --shadow-doodle: 2px 2px 0px rgba(6, 95, 70, 0.4);
+  --shadow-doodle-md: 3px 3px 0px rgba(6, 95, 70, 0.45);
+  --shadow-doodle-lg: 4px 4px 0px rgba(6, 95, 70, 0.5);
+  --shadow-doodle-xl: 6px 6px 0px rgba(6, 95, 70, 0.55);
+}
+
+:root[data-mood="sunset"]:not([data-theme="dark"]) {
+  --background: #FDF3EA;
+  --sidebar-background: #F8E8DA;
+  --surface: #FFFBEB;
+  --surface-elevated: #FEF3C7;
+  --surface-sunken: #EFE0D0;
+  --surface-hover: #FEF0D4;
+  --card-pastel-yellow: #FEF08A;
+  --card-pastel-sky: #E0F2FE;
+  --card-pastel-mint: #ECFDF5;
+  --card-pastel-peach: #FFEDD5;
+  --card-pastel-lavender: #F3E8FF;
+  --primary: #D97706;
+  --primary-strong: #B45309;
+  --secondary: #5A2906;
+  --secondary-strong: #451A03;
+  --text: #451A03;
+  --foreground: #451A03;
+  --muted: #92400E;
+  --line: #FED7AA;
+  --line-strong: #92400E;
+  --border-doodle: 2px solid #78350F;
+  --shadow-doodle-xs: 1.5px 1.5px 0px rgba(120, 53, 15, 0.35);
+  --shadow-doodle: 2px 2px 0px rgba(120, 53, 15, 0.4);
+  --shadow-doodle-md: 3px 3px 0px rgba(120, 53, 15, 0.45);
+  --shadow-doodle-lg: 4px 4px 0px rgba(120, 53, 15, 0.5);
+  --shadow-doodle-xl: 6px 6px 0px rgba(120, 53, 15, 0.55);
+}
+
 /* ================= Authentic Flat Study Backgrounds (No AI Gradients) ================= */
 .study-ambient-canvas {
   position: fixed;
@@ -4518,6 +4672,21 @@
     linear-gradient(to bottom, color-mix(in srgb, #D97706 12%, transparent) 1px, transparent 1px);
   background-size: 30px 30px;
   opacity: 0.8;
+}
+
+/* Mood 5: Sakura Blossom Pastel Pink Paper */
+.mood-sakura {
+  background-color: #FFF1F5;
+}
+
+.mood-sakura .ambient-texture-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, #EC4899 12%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, #EC4899 12%, transparent) 1px, transparent 1px);
+  background-size: 28px 28px;
+  opacity: 0.85;
 }
 
 /* Layer 3: Floating Multi-Colored Curva Study Drawings */
@@ -4611,6 +4780,23 @@
   --curva-dna-2: #F59E0B;
   --curva-plane: #FB923C;
   --curva-plane-dark: #D97706;
+}
+
+.mood-sakura {
+  --curva-stroke: #6B21A8;
+  --curva-book-1: #F43F5E;
+  --curva-book-2: #C084FC;
+  --curva-book-3: #F472B6;
+  --curva-mug: #A855F7;
+  --curva-pencil: #FB7185;
+  --curva-flask-bg: rgba(255, 241, 245, 0.85);
+  --curva-liquid: #EC4899;
+  --curva-bulb: #F472B6;
+  --curva-note: #FCE7F3;
+  --curva-dna-1: #F43F5E;
+  --curva-dna-2: #9333EA;
+  --curva-plane: #E879F9;
+  --curva-plane-dark: #A21CAF;
 }
 
 /* Doodle Positions & Staggered Animations */

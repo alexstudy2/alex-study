@@ -16,6 +16,7 @@ import {
   Sun,
   Moon,
   Monitor,
+  Heart,
   Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,7 @@ import { STUDY_MOODS, MOOD_STORAGE_KEY } from "@/components/ui/study-background-
 import type { StudyMood } from "@/components/ui/study-background";
 
 type Locale = "en" | "ar";
-type Theme = "SYSTEM" | "LIGHT" | "DARK";
+type Theme = "SYSTEM" | "LIGHT" | "DARK" | "GIRLY";
 type Initial = {
   name: string;
   collegeId: string;
@@ -72,8 +73,13 @@ const fallbackPreference: NonNullable<Initial["preference"]> = {
 };
 
 function applyTheme(theme: Theme) {
-  if (theme === "SYSTEM") document.documentElement.removeAttribute("data-theme");
-  else document.documentElement.dataset.theme = theme.toLowerCase();
+  if (theme === "DARK") {
+    document.documentElement.dataset.theme = "dark";
+  } else if (theme === "GIRLY") {
+    document.documentElement.dataset.theme = "girly";
+  } else {
+    document.documentElement.dataset.theme = "light";
+  }
 }
 
 type TabKey = "profile" | "timer" | "notifications" | "privacy" | "account";
@@ -106,6 +112,7 @@ export function SettingsWorkspace({ initial, locale }: { initial: Initial; local
   function changeStudyMood(mood: StudyMood) {
     setStudyMood(mood);
     try {
+      document.documentElement.dataset.mood = mood;
       localStorage.setItem(MOOD_STORAGE_KEY, mood);
       window.dispatchEvent(
         new StorageEvent("storage", {
@@ -459,9 +466,10 @@ export function SettingsWorkspace({ initial, locale }: { initial: Initial; local
             {/* Theme Picker */}
             <div className="mt-4 mb-6">
               <span className="field-label block mb-2">{ar ? "مظهر الموقع" : "Visual Theme"}</span>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {([
                   { value: "LIGHT", label: ar ? "المظهر الفاتح" : "Light Theme", icon: Sun },
+                  { value: "GIRLY", label: ar ? "وردي وبنفسجي (Girly)" : "Girly Pink & Violet", icon: Heart },
                   { value: "DARK", label: ar ? "المظهر الداكن" : "Dark Theme", icon: Moon },
                   { value: "SYSTEM", label: ar ? "مظهر النظام" : "System Match", icon: Monitor },
                 ] satisfies { value: Theme; label: string; icon: typeof Sun }[]).map((t) => {

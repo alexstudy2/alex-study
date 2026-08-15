@@ -21,6 +21,7 @@ enum Theme {
   SYSTEM
   LIGHT
   DARK
+  GIRLY
 }
 
 enum ConsentStatus {
