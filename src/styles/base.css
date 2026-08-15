@@ -20,12 +20,6 @@ html[data-theme="dark"] {
   color-scheme: dark;
 }
 
-@media (prefers-color-scheme: dark) {
-  html:not([data-theme="light"]) {
-    color-scheme: dark;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);

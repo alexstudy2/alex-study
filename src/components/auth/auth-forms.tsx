@@ -29,7 +29,9 @@ export function SignInForm({ locale }: { locale: Locale }) {
           ? "تحقق من الرقم الجامعي والسنة الدراسية وكلمة المرور."
           : "Check your college ID, academic year, and password.",
       );
-    else router.push("/dashboard");
+    else {
+      window.location.href = "/dashboard";
+    }
   }
   return (
     <form onSubmit={submit} className="auth-form">

@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { AlexStudyLogo } from "@/components/ui/logo";
 import { StudyBackgroundSelector } from "@/components/ui/study-background-selector";
 import {
+  BarChart3,
   Bell,
   Brain,
   CalendarDays,
@@ -77,6 +78,7 @@ const navigationGroups: NavigationGroup[] = [
     items: [
       { href: "/sessions", label: "Sessions", labelAr: "سجل الجلسات", icon: History },
       { href: "/insights", label: "AI Insights", labelAr: "الرؤى الذكية", icon: Brain },
+      { href: "/analytics", label: "Analytics", labelAr: "التحليلات", icon: BarChart3 },
     ],
   },
   {
@@ -102,8 +104,11 @@ function isActive(pathname: string, href: string) {
 }
 
 function applyTheme(theme: Theme) {
-  if (theme === "SYSTEM") document.documentElement.removeAttribute("data-theme");
-  else document.documentElement.dataset.theme = theme.toLowerCase();
+  if (theme === "DARK") {
+    document.documentElement.dataset.theme = "dark";
+  } else {
+    document.documentElement.dataset.theme = "light";
+  }
 }
 
 export function AppShell({
@@ -118,16 +123,33 @@ export function AppShell({
   initialTheme: Theme;
 }) {
   const pathname = usePathname();
-  const [theme, setTheme] = useState(initialTheme);
+  const { data: clientSession } = useSession();
+  const effectiveUser =
+    user ??
+    (clientSession?.user
+      ? {
+          name: clientSession.user.name ?? "Student",
+          locale: ((clientSession.user as unknown as Record<string, unknown>).locale as "EN" | "AR") ?? "AR",
+        }
+      : null);
+
+  const [theme, setTheme] = useState<Theme>(initialTheme ?? "LIGHT");
 
   useEffect(() => {
-    applyTheme(initialTheme);
+    try {
+      const savedTheme = localStorage.getItem("alex-study-theme") as Theme | null;
+      const targetTheme = savedTheme || initialTheme || "LIGHT";
+      setTheme(targetTheme);
+      applyTheme(targetTheme);
+    } catch {
+      applyTheme(initialTheme || "LIGHT");
+    }
   }, [initialTheme]);
 
-  if (!user || pathname === "/" || publicPaths.some((path) => pathname.startsWith(path)))
+  if (!effectiveUser || pathname === "/" || publicPaths.some((path) => pathname.startsWith(path)))
     return children;
 
-  const ar = user.locale === "AR";
+  const ar = effectiveUser.locale === "AR";
   const themeLabels = ar
     ? { SYSTEM: "مظهر النظام", LIGHT: "المظهر الفاتح", DARK: "المظهر الداكن" }
     : { SYSTEM: "System theme", LIGHT: "Light theme", DARK: "Dark theme" };
@@ -135,9 +157,12 @@ export function AppShell({
 
   async function cycleTheme() {
     const previous = theme;
-    const next = theme === "SYSTEM" ? "LIGHT" : theme === "LIGHT" ? "DARK" : "SYSTEM";
+    const next: Theme = theme === "LIGHT" ? "DARK" : theme === "DARK" ? "LIGHT" : "LIGHT";
     setTheme(next);
     applyTheme(next);
+    try {
+      localStorage.setItem("alex-study-theme", next);
+    } catch {}
     try {
       const response = await fetch("/api/me/preferences", {
         method: "PATCH",
@@ -152,6 +177,9 @@ export function AppShell({
   }
 
   async function handleSignOut() {
+    try {
+      localStorage.removeItem("alex-study-theme");
+    } catch {}
     await signOut({ callbackUrl: "/sign-in" });
   }
 
@@ -224,8 +252,8 @@ export function AppShell({
             </button>
           </div>
           <div className="shell-profile">
-            <span aria-hidden="true">{user.name.trim().slice(0, 1).toUpperCase()}</span>
-            <strong className="truncate">{user.name}</strong>
+            <span aria-hidden="true">{effectiveUser.name.trim().slice(0, 1).toUpperCase()}</span>
+            <strong className="truncate">{effectiveUser.name}</strong>
           </div>
         </div>
       </aside>
