@@ -1,0 +1,76 @@
+name: Alex Study Scheduled Cron Jobs
+
+on:
+  schedule:
+    # 1. Run hourly jobs (Challenges & Reminders)
+    - cron: '0 * * * *'
+    # 2. Run daily maintenance jobs at 20:00 UTC
+    - cron: '0 20 * * *'
+    # 3. Run weekly leaderboards calculation on Sunday at 23:00 UTC
+    - cron: '0 23 * * 0'
+  # Allows manual triggering from GitHub Actions UI anytime
+  workflow_dispatch:
+
+jobs:
+  run-cron-tasks:
+    name: Execute Scheduled Jobs on Vercel
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Authorized Cron Requests
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "::error::APP_URL or CRON_SECRET is not set in GitHub Secrets. Please configure them in Repository Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+
+          # Remove trailing slash from APP_URL if present
+          BASE_URL="${APP_URL%/}"
+          echo "🚀 Calling Alex Study internal cron endpoints on: $BASE_URL"
+
+          # 1. Challenges Lifecycle
+          echo "⚡ Triggering Challenges Lifecycle..."
+          curl -f -s -X POST "$BASE_URL/api/internal/jobs/challenges" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -H "Content-Type: application/json" || echo "⚠️ Challenges job warning"
+
+          # 2. Accountability Reminders
+          echo "⚡ Triggering Accountability Reminders..."
+          curl -f -s -X POST "$BASE_URL/api/internal/jobs/accountability-reminders" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -H "Content-Type: application/json" || echo "⚠️ Accountability reminders warning"
+
+          # 3. Daily Maintenance & Insights (Runs at 20:00 UTC or on Manual Run)
+          if [ "${{ github.event.schedule }}" = "0 20 * * *" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "🧹 Triggering AI Cleanup..."
+            curl -f -s -X POST "$BASE_URL/api/internal/jobs/cleanup" \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              -H "Content-Type: application/json" || echo "⚠️ Cleanup job warning"
+
+            echo "🔥 Triggering Burnout Detection..."
+            curl -f -s -X POST "$BASE_URL/api/internal/jobs/burnout-detection" \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              -H "Content-Type: application/json" || echo "⚠️ Burnout detection warning"
+
+            echo "📈 Triggering Performance Detection..."
+            curl -f -s -X POST "$BASE_URL/api/internal/jobs/performance-detection" \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              -H "Content-Type: application/json" || echo "⚠️ Performance detection warning"
+
+            echo "✨ Triggering AI Recaps..."
+            curl -f -s -X POST "$BASE_URL/api/internal/jobs/ai-recaps" \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              -H "Content-Type: application/json" || echo "⚠️ AI recaps warning"
+          fi
+
+          # 4. Weekly Leaderboards (Sunday 23:00 UTC or Manual Run)
+          if [ "${{ github.event.schedule }}" = "0 23 * * 0" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "🏆 Triggering Weekly Leaderboards Calculation..."
+            curl -f -s -X POST "$BASE_URL/api/internal/jobs/weekly-leaderboards" \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              -H "Content-Type: application/json" || echo "⚠️ Weekly leaderboards warning"
+          fi
+
+          echo "✅ Scheduled tasks finished successfully!"
