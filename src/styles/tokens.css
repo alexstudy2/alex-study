@@ -18,12 +18,12 @@
 
   --success: #16A34A;
   --success-strong: #15803D;
-  --success-foreground: #FFFFFF;
+  --success-foreground: #111827;
   --success-subtle: #F0FDF4;
 
   --warning: #D97706;
   --warning-strong: #B45309;
-  --warning-foreground: #FFFFFF;
+  --warning-foreground: #111827;
   --warning-subtle: #FFFBEB;
 
   --danger: #DC2626;
@@ -105,6 +105,9 @@
   --shadow-doodle-md: 3px 3px 0px var(--secondary);
   --shadow-doodle-lg: 4px 4px 0px var(--secondary);
   --shadow-doodle-xl: 6px 6px 0px var(--secondary);
+  /* `sm` sits between xs and the base step. Aliased rather than hard-coded so every
+     theme and mood override of --shadow-doodle carries through automatically. */
+  --shadow-doodle-sm: var(--shadow-doodle);
 
   --radius-xs: 4px;
   --radius-sm: 6px;
@@ -157,13 +160,22 @@
 
   --danger: #EF4444;
   --danger-strong: #F87171;
-  --danger-foreground: #FFFFFF;
+  --danger-foreground: #111827;
   --danger-subtle: rgba(239, 68, 68, 0.18);
 
   --surface: #1E293B;
   --surface-elevated: #24344D;
   --surface-sunken: #131D2D;
   --surface-hover: #293B56;
+  /* Without these the light values from :root leak through, so the sidebar and the
+     pastel cards rendered a near-white panel behind light dark-theme text. */
+  --sidebar-background: #16213A;
+
+  --card-pastel-yellow: #262118;
+  --card-pastel-sky: #13273E;
+  --card-pastel-mint: #132A20;
+  --card-pastel-peach: #2B1E17;
+  --card-pastel-lavender: #241834;
 
   --text: #F8FAFC;
   --foreground: #F8FAFC;
@@ -200,7 +212,7 @@
 :root[data-theme="girly"] {
   --primary: #F43F5E;
   --primary-strong: #BE123C;
-  --primary-foreground: #FFFFFF;
+  --primary-foreground: #111827;
   --primary-subtle: #FFF1F5;
 
   --secondary: #6B21A8;
@@ -210,12 +222,12 @@
 
   --success: #10B981;
   --success-strong: #047857;
-  --success-foreground: #FFFFFF;
+  --success-foreground: #111827;
   --success-subtle: #ECFDF5;
 
   --warning: #F59E0B;
-  --warning-strong: #D97706;
-  --warning-foreground: #FFFFFF;
+  --warning-strong: #B45309;
+  --warning-foreground: #111827;
   --warning-subtle: #FFFBEB;
 
   --danger: #E11D48;

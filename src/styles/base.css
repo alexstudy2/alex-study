@@ -73,6 +73,19 @@ textarea {
   color: inherit;
 }
 
+/* Unstyled native checkboxes render at ~13px -- half the WCAG 2.5.8 minimum and fiddly to
+   hit on a phone. This brings every one up to the 18px the design system already uses for
+   its styled subtask boxes. Wrapped in :where() so it carries zero specificity: it is a
+   default that any component class still overrides, rather than an element selector that
+   would outrank single-class rules like .doodle-switch-input. */
+:where(input[type="checkbox"], input[type="radio"]) {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
 button {
   cursor: pointer;
 }

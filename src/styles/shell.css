@@ -117,6 +117,9 @@
     flex-direction: row;
     justify-content: space-between;
     align-items: flex-end;
+    /* Title and action group sit side by side from 640px up; without wrapping the pair
+       held its min-content width and overflowed between 640px and ~800px. */
+    flex-wrap: wrap;
   }
 }
 
@@ -186,6 +189,10 @@
   border-radius: var(--radius-full);
   background: var(--surface);
   box-shadow: var(--shadow-doodle-sm);
+  /* This segmented nav pill held its min-content width, so a three-button group
+     (Leaderboard / Challenges / Notifications) overflowed a 360px header. */
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .page-header-link,
@@ -203,6 +210,8 @@
   border: 0;
   background: transparent;
   transition: all var(--transition-fast);
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .page-header-link:hover,
@@ -216,7 +225,7 @@
 .page-header a[aria-current="page"],
 .page-header button[aria-current="page"] {
   background: var(--primary);
-  color: #FFFFFF;
+  color: var(--primary-foreground);
   border: 1.5px solid var(--secondary);
   box-shadow: 1.5px 1.5px 0px var(--secondary);
 }
@@ -235,7 +244,7 @@
   top: -100px;
   left: var(--space-4);
   background: var(--secondary);
-  color: #FFFFFF;
+  color: var(--secondary-foreground);
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-sm);
   z-index: 1000;
@@ -349,14 +358,17 @@
 .app-sidebar a[aria-current="page"],
 .mobile-navigation a[aria-current="page"] {
   background: var(--primary);
-  color: #FFFFFF;
+  color: var(--primary-foreground);
   border-color: var(--secondary);
   box-shadow: 2px 2px 0px var(--secondary);
 }
 
 .app-sidebar a[aria-current="page"] svg,
 .mobile-navigation a[aria-current="page"] svg {
-  color: #FFFFFF;
+  /* Take the parent's --primary-foreground rather than forcing white, which was
+     invisible wherever --primary is light. Kept as a rule (not deleted) so it still
+     outranks the generic `.mobile-navigation svg` colour. */
+  color: inherit;
 }
 
 .sidebar-rule {
@@ -391,7 +403,7 @@
   height: 28px;
   border-radius: 50%;
   background: var(--primary);
-  color: #FFFFFF;
+  color: var(--primary-foreground);
   display: grid;
   place-items: center;
   font-weight: 800;
@@ -408,7 +420,7 @@
   font-size: 0.7rem;
   font-weight: 800;
   background: var(--danger);
-  color: #FFFFFF;
+  color: var(--danger-foreground);
   margin-left: auto;
   border: 1px solid var(--secondary);
 }
@@ -457,7 +469,7 @@
 
   .mobile-navigation a[aria-current="page"] {
     background: var(--primary);
-    color: #FFFFFF;
+    color: var(--primary-foreground);
     border: 1px solid var(--secondary);
     box-shadow: 1px 1px 0px var(--secondary);
   }
@@ -513,6 +525,19 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
+  /* These rows pair a text block with an action group. Without wrapping they held their
+     min-content width and were clipped on narrow viewports (friends, notifications). */
+  flex-wrap: wrap;
+}
+
+/* Let the text block take the row and push the actions onto their own line rather than
+   squeezing both. */
+.social-list > article > div:first-child,
+.notification-list > article > div:first-child,
+.social-panel > article > div:first-child,
+.panel-heading > div:first-child {
+  min-width: 0;
+  flex: 1 1 12rem;
 }
 
 .social-header {
@@ -549,4 +574,5 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: var(--space-4);
+  flex-wrap: wrap;
 }

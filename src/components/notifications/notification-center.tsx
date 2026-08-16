@@ -104,7 +104,7 @@ export function NotificationCenter({
         <h2>{ar ? "تفضيلات التنبيهات" : "Notification preferences"}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
           {Object.entries(prefs).map(([key, value]) => (
-            <label key={key} className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+            <label key={key} className="flex items-center gap-2 min-h-6 text-sm font-medium cursor-pointer">
               <input
                 type="checkbox"
                 checked={value}

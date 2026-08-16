@@ -81,8 +81,14 @@
   color: var(--primary-foreground);
 }
 
+/* The `-strong` steps invert with the palette: darker than the base in the light and girly
+   themes, lighter than it in dark/cosmic. So a `--X-foreground` tuned for the base tone
+   cannot also serve the `-strong` hover background. `--secondary-foreground` already tracks
+   exactly that polarity (white where surfaces are light, near-black where they are dark),
+   which is why the hover states below name it instead of inheriting. */
 .btn-primary:hover {
   background: var(--primary-strong);
+  color: var(--secondary-foreground);
 }
 
 .btn-secondary {
@@ -96,20 +102,22 @@
 
 .btn-accent {
   background: var(--warning);
-  color: #FFFFFF;
+  color: var(--warning-foreground);
 }
 
 .btn-accent:hover {
   background: var(--warning-strong);
+  color: var(--secondary-foreground);
 }
 
 .btn-danger {
   background: var(--danger);
-  color: #FFFFFF;
+  color: var(--danger-foreground);
 }
 
 .btn-danger:hover {
   background: var(--danger-strong);
+  color: var(--secondary-foreground);
 }
 
 .btn-outline {
@@ -158,7 +166,7 @@
   border: 2px solid var(--secondary);
   box-shadow: var(--shadow-doodle);
   background: var(--primary);
-  color: #FFFFFF;
+  color: var(--primary-foreground);
   text-decoration: none;
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -168,6 +176,8 @@
   transform: translate(-1px, -1px);
   box-shadow: var(--shadow-doodle-md);
   background: var(--primary-strong);
+  /* see the -strong polarity note above .btn-primary:hover */
+  color: var(--secondary-foreground);
 }
 
 .primary-button:active:not(:disabled) {
@@ -218,7 +228,7 @@
   border: 2px solid var(--secondary);
   box-shadow: var(--shadow-doodle);
   background: var(--danger);
-  color: #FFFFFF;
+  color: var(--danger-foreground);
   cursor: pointer;
   transition: all var(--transition-fast);
 }
@@ -324,7 +334,7 @@
 
 .ui-badge-default {
   background: var(--primary);
-  color: #FFFFFF;
+  color: var(--primary-foreground);
 }
 
 .ui-badge-secondary {
@@ -334,22 +344,22 @@
 
 .ui-badge-accent {
   background: var(--warning);
-  color: #FFFFFF;
+  color: var(--warning-foreground);
 }
 
 .ui-badge-success {
   background: var(--success);
-  color: #FFFFFF;
+  color: var(--success-foreground);
 }
 
 .ui-badge-warning {
   background: var(--warning);
-  color: #FFFFFF;
+  color: var(--warning-foreground);
 }
 
 .ui-badge-danger {
   background: var(--danger);
-  color: #FFFFFF;
+  color: var(--danger-foreground);
 }
 
 .ui-badge-info {
@@ -646,6 +656,8 @@
   justify-content: center;
   color: var(--muted);
   outline: none;
+  min-width: 1.5rem;
+  min-height: 1.5rem;
 }
 
 .task-checkbox-btn:hover {
@@ -699,7 +711,7 @@
   padding: var(--space-2) var(--space-3);
   border: 2px solid var(--secondary);
   border-radius: var(--radius-doodle-card);
-  background: var(--card);
+  background: var(--surface);
   box-shadow: var(--shadow-doodle-sm);
   transition: box-shadow var(--transition-fast);
 }
@@ -712,7 +724,7 @@
   flex: 1;
   border: none;
   background: transparent;
-  font-family: var(--font-body);
+  font-family: var(--font-sans);
   font-size: var(--text-sm);
   color: var(--foreground);
   outline: none;
@@ -804,6 +816,10 @@
   border: 2px solid var(--secondary);
   border-radius: var(--radius-full);
   box-shadow: var(--shadow-doodle-xs);
+  /* Five tabs came to 385px, wider than a 360px screen. Same treatment as the identical
+     .settings-category-tabs pill: cap it and let it scroll. */
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .notebook-tab {
@@ -811,12 +827,15 @@
   border-radius: var(--radius-full);
   font-size: var(--text-xs);
   font-weight: 800;
-  font-family: var(--font-body);
+  font-family: var(--font-sans);
   border: 0;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
   transition: all var(--transition-fast);
+  /* keeps the tabs at full size so the bar scrolls rather than squeezing them */
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .notebook-tab:hover {
@@ -825,7 +844,7 @@
 
 .notebook-tab.active {
   background: var(--primary);
-  color: #FFFFFF;
+  color: var(--primary-foreground);
   border: 1.5px solid var(--secondary);
   box-shadow: 1px 1px 0px var(--secondary);
 }
@@ -869,7 +888,7 @@
 
 .subject-chip.active {
   background: var(--primary);
-  color: #FFFFFF;
+  color: var(--primary-foreground);
   border-color: var(--secondary);
 }
 
@@ -993,7 +1012,7 @@
   min-width: 200px;
   border: 0;
   background: transparent;
-  font-family: var(--font-body);
+  font-family: var(--font-sans);
   font-size: var(--text-sm);
   color: var(--foreground);
   outline: none;
@@ -1060,7 +1079,10 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  shrink-0: 1;
+  /* Was `shrink-0: 1`, not a real property and therefore a no-op. This row holds the task
+     title, so it needs a zero min-width to let the text truncate instead of pushing the
+     row wider than its container. */
+  min-width: 0;
 }
 
 .drag-grip-btn {
@@ -1072,6 +1094,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  /* A 16px glyph plus 2px of padding measured 20x20. The background is transparent, so
+     growing the box to the 24px AA minimum enlarges the hit area without moving the icon. */
+  min-width: 1.5rem;
+  min-height: 1.5rem;
 }
 
 .drag-grip-btn:active {
@@ -1087,6 +1113,8 @@
   align-items: center;
   justify-content: center;
   outline: none;
+  min-width: 1.5rem;
+  min-height: 1.5rem;
 }
 
 .task-row-body {
@@ -1170,7 +1198,7 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 1px 7px;
+  padding: 3px 8px;
   border-radius: var(--radius-full);
   font-size: 11px;
   background: var(--surface-sunken);
@@ -1178,6 +1206,7 @@
   color: var(--secondary);
   cursor: pointer;
   transition: all var(--transition-fast);
+  min-height: 1.5rem;
 }
 
 .task-subtasks-pill:hover {
@@ -1200,6 +1229,9 @@
   align-items: center;
   gap: var(--space-2);
   cursor: pointer;
+  /* The label is the real tap target (clicking the text toggles the box), but with no padding
+     it collapsed to the 20px line box. 24px is the WCAG 2.5.8 floor. */
+  min-height: 24px;
 }
 
 .task-row-actions {
@@ -1410,7 +1442,7 @@
 .lobby-chat-card form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2); margin-top: var(--space-3); }
 .lobby-chat-card form button { display: inline-flex; align-items: center; gap: 0.35rem; }
 .lobby-chat-card form button svg { width: 1rem; height: 1rem; }
-@media (max-width: 900px) { .lobby-studio-grid { grid-template-columns: 1fr; } .lobby-members-panel { position: static; } }
+@media (max-width: 900px) { .lobby-studio-grid { grid-template-columns: minmax(0, 1fr); } .lobby-members-panel { position: static; } }
 @media (max-width: 600px) { .lobby-timer-setup { grid-template-columns: 1fr 1fr; } .lobby-duration-presets { grid-column: 1 / -1; } .lobby-my-task-form, .lobby-chat-card form { grid-template-columns: 1fr; } .lobby-message-list article { max-width: 100%; } }
 
 /* Tasks pinboard: tactile sticky notes with subject-aware accents. */
@@ -1455,13 +1487,13 @@
 .notebook-tasks-surface { padding: var(--space-5); }
 .notebook-task-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
   gap: var(--space-5);
   align-items: start;
 }
 
 .notebook-task-row.sticky-task-note {
-  --note-color: var(--amber);
+  --note-color: var(--warning);
   position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -1520,7 +1552,7 @@
   background: var(--surface);
 }
 .subject-chip, .subject-add-chip { min-height: 2.5rem; border-radius: var(--radius-md); }
-.subject-chip.active { color: var(--secondary); }
+/* .subject-chip.active takes its colour from --primary-foreground where the rule is declared (above); a --secondary override used to sit here and won on source order, turning the label near-white on the light --primary of dark and cosmic. */
 .inline-new-course-popup {
   display: grid;
   grid-template-columns: minmax(12rem, 1fr) minmax(9rem, auto) auto auto;
@@ -1661,7 +1693,7 @@
   border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--foreground);
-  font-family: var(--font-body);
+  font-family: var(--font-sans);
   font-size: var(--text-sm);
   outline: none;
   transition: box-shadow var(--transition-fast);
@@ -1740,7 +1772,7 @@
   border: 2px solid var(--secondary);
   border-radius: var(--radius-doodle-btn);
   background: var(--primary);
-  color: #FFFFFF;
+  color: var(--primary-foreground);
   font-weight: 800;
   font-size: var(--text-xs);
   cursor: pointer;
@@ -1880,7 +1912,7 @@
   border: 1.5px solid var(--secondary);
   border-radius: var(--radius-sm);
   box-shadow: 2px 2px 0 var(--secondary);
-  font-family: var(--font-body);
+  font-family: var(--font-sans);
   font-size: var(--text-xs);
   font-weight: 800;
   white-space: nowrap;
@@ -1968,7 +2000,7 @@
   border-radius: var(--radius-full);
   font-size: var(--text-xs);
   font-weight: 800;
-  font-family: var(--font-body);
+  font-family: var(--font-sans);
   border: 0;
   background: transparent;
   color: var(--muted);
@@ -1983,7 +2015,7 @@
 
 .timer-mode-tab.active {
   background: var(--primary);
-  color: #FFFFFF;
+  color: var(--primary-foreground);
   border: 1.5px solid var(--secondary);
   box-shadow: 1px 1px 0px var(--secondary);
 }
@@ -2060,7 +2092,7 @@
   border: 2px dashed var(--warning);
   background: var(--surface-sunken);
   color: var(--foreground);
-  font-family: var(--font-body);
+  font-family: var(--font-sans);
   font-size: var(--text-xs);
   font-weight: 800;
   cursor: pointer;
@@ -2081,7 +2113,7 @@
   height: 20px;
   border-radius: 999px;
   background: var(--warning, #D97706);
-  color: #FFFFFF;
+  color: var(--warning-foreground);
   font-size: 11px;
   font-weight: 900;
   font-family: var(--font-mono);
@@ -2357,7 +2389,7 @@
   color: var(--foreground);
   font-size: var(--text-xs);
   font-weight: 700;
-  font-family: var(--font-body);
+  font-family: var(--font-sans);
   box-shadow: var(--shadow-doodle-xs);
   outline: none;
   transition: all var(--transition-fast);
@@ -2378,7 +2410,7 @@
 .fullscreen-focus-active .doodle-timer-card {
   min-height: auto;
   max-width: 40rem;
-  padding: clamp(var(--space-5), 3.5vw, var(--space-8)) clamp(var(--space-4), 3vw, var(--space-7));
+  padding: clamp(var(--space-5), 3.5vw, var(--space-8)) clamp(var(--space-4), 3vw, var(--space-6));
 }
 .fullscreen-focus-active .giant-timer-digits {
   font-size: clamp(3.2rem, 7vw, 4.8rem);
@@ -2800,7 +2832,7 @@
 .public-score-track,
 .reflection-card,
 .distraction-log {
-  font-family: var(--font-body);
+  font-family: var(--font-sans);
 }
 
 .scoreboard-value,
@@ -2820,6 +2852,15 @@
   background: var(--primary-subtle);
   box-shadow: 3px 3px 0 var(--secondary);
   font-size: 1.8rem;
+}
+
+/* The circle holds a big figure plus a small caption, but both were inheriting the 1.8rem
+   above, so "complete" / "Focus Score" rendered wider than the 8rem disc. */
+.score-orbit span {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--muted);
+  text-align: center;
 }
 
 .detail-metrics > *,
@@ -2909,13 +2950,14 @@
 .analytics-sidebar-note { align-items: flex-start; flex-direction: column; gap: 0.2rem; margin-top: auto; padding: var(--space-3); border: 2px dashed var(--primary); border-radius: var(--radius-md); background: var(--primary-subtle); font-size: var(--text-xs); }
 .analytics-sidebar-note svg { color: var(--primary-strong); }
 .analytics-sidebar-note strong { color: var(--secondary); }
-.analytics-sidebar-note span { color: var(--muted); line-height: 1.45; }
+.analytics-sidebar-note span { color: color-mix(in srgb, var(--muted) 75%, var(--foreground)); line-height: 1.45; }
 .analytics-sidebar .secondary-button { justify-content: center; text-decoration: none; }
 .analytics-main { display: grid; gap: var(--space-4); min-width: 0; }
 .analytics-toolbar { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 2px dashed var(--secondary); border-radius: var(--radius-doodle-card); background: var(--primary-subtle); }
 .analytics-toolbar .eyebrow { margin: 0; }
 .analytics-toolbar strong { font-family: var(--font-heading); }
 .analytics-toolbar select { min-height: 2.35rem; padding: 0.35rem 0.7rem; border: 2px solid var(--secondary); border-radius: var(--radius-md); background: var(--surface); color: var(--foreground); font: inherit; font-size: var(--text-xs); font-weight: 800; }
+.analytics-toolbar label { font-weight: 700; font-size: var(--text-sm); }
 .analytics-updating { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--secondary); font-size: var(--text-xs); font-weight: 800; }
 .analytics-updating svg { width: 1rem; height: 1rem; }
 .analytics-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); border: 0; background: transparent; box-shadow: none; overflow: visible; }
@@ -2923,7 +2965,7 @@
 .analytics-metric-icon { display: grid; place-items: center; width: 2rem; height: 2rem; border: 1.5px solid var(--secondary); border-radius: 50%; background: var(--primary-subtle); color: var(--secondary); }
 .analytics-metric-icon svg { width: 1rem; height: 1rem; }
 .analytics-summary span { color: var(--muted); font-size: var(--text-xs); font-weight: 800; }
-.analytics-summary strong { font-family: var(--font-mono); font-size: var(--text-xl); }
+.analytics-summary strong { font-family: var(--font-mono); font-size: var(--text-xl); font-weight: 800; font-variant-numeric: tabular-nums; }
 .analytics-summary small { color: var(--muted); font-size: 0.7rem; }
 .analytics-panel { padding: var(--space-5); border: 2px solid var(--secondary); border-radius: var(--radius-doodle-card); background: var(--surface); box-shadow: var(--shadow-doodle); }
 .analytics-wide-panel { min-width: 0; }
@@ -2944,22 +2986,22 @@
 .analytics-legend i { width: 0.7rem; height: 0.7rem; border: 1px solid var(--secondary); border-radius: 2px; }
 .analytics-legend span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .analytics-legend strong { font-family: var(--font-mono); }
-.analytics-ai-panel { padding: var(--space-5); border: 2px solid var(--secondary); border-radius: var(--radius-doodle-card); background: var(--secondary); color: #fff; box-shadow: var(--shadow-doodle-md); }
+.analytics-ai-panel { padding: var(--space-5); border: 2px solid var(--secondary); border-radius: var(--radius-doodle-card); background: var(--secondary); color: var(--secondary-foreground); box-shadow: var(--shadow-doodle-md); }
 .analytics-ai-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-3); }
-.analytics-ai-heading .eyebrow { margin: 0; color: var(--primary); }
-.analytics-ai-heading h2 { margin: 0.2rem 0 0; font-family: var(--font-heading); font-size: var(--text-lg); }
-.analytics-ai-heading .secondary-button { border-color: #fff; color: #fff; background: transparent; box-shadow: 2px 2px 0 #fff; text-decoration: none; }
-.analytics-ai-icon { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border: 2px solid var(--primary); border-radius: 50%; color: var(--primary); }
+.analytics-ai-heading .eyebrow { margin: 0; color: color-mix(in srgb, var(--primary) 50%, var(--secondary-foreground)); } /* --primary only contrasts with --surface, so mix toward the panel's own foreground */
+.analytics-ai-heading h2 { margin: 0.2rem 0 0; font-family: var(--font-heading); font-size: var(--text-lg); color: inherit; } /* base.css `h1..h6 { color: var(--foreground) }` outranks inheritance and rendered near-black on the dark panel */
+.analytics-ai-heading .secondary-button { border-color: currentColor; color: var(--secondary-foreground); background: transparent; box-shadow: 2px 2px 0 currentColor; text-decoration: none; }
+.analytics-ai-icon { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border: 2px solid currentColor; border-radius: 50%; color: color-mix(in srgb, var(--primary) 50%, var(--secondary-foreground)); }
 .analytics-signal-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); margin-top: var(--space-4); }
-.analytics-signal-grid article { align-items: flex-start; padding: var(--space-3); border: 1.5px dashed rgba(255,255,255,0.6); border-radius: var(--radius-md); }
-.analytics-signal-grid article > svg { width: 1.1rem; height: 1.1rem; flex: 0 0 auto; color: var(--primary); }
-.analytics-signal-grid article[data-tone="green"] > svg { color: #86efac; }
-.analytics-signal-grid article[data-tone="amber"] > svg { color: #fbbf24; }
-.analytics-signal-grid span { display: block; color: #cbd5e1; font-size: 0.7rem; font-weight: 800; }
+.analytics-signal-grid article { align-items: flex-start; padding: var(--space-3); border: 1.5px dashed color-mix(in srgb, var(--secondary-foreground) 60%, transparent); border-radius: var(--radius-md); }
+.analytics-signal-grid article > svg { width: 1.1rem; height: 1.1rem; flex: 0 0 auto; color: color-mix(in srgb, var(--primary) 50%, var(--secondary-foreground)); }
+.analytics-signal-grid article[data-tone="green"] > svg { color: color-mix(in srgb, #22C55E 55%, var(--secondary-foreground)); }
+.analytics-signal-grid article[data-tone="amber"] > svg { color: color-mix(in srgb, #F59E0B 55%, var(--secondary-foreground)); }
+.analytics-signal-grid span { display: block; color: color-mix(in srgb, var(--secondary-foreground) 80%, transparent); font-size: 0.7rem; font-weight: 800; }
 .analytics-signal-grid strong { display: block; margin-top: 0.2rem; font-family: var(--font-mono); font-size: var(--text-base); }
-.analytics-signal-grid p { margin: 0.35rem 0 0; color: #dbeafe; font-size: 0.7rem; line-height: 1.45; }
-.analytics-ai-disclaimer { margin: var(--space-4) 0 0; color: #cbd5e1; font-size: 0.7rem; }
-@media (max-width: 980px) { .analytics-workspace { grid-template-columns: 1fr; } .analytics-sidebar { position: static; } .analytics-sidebar nav { display: flex; overflow-x: auto; } .analytics-sidebar nav a { flex: 0 0 auto; } .analytics-sidebar-note { display: none; } .analytics-sidebar .secondary-button { align-self: flex-start; } }
+.analytics-signal-grid p { margin: 0.35rem 0 0; color: color-mix(in srgb, var(--secondary-foreground) 88%, transparent); font-size: 0.7rem; line-height: 1.45; }
+.analytics-ai-disclaimer { margin: var(--space-4) 0 0; color: color-mix(in srgb, var(--secondary-foreground) 78%, transparent); font-size: 0.7rem; }
+@media (max-width: 980px) { .analytics-workspace { grid-template-columns: minmax(0, 1fr); } .analytics-sidebar { position: static; } .analytics-sidebar nav { display: flex; overflow-x: auto; } .analytics-sidebar nav a { flex: 0 0 auto; } .analytics-sidebar-note { display: none; } .analytics-sidebar .secondary-button { align-self: flex-start; } }
 @media (max-width: 760px) { .analytics-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } .analytics-chart-grid, .analytics-signal-grid { grid-template-columns: 1fr; } .analytics-toolbar, .analytics-ai-heading { align-items: stretch; flex-direction: column; } .analytics-ai-heading .secondary-button { align-self: flex-start; } }
 @media (max-width: 420px) { .analytics-summary { grid-template-columns: 1fr; } .analytics-panel, .analytics-ai-panel { padding: var(--space-4); } }
 
@@ -3010,7 +3052,7 @@
 .insight-alert { display: flex; align-items: center; gap: 0.5rem; margin: 0; padding: var(--space-3) var(--space-4); border: 2px dashed var(--danger); border-radius: var(--radius-md); background: var(--danger-subtle); color: var(--danger); font-weight: 800; }
 .insight-alert svg { width: 1rem; height: 1rem; flex: 0 0 auto; }
 
-.insight-list { grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); align-items: stretch; }
+.insight-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: var(--space-4); align-items: stretch; }
 .insight-card { display: flex; min-height: 18rem; flex-direction: column; gap: var(--space-3); padding: var(--space-5); border: 2px solid var(--secondary); border-radius: var(--radius-doodle-card); background: var(--surface); box-shadow: var(--shadow-doodle); transition: transform var(--transition-fast), box-shadow var(--transition-fast); }
 .insight-card:hover { transform: translate(-2px, -2px); box-shadow: var(--shadow-doodle-md); }
 .insight-card[data-type="BURNOUT"] { border-color: var(--warning); }
@@ -3078,7 +3120,7 @@
 
 .goal-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
   gap: var(--space-4);
 }
 
@@ -3237,7 +3279,7 @@
 
 .goal-metric-tabs {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-2);
 }
 
@@ -3296,7 +3338,10 @@
   gap: var(--space-5);
 }
 
-.social-search input { flex: 1; }
+/* `flex: 1` alone cannot shrink a text input below its default intrinsic width, so the
+   field plus its submit button overflowed the panel on narrow viewports. */
+.social-search { flex-wrap: wrap; }
+.social-search input { flex: 1 1 10rem; min-width: 0; }
 .muted-copy { color: var(--muted); }
 .success-copy { color: var(--success); font-weight: 800; }
 .form-feedback,
@@ -3365,7 +3410,7 @@
 
 .room-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
   gap: var(--space-4);
 }
 
@@ -3558,14 +3603,16 @@
 
 .view-tabs button[aria-selected="true"] {
   background: var(--primary);
-  color: #FFFFFF;
+  color: var(--primary-foreground);
   border: 1.5px solid var(--secondary);
   box-shadow: 1px 1px 0px var(--secondary);
 }
 
 .month-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  /* `1fr` tracks keep an auto (min-content) floor, so seven columns of event titles
+     refused to shrink and forced ~1134px of width at every viewport. */
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 6px;
 }
 
@@ -3615,7 +3662,7 @@
 
 .calendar-event {
   display: block;
-  padding: 2px 6px;
+  padding: 3px 6px;
   border-radius: var(--radius-sm);
   border: 1.5px solid var(--secondary);
   background: var(--primary-subtle);
@@ -3626,6 +3673,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  /* 2px of vertical padding left this 23px tall, just under the 24px AA floor. */
+  min-height: 1.5rem;
 }
 
 .calendar-event.task {
@@ -3711,7 +3760,7 @@
   border: 2px solid var(--secondary);
   border-radius: var(--radius-md);
   background: var(--surface);
-  font-family: var(--font-body);
+  font-family: var(--font-sans);
   font-size: var(--text-sm);
 }
 
@@ -3719,7 +3768,7 @@
   width: 42px;
   height: 42px;
   background: var(--primary);
-  color: #fff;
+  color: var(--primary-foreground);
   border: 2px solid var(--secondary);
   border-radius: var(--radius-md);
   font-size: 1.5rem;
@@ -3730,7 +3779,7 @@
 
 .week-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 6px;
 }
 
@@ -3739,7 +3788,7 @@
     display: none;
   }
   .month-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-2);
   }
   .calendar-day {
@@ -3753,18 +3802,27 @@
   .calendar-day.empty {
     display: none;
   }
-  .calendar-day .day-number {
+  /* The cell renders `<time>` plus an unclassed events wrapper. The `.day-number` and
+     `.event-dot-row` these two rules used to name are absent from the markup, so the
+     wrapper kept its default min-content width -- the full nowrap event title -- and
+     dragged the single column out to 777px. */
+  .calendar-day > time {
     min-width: 2rem;
     font-weight: 700;
   }
-  .calendar-day .event-dot-row {
+  .calendar-day > div {
     flex: 1;
+    /* lets the nowrap titles inside truncate instead of setting the column width */
+    min-width: 0;
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 4px;
   }
   .week-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .week-day {
+    min-width: 0;
   }
 }
 
@@ -4114,7 +4172,7 @@
 
 .challenge-toolbar button[role="tab"][aria-selected="true"] {
   background: var(--primary);
-  color: #FFFFFF;
+  color: var(--primary-foreground);
   border: 1.5px solid var(--secondary);
   box-shadow: 1px 1px 0px var(--secondary);
 }
@@ -4183,7 +4241,7 @@
 
 .wizard-step.active {
   background: var(--primary);
-  color: white;
+  color: var(--primary-foreground);
   border: 2px solid var(--secondary);
 }
 
@@ -4299,7 +4357,7 @@
   border-radius: var(--radius-full);
   font-size: var(--text-xs);
   font-weight: 800;
-  font-family: var(--font-body);
+  font-family: var(--font-sans);
   border: 0;
   background: transparent;
   color: var(--muted);
@@ -4314,7 +4372,7 @@
 
 .settings-tab-btn.active {
   background: var(--primary);
-  color: #FFFFFF;
+  color: var(--primary-foreground);
   border: 1.5px solid var(--secondary);
   box-shadow: 1px 1px 0px var(--secondary);
 }
@@ -4351,7 +4409,7 @@
 
 .form-row-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: var(--space-3);
 }
 
@@ -4376,7 +4434,7 @@
   border-radius: var(--radius-md);
   background: var(--surface);
   color: var(--foreground);
-  font-family: var(--font-body);
+  font-family: var(--font-sans);
   font-size: var(--text-sm);
   box-shadow: var(--shadow-doodle-xs);
   outline: none;
@@ -4414,7 +4472,7 @@
 
 .lang-option.selected {
   background: var(--primary);
-  color: #FFFFFF;
+  color: var(--primary-foreground);
   box-shadow: var(--shadow-doodle-sm);
 }
 
@@ -4494,6 +4552,10 @@
   --border-doodle: 2px solid #263D5B;
 }
 
+/* Cosmic is the only dark mood, and it is deliberately unguarded so it applies over the
+   light and girly themes too. That means it must restate every token those themes derive
+   from a light palette — otherwise values like --secondary-foreground: #FFFFFF survive
+   next to cosmic's near-white --secondary and render invisible text. */
 :root[data-mood="cosmic"] {
   --background: #0E1626;
   --sidebar-background: #131C2E;
@@ -4508,14 +4570,46 @@
   --card-pastel-lavender: #241834;
   --primary: #49B6E5;
   --primary-strong: #70c7ed;
+  --primary-foreground: #111827;
+  --primary-subtle: rgba(73, 182, 229, 0.18);
   --secondary: #E2E8F0;
   --secondary-strong: #FFFFFF;
+  --secondary-foreground: #111827;
+  --secondary-subtle: rgba(226, 232, 240, 0.12);
+  --success: #22C55E;
+  --success-strong: #4ADE80;
+  --success-foreground: #111827;
+  --success-subtle: rgba(34, 197, 94, 0.18);
+  --warning: #F59E0B;
+  --warning-strong: #FBBF24;
+  --warning-foreground: #111827;
+  --warning-subtle: rgba(245, 158, 11, 0.18);
+  --danger: #EF4444;
+  --danger-strong: #F87171;
+  --danger-foreground: #111827;
+  --danger-subtle: rgba(239, 68, 68, 0.18);
   --text: #F8FAFC;
   --foreground: #F8FAFC;
   --muted: #94A3B8;
+  --muted-foreground: #94A3B8;
+  --muted-surface: #182234;
   --line: #334155;
   --line-strong: #E2E8F0;
+  --accent: #49B6E5;
+  --accent-strong: #70c7ed;
+  --accent-foreground: #111827;
+  --accent-subtle: rgba(73, 182, 229, 0.18);
+  --focus: #49B6E5;
+  --focus-ring: rgba(73, 182, 229, 0.45);
+  --focus-outline: 2px dashed #49B6E5;
   --border-doodle: 2px solid #64748B;
+  --border-doodle-thin: 1.5px solid #64748B;
+  --border-doodle-dashed: 2px dashed #64748B;
+  --shadow-doodle-xs: 1.5px 1.5px 0px rgba(0, 0, 0, 0.5);
+  --shadow-doodle: 2px 2px 0px rgba(0, 0, 0, 0.6);
+  --shadow-doodle-md: 3px 3px 0px rgba(0, 0, 0, 0.7);
+  --shadow-doodle-lg: 4px 4px 0px rgba(0, 0, 0, 0.8);
+  --shadow-doodle-xl: 6px 6px 0px rgba(0, 0, 0, 0.9);
 }
 
 :root[data-mood="sakura"]:not([data-theme="dark"]) {
@@ -4565,7 +4659,7 @@
   --secondary-strong: #064E3B;
   --text: #064E3B;
   --foreground: #064E3B;
-  --muted: #047857;
+  --muted: #065F46;
   --line: #A7F3D0;
   --line-strong: #065F46;
   --border-doodle: 2px solid #065F46;
@@ -4986,6 +5080,48 @@
   .btn-icon-sm {
     min-width: 44px;
     min-height: 44px;
+  }
+
+  /* Task-row controls. Height costs nothing horizontally, so the two row buttons get the
+     full 44px (WCAG 2.5.5 AAA, and the width this file already uses for .btn-icon-sm).
+     The drag grip stays narrower: at 320px the row has ~280px of content box to share
+     with the task title, and dragging on a touch screen uses the whole row anyway. */
+  .task-complete-btn,
+  .task-checkbox-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .drag-grip-btn {
+    min-width: 2rem;
+    min-height: 44px;
+  }
+
+  .task-subtasks-pill {
+    min-height: 2rem;
+    padding: 4px 12px;
+  }
+
+  /* Month cells are a 7-across grid, so events grow vertically only. */
+  .calendar-event {
+    min-height: 2rem;
+    padding: 6px 8px;
+  }
+
+  /* Paired with the zero-specificity default in base.css. */
+  :where(input[type="checkbox"], input[type="radio"]) {
+    width: 24px;
+    height: 24px;
+  }
+
+  /* These two size their inputs through a real class selector, so they outrank the :where()
+     default above no matter where it sits. Repeating them at matching specificity (and later
+     in the file) is what actually lifts them to 24px on a touch screen. Both sit inside a
+     large clickable <label>, so this is comfort rather than a WCAG 2.5.8 fix. */
+  .doodle-switch-input,
+  .subtask-row input {
+    width: 24px;
+    height: 24px;
   }
 }
 

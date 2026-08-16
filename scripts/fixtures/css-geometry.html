@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en" data-theme="light" data-mood="notebook">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="./css-geometry.css" />
+  </head>
+  <body>
+    <!-- Reproduces the real app shell so the width chain (app-shell -> app-content -> page)
+         matches what the authenticated crawl measured. -->
+    <div class="app-shell">
+      <div class="app-body">
+        <main class="app-content">
+          <!-- ============ 1. /calendar month grid ============ -->
+          <section class="calendar-workspace" id="fx-calendar">
+            <div class="month-grid">
+              <div class="weekday">Mon</div>
+              <div class="weekday">Tue</div>
+              <div class="weekday">Wed</div>
+              <div class="weekday">Thu</div>
+              <div class="weekday">Fri</div>
+              <div class="weekday">Sat</div>
+              <div class="weekday">Sun</div>
+              <article class="calendar-day" role="button" tabindex="0">
+                <time>1</time>
+                <div>
+                  <a class="calendar-event task" href="#">Revise cardiovascular pharmacology block 3</a>
+                  <a class="calendar-event session" href="#">Histology slide review with study group</a>
+                  <a class="calendar-event task" href="#">Neuroanatomy tutorial preparation</a>
+                  <span class="more-events">+2</span>
+                </div>
+              </article>
+              <article class="calendar-day today" role="button" tabindex="0">
+                <time>2</time>
+                <div>
+                  <a class="calendar-event session" href="#">Pathology long case discussion</a>
+                </div>
+              </article>
+              <article class="calendar-day" role="button" tabindex="0"><time>3</time><div></div></article>
+              <article class="calendar-day" role="button" tabindex="0"><time>4</time><div></div></article>
+              <article class="calendar-day" role="button" tabindex="0"><time>5</time><div></div></article>
+              <article class="calendar-day" role="button" tabindex="0"><time>6</time><div></div></article>
+              <article class="calendar-day" role="button" tabindex="0"><time>7</time><div></div></article>
+            </div>
+          </section>
+
+          <!-- ============ 2. /calendar week grid ============ -->
+          <section id="fx-week">
+            <div class="week-grid">
+              <article class="week-day today">
+                <header class="week-day-header">
+                  <span class="week-day-name">Mon</span><time class="week-day-number">1</time>
+                </header>
+                <div class="week-day-events">
+                  <a class="calendar-event task" href="#"
+                    ><span class="event-time">09:30</span><span>Revise cardiovascular pharmacology block 3</span></a
+                  >
+                </div>
+              </article>
+              <article class="week-day">
+                <header class="week-day-header">
+                  <span class="week-day-name">Tue</span><time class="week-day-number">2</time>
+                </header>
+                <div class="week-day-events">
+                  <a class="calendar-event session" href="#"
+                    ><span class="event-time">14:00</span><span>Histology slide review with study group</span></a
+                  >
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <!-- ============ 3. /tasks filter pill bar ============ -->
+          <section id="fx-tabs">
+            <div class="notebook-top-header">
+              <div class="notebook-filter-tabs" role="tablist" aria-label="Task filters">
+                <button type="button" role="tab" aria-selected="true" class="notebook-tab active">All</button>
+                <button type="button" role="tab" aria-selected="false" class="notebook-tab">Today</button>
+                <button type="button" role="tab" aria-selected="false" class="notebook-tab">Upcoming</button>
+                <button type="button" role="tab" aria-selected="false" class="notebook-tab">Overdue</button>
+                <button type="button" role="tab" aria-selected="false" class="notebook-tab">Done</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- ============ 4. page-header segmented nav pill (worst case: 3 long labels) ============ -->
+          <section id="fx-pill">
+            <header class="page-header-container">
+              <div class="page-header-main">
+                <a
+                  class="inline-flex items-center gap-1.5 min-h-6 text-xs text-muted font-bold mb-1.5 hover:text-foreground transition-colors"
+                  href="#"
+                  ><svg class="w-4 h-4" viewBox="0 0 24 24"></svg><span>Lobbies</span></a
+                >
+                <h1>Notice the pattern, not the pressure.</h1>
+              </div>
+              <div class="page-header-actions">
+                <div class="page-header">
+                  <a class="page-header-link" href="#">Leaderboard</a>
+                  <a class="page-header-link" href="#">Challenges</a>
+                  <a class="page-header-link" href="#">Notifications</a>
+                </div>
+              </div>
+            </header>
+          </section>
+
+          <!-- ============ 5. score-orbit ============ -->
+          <section id="fx-orbit">
+            <div class="score-orbit"><strong>72%</strong><span>complete</span></div>
+            <div class="score-orbit"><strong>84</strong><span>Focus Score</span></div>
+          </section>
+
+          <!-- ============ 6. /lobbies/create form ============ -->
+          <section id="fx-lobbyform">
+            <form class="lobby-form">
+              <label>Room name<input name="name" required maxlength="100" /></label>
+              <label>Description<textarea name="description" maxlength="500"></textarea></label>
+              <div class="form-grid">
+                <label
+                  >Visibility<select name="visibility">
+                    <option value="PUBLIC">Public</option>
+                    <option value="PRIVATE">Private</option>
+                  </select></label
+                >
+                <label>Capacity<input name="maxMembers" type="number" min="2" max="25" value="25" /></label>
+              </div>
+              <button class="primary-button">Create room</button>
+            </form>
+          </section>
+
+          <!-- ============ 7. /analytics workspace ============ -->
+          <section class="analytics-workspace" id="fx-analytics" dir="ltr">
+            <aside class="analytics-sidebar" aria-label="Analytics sections">
+              <div class="analytics-sidebar-title"><span>Analysis board</span></div>
+              <nav>
+                <a href="#">Overview</a><a href="#">Trends</a><a href="#">Subjects</a><a href="#">Focus times</a
+                ><a href="#">AI analysis</a>
+              </nav>
+              <div class="analytics-sidebar-note">
+                <strong>Personal analysis</strong><span>Grounded only in your sessions and tasks.</span>
+              </div>
+              <a class="secondary-button" href="#">Open insights</a>
+            </aside>
+            <div class="analytics-main">
+              <div class="analytics-toolbar" id="overview">
+                <div><p class="eyebrow">Live study data</p><strong>Last 30 days</strong></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ============ 8. /lobbies/:id studio grid ============ -->
+          <section class="lobby-studio" id="fx-lobbystudio" dir="ltr">
+            <div class="lobby-studio-grid">
+              <main class="lobby-primary-column">
+                <section class="lobby-timer-card">
+                  <header class="lobby-section-heading">
+                    <div><div><p class="eyebrow">Group timer</p><h2>Set up the session</h2></div></div>
+                    <span class="lobby-timer-status running">Running</span>
+                  </header>
+                </section>
+              </main>
+              <aside class="lobby-side-column"><section class="lobby-members-card"><h2>Members</h2></section></aside>
+            </div>
+          </section>
+
+          <!-- ============ 9. task-row controls (tap targets) ============ -->
+          <section id="fx-taskrow">
+            <div class="notebook-task-list">
+              <article class="sticky-task-note">
+                <div class="task-row-left">
+                  <button class="drag-grip-btn" type="button" aria-label="Reorder">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24"></svg>
+                  </button>
+                  <button class="task-checkbox-btn" type="button" aria-label="Toggle"></button>
+                  <button class="task-complete-btn" type="button" aria-label="Complete"></button>
+                  <span class="task-row-title">Revise cardiovascular pharmacology</span>
+                  <span class="task-subtasks-pill">2/5</span>
+                </div>
+              </article>
+            </div>
+            <!-- The real app never renders a bare native input; each one sits in one of these
+                 three label wrappers, which is the actual clickable target. -->
+            <label class="subtask-item"
+              ><input type="checkbox" class="task-checkbox" /><span class="text-xs font-semibold"
+                >Read chapter 4</span
+              ></label
+            >
+            <label class="subtask-row"><input type="checkbox" /><span>Annotate slides</span></label>
+            <label class="doodle-switch-label"
+              ><input type="checkbox" class="doodle-switch-input" />
+              <div>
+                <strong class="text-xs block text-foreground">Auto-start breaks</strong>
+                <span class="text-[11px] text-muted">Timer moves to break without manual click.</span>
+              </div></label
+            >
+            <label class="flex items-center gap-2 min-h-6 text-sm font-medium cursor-pointer"
+              ><input type="checkbox" /><span>Email reminders</span></label
+            >
+            <label class="flex items-center gap-2 min-h-6 text-sm font-medium cursor-pointer"
+              ><input type="radio" name="fx-r" /><span>Weekly digest</span></label
+            >
+          </section>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>

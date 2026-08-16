@@ -31,9 +31,11 @@ export function PageHeader({
     <header className={["page-header-container", className].filter(Boolean).join(" ")}>
       <div className="page-header-main">
         {backHref && (
+          // min-h-6 is the WCAG 2.5.8 24px floor: the 12px label and 16px icon left this
+          // standalone breadcrumb control only 19px tall.
           <Link
             href={backHref}
-            className="inline-flex items-center gap-1.5 text-xs text-muted font-bold mb-1.5 hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-1.5 min-h-6 text-xs text-muted font-bold mb-1.5 hover:text-foreground transition-colors"
           >
             <BackIcon className="w-4 h-4" />
             <span>{backLabel || (isRtl ? "رجوع" : "Back")}</span>

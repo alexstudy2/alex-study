@@ -51,7 +51,7 @@ export function AlexStudyLogo({ size = 34, className = "" }: { size?: number; cl
           letterSpacing: "-0.01em",
         }}
       >
-        Alex <span style={{ color: "var(--primary)" }}>Study</span>
+        Alex <span style={{ color: "var(--primary-strong)" }}>Study</span>
       </span>
     </span>
   );

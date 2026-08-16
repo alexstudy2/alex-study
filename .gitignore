@@ -15,6 +15,10 @@
 /test-results
 /playwright-report
 /blob-report
+/audit-out
+# compiled by scripts/css-geometry-check.mjs from the real stylesheet chain
+/scripts/fixtures/css-geometry.css
+/scripts/fixtures/.entry.css
 
 # next.js
 /.next/
