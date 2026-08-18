@@ -106,6 +106,7 @@ export function LeaderboardWorkspace({
   return (
     <PageShell dir={ar ? "rtl" : "ltr"}>
       <PageHeader
+        icon={Trophy}
         eyebrow={ar ? "نشاط أسبوعي" : "Weekly activity"}
         title={ar ? "تقدم جماعي، بلا ضغط." : "Shared momentum, without the pressure."}
         description={

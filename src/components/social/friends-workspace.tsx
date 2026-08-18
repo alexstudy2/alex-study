@@ -91,6 +91,7 @@ export function FriendsWorkspace({
   return (
     <PageShell dir={ar ? "rtl" : "ltr"}>
       <PageHeader
+        icon={UserPlus}
         eyebrow={ar ? "الدعم المتبادل" : "Mutual support"}
         title={ar ? "الأصدقاء والمساءلة" : "Friends and accountability"}
         description={

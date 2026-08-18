@@ -4,6 +4,7 @@ import { goalsWithProgress } from "@/lib/goals/queries";
 import { daysRemaining } from "@/lib/goals/progress";
 import { PageShell } from "@/components/ui/page-shell";
 import { PageHeader } from "@/components/ui/page-header";
+import { Target } from "lucide-react";
 
 export default async function GoalDetailPage({ params }: { params: Promise<{ goalId: string }> }) {
   const user = await requireUser();
@@ -15,6 +16,7 @@ export default async function GoalDetailPage({ params }: { params: Promise<{ goa
   return (
     <PageShell dir={ar ? "rtl" : "ltr"}>
       <PageHeader
+        icon={Target}
         backHref="/goals"
         backLabel={ar ? "كل الأهداف" : "All goals"}
         isRtl={ar}

@@ -4,6 +4,7 @@ import { calendarEvents } from "@/lib/calendar/queries";
 import { CalendarWorkspace } from "@/components/calendar/calendar-workspace";
 import { PageShell } from "@/components/ui/page-shell";
 import { PageHeader } from "@/components/ui/page-header";
+import { CalendarDays } from "lucide-react";
 
 export default async function CalendarPage() {
   const user = await requireUser();
@@ -15,6 +16,7 @@ export default async function CalendarPage() {
   return (
     <PageShell dir={ar ? "rtl" : "ltr"}>
       <PageHeader
+        icon={CalendarDays}
         eyebrow={ar ? "تقويم الدراسة" : "Study calendar"}
         title={ar ? "شاهد وقتك قبل أن يمضي." : "See your time before it passes."}
         description={

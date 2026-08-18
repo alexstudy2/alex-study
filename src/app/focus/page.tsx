@@ -5,6 +5,7 @@ import { timerRunInclude } from "@/lib/sessions/queries";
 import { FocusWorkspace } from "@/components/sessions/focus-workspace";
 import { PageShell } from "@/components/ui/page-shell";
 import { PageHeader } from "@/components/ui/page-header";
+import { Timer } from "lucide-react";
 
 export default async function FocusPage() {
   const user = await requireUser();
@@ -37,6 +38,7 @@ export default async function FocusPage() {
   return (
     <PageShell dir={ar ? "rtl" : "ltr"}>
       <PageHeader
+        icon={Timer}
         eyebrow={ar ? "مساحة تركيز" : "Focus studio"}
         title={ar ? "امنح عقلك مساحة واحدة." : "Give your mind one room."}
         description={

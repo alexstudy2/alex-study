@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
@@ -13,18 +13,19 @@ import {
   Download,
   Check,
   Sparkles,
-  Sun,
-  Moon,
-  Monitor,
-  Heart,
   Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { STUDY_MOODS, MOOD_STORAGE_KEY } from "@/components/ui/study-background-selector";
-import type { StudyMood } from "@/components/ui/study-background";
+import { STUDY_MOODS } from "@/components/ui/study-background-selector";
+import {
+  applyMood,
+  moodFromEnum,
+  saveMood,
+  type StudyMood,
+  type StudyMoodEnum,
+} from "@/lib/settings/study-mood";
 
 type Locale = "en" | "ar";
-type Theme = "SYSTEM" | "LIGHT" | "DARK" | "GIRLY";
 type Initial = {
   name: string;
   collegeId: string;
@@ -35,7 +36,7 @@ type Initial = {
   profileVisibility: "PRIVATE" | "COLLEGE_ONLY";
   preference: {
     locale: "EN" | "AR";
-    theme: Theme;
+    studyMood: StudyMoodEnum;
     defaultFocusMinutes: number;
     defaultShortBreakMinutes: number;
     defaultLongBreakMinutes: number;
@@ -55,7 +56,7 @@ type Initial = {
 
 const fallbackPreference: NonNullable<Initial["preference"]> = {
   locale: "EN",
-  theme: "SYSTEM",
+  studyMood: "NOTEBOOK",
   defaultFocusMinutes: 25,
   defaultShortBreakMinutes: 5,
   defaultLongBreakMinutes: 15,
@@ -72,16 +73,6 @@ const fallbackPreference: NonNullable<Initial["preference"]> = {
   shareFullNameOnCards: false,
 };
 
-function applyTheme(theme: Theme) {
-  if (theme === "DARK") {
-    document.documentElement.dataset.theme = "dark";
-  } else if (theme === "GIRLY") {
-    document.documentElement.dataset.theme = "girly";
-  } else {
-    document.documentElement.dataset.theme = "light";
-  }
-}
-
 type TabKey = "profile" | "timer" | "notifications" | "privacy" | "account";
 
 export function SettingsWorkspace({ initial, locale }: { initial: Initial; locale: Locale }) {
@@ -96,33 +87,25 @@ export function SettingsWorkspace({ initial, locale }: { initial: Initial; local
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [deleteError, setDeleteError] = useState("");
-  const [studyMood, setStudyMood] = useState<StudyMood>("notebook");
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(MOOD_STORAGE_KEY) as StudyMood | null;
-      if (saved && ["notebook", "cosmic", "aurora", "sunset"].includes(saved)) {
-        setStudyMood(saved);
-      }
-    } catch {
-      // Ignore
-    }
-  }, []);
+  const [studyMood, setStudyMood] = useState<StudyMood>(
+    moodFromEnum(initial.preference?.studyMood)
+  );
 
   function changeStudyMood(mood: StudyMood) {
+    const previous = studyMood;
     setStudyMood(mood);
-    try {
-      document.documentElement.dataset.mood = mood;
-      localStorage.setItem(MOOD_STORAGE_KEY, mood);
-      window.dispatchEvent(
-        new StorageEvent("storage", {
-          key: MOOD_STORAGE_KEY,
-          newValue: mood,
-        })
-      );
-    } catch {
-      // Ignore
-    }
+    applyMood(mood);
+    setStatus("");
+    /* Optimistic: the palette repaints on tap. Undo it if the write fails rather than
+       leaving the screen showing a preference the server rejected. */
+    void saveMood(mood).then(
+      () => flashSaved(),
+      () => {
+        setStudyMood(previous);
+        applyMood(previous);
+        setStatus(text.error);
+      }
+    );
   }
 
   const text = {
@@ -183,7 +166,6 @@ export function SettingsWorkspace({ initial, locale }: { initial: Initial; local
     setStatus("");
     const values = Object.fromEntries(new FormData(event.currentTarget));
     const payload = {
-      theme: preference.theme,
       defaultFocusMinutes: Number(values.defaultFocusMinutes),
       defaultShortBreakMinutes: Number(values.defaultShortBreakMinutes),
       defaultLongBreakMinutes: Number(values.defaultLongBreakMinutes),
@@ -286,7 +268,7 @@ export function SettingsWorkspace({ initial, locale }: { initial: Initial; local
 
   const tabs: { key: TabKey; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
     { key: "profile", label: ar ? "الملف الشخصي" : "Profile", icon: User },
-    { key: "timer", label: ar ? "المؤقت والمظهر" : "Timer & Theme", icon: Sliders },
+    { key: "timer", label: ar ? "المؤقت والمظهر" : "Timer & Appearance", icon: Sliders },
     { key: "notifications", label: ar ? "الإشعارات" : "Notifications", icon: Bell },
     { key: "privacy", label: ar ? "الخصوصية والذكاء" : "Privacy & AI", icon: Shield },
     { key: "account", label: ar ? "الحساب والخروج" : "Account & Danger", icon: AlertTriangle },
@@ -448,7 +430,7 @@ export function SettingsWorkspace({ initial, locale }: { initial: Initial; local
           </section>
         )}
 
-        {/* TAB 2: Timer & Theme */}
+        {/* TAB 2: Timer & Appearance */}
         {activeTab === "timer" && (
           <section className="settings-notebook-card">
             <div className="card-header-line">
@@ -458,48 +440,22 @@ export function SettingsWorkspace({ initial, locale }: { initial: Initial; local
                   {ar ? "تفضيلات المؤقت والمظهر" : "Study Timer & Appearance"}
                 </h2>
                 <p className="text-xs text-muted m-0">
-                  {ar ? "اضبط فترات البومودورو والمظهر البصري للموقع." : "Customize your study sessions, intervals, and theme."}
+                  {ar ? "اضبط فترات البومودورو وأجواء المذاكرة." : "Customize your study sessions, intervals, and mood."}
                 </p>
               </div>
             </div>
 
-            {/* Theme Picker */}
+            {/* Study Mood Picker -- one choice drives the whole palette and the background */}
             <div className="mt-4 mb-6">
-              <span className="field-label block mb-2">{ar ? "مظهر الموقع" : "Visual Theme"}</span>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {([
-                  { value: "LIGHT", label: ar ? "المظهر الفاتح" : "Light Theme", icon: Sun },
-                  { value: "GIRLY", label: ar ? "وردي وبنفسجي (Girly)" : "Girly Pink & Violet", icon: Heart },
-                  { value: "DARK", label: ar ? "المظهر الداكن" : "Dark Theme", icon: Moon },
-                  { value: "SYSTEM", label: ar ? "مظهر النظام" : "System Match", icon: Monitor },
-                ] satisfies { value: Theme; label: string; icon: typeof Sun }[]).map((t) => {
-                  const Icon = t.icon;
-                  const isCurrent = preference.theme === t.value;
-                  return (
-                    <button
-                      key={t.value}
-                      type="button"
-                      onClick={() => {
-                        setPreference((c) => ({ ...c, theme: t.value }));
-                        applyTheme(t.value);
-                        void patchPreferenceField("theme", t.value);
-                      }}
-                      className={`theme-card-btn ${isCurrent ? "active" : ""}`}
-                    >
-                      <Icon className="w-5 h-5 mb-1 text-secondary" />
-                      <span className="text-xs font-bold">{t.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Study Background Mood Picker */}
-            <div className="mt-6 mb-6 pt-4 border-t-2 border-dashed border-line">
-              <span className="field-label block mb-2">
-                {ar ? "خلفية وأجواء المذاكرة التفاعلية" : "Interactive Study Background Mood"}
+              <span className="field-label block mb-1">
+                {ar ? "أجواء المذاكرة" : "Study Mood"}
               </span>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <p className="text-xs text-muted mt-0 mb-2">
+                {ar
+                  ? "الجو الواحد يحدد الألوان والخلفية معًا."
+                  : "One mood sets both the colour palette and the animated background."}
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                 {STUDY_MOODS.map((m) => {
                   const Icon = m.icon;
                   const isCurrent = studyMood === m.id;
@@ -507,6 +463,7 @@ export function SettingsWorkspace({ initial, locale }: { initial: Initial; local
                     <button
                       key={m.id}
                       type="button"
+                      aria-pressed={isCurrent}
                       onClick={() => changeStudyMood(m.id)}
                       className={`theme-card-btn ${isCurrent ? "active" : ""}`}
                     >

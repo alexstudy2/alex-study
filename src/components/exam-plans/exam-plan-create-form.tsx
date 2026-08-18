@@ -97,6 +97,7 @@ export function ExamPlanCreateForm({
   return (
     <PageShell dir={ar ? "rtl" : "ltr"}>
       <PageHeader
+        icon={Sparkles}
         eyebrow={ar ? "مخطط امتحان بالذكاء الاصطناعي" : "AI exam planner"}
         title={ar ? "ابدأ بمقترح قابل للتعديل." : "Start with an editable proposal."}
         description={

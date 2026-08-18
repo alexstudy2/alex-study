@@ -26,6 +26,7 @@ export default async function LobbiesPage() {
   return (
     <PageShell dir={ar ? "rtl" : "ltr"}>
       <PageHeader
+        icon={Users}
         eyebrow={ar ? "غرف التركيز" : "Focus lobbies"}
         title={ar ? "ادرس مع آخرين، دون ضوضاء." : "Study together, without the noise."}
         description={

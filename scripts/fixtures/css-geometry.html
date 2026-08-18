@@ -70,9 +70,16 @@
             </div>
           </section>
 
-          <!-- ============ 3. /tasks filter pill bar ============ -->
+          <!-- ============ 3. /tasks header: filter pills, manage toggle, subject chips ============ -->
           <section id="fx-tabs">
             <div class="notebook-top-header">
+              <div class="header-branding">
+                <div class="header-icon-box"><svg class="w-5 h-5" viewBox="0 0 24 24"></svg></div>
+                <div>
+                  <h1 class="header-title">Study Task Planner</h1>
+                  <p class="header-subtitle">12 tasks in this view</p>
+                </div>
+              </div>
               <div class="notebook-filter-tabs" role="tablist" aria-label="Task filters">
                 <button type="button" role="tab" aria-selected="true" class="notebook-tab active">All</button>
                 <button type="button" role="tab" aria-selected="false" class="notebook-tab">Today</button>
@@ -80,19 +87,57 @@
                 <button type="button" role="tab" aria-selected="false" class="notebook-tab">Overdue</button>
                 <button type="button" role="tab" aria-selected="false" class="notebook-tab">Done</button>
               </div>
+              <div class="header-actions">
+                <button type="button" class="notebook-manage-toggle" aria-pressed="false">
+                  <svg class="w-4 h-4" viewBox="0 0 24 24"></svg><span>Arrange</span>
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm">
+                  <span class="btn-icon-left"><svg class="w-4 h-4" viewBox="0 0 24 24"></svg></span>Detailed Form
+                </button>
+              </div>
             </div>
+
+            <!-- Horizontal chip scroller. Present so the 2.5rem chip height is actually
+                 measured against the tap-target floor rather than assumed. -->
+            <nav class="subjects-ribbon" aria-label="Course filter">
+              <div class="subjects-scroll">
+                <button type="button" class="subject-chip active">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24"></svg><span>All Courses</span
+                  ><span class="chip-count">12</span>
+                </button>
+                <button type="button" class="subject-chip" data-color="teal">
+                  <span class="subject-color-indicator" data-color="teal"></span><span>Pharmacology</span
+                  ><span class="chip-count">4</span>
+                </button>
+                <button type="button" class="subject-chip" data-color="rose">
+                  <span class="subject-color-indicator" data-color="rose"></span><span>Histology</span>
+                </button>
+                <button type="button" class="subject-add-chip">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24"></svg><span>New Course</span>
+                </button>
+              </div>
+            </nav>
           </section>
 
           <!-- ============ 4. page-header segmented nav pill (worst case: 3 long labels) ============ -->
           <section id="fx-pill">
             <header class="page-header-container">
               <div class="page-header-main">
-                <a
-                  class="inline-flex items-center gap-1.5 min-h-6 text-xs text-muted font-bold mb-1.5 hover:text-foreground transition-colors"
-                  href="#"
-                  ><svg class="w-4 h-4" viewBox="0 0 24 24"></svg><span>Lobbies</span></a
-                >
-                <h1>Notice the pattern, not the pressure.</h1>
+                <span class="header-icon-box" aria-hidden="true">
+                  <svg class="w-5 h-5" viewBox="0 0 24 24"></svg>
+                </span>
+                <div class="page-header-text">
+                  <a
+                    class="inline-flex items-center gap-1.5 min-h-6 text-xs text-muted font-bold mb-1.5 hover:text-foreground transition-colors"
+                    href="#"
+                    ><svg class="w-4 h-4" viewBox="0 0 24 24"></svg><span>Lobbies</span></a
+                  >
+                  <span class="eyebrow block text-xs font-bold uppercase tracking-wider mb-1">Personal analytics</span>
+                  <h1>Notice the pattern, not the pressure.</h1>
+                  <p class="mt-1">
+                    A longer supporting description that has to wrap inside the new bordered header card.
+                  </p>
+                </div>
               </div>
               <div class="page-header-actions">
                 <div class="page-header">
@@ -163,28 +208,133 @@
             </div>
           </section>
 
-          <!-- ============ 9. task-row controls (tap targets) ============ -->
+          <!-- ============ 9. tasks page: notebook card + task cards ============ -->
+          <!-- Faithful to task-workspace.tsx, because the decoration probe already proved that
+               an approximate copy of this markup produces a false pass: a bare
+               `.sticky-task-note` looked styled in the fixture while doing nothing in the app. -->
           <section id="fx-taskrow">
-            <div class="notebook-task-list">
-              <article class="sticky-task-note">
-                <div class="task-row-left">
-                  <button class="drag-grip-btn" type="button" aria-label="Reorder">
-                    <svg class="w-4 h-4" viewBox="0 0 24 24"></svg>
-                  </button>
-                  <button class="task-checkbox-btn" type="button" aria-label="Toggle"></button>
-                  <button class="task-complete-btn" type="button" aria-label="Complete"></button>
-                  <span class="task-row-title">Revise cardiovascular pharmacology</span>
-                  <span class="task-subtasks-pill">2/5</span>
+            <div class="master-notebook-card">
+              <form class="notebook-quick-add-line" data-options="off">
+                <div class="quick-add-left-icon"><svg class="w-4 h-4" viewBox="0 0 24 24"></svg></div>
+                <input
+                  type="text"
+                  class="quick-add-input"
+                  placeholder="Write your study task here... and press Enter"
+                />
+                <button type="button" class="quick-add-options-toggle" aria-expanded="false" aria-label="Task options">
+                  <svg class="w-4 h-4" viewBox="0 0 24 24"></svg>
+                </button>
+                <button type="submit" class="btn btn-primary btn-sm quick-add-submit">
+                  <span class="btn-icon-left"><svg class="w-4 h-4" viewBox="0 0 24 24"></svg></span>Add
+                </button>
+                <div class="quick-add-options">
+                  <select class="quick-add-select" aria-label="Subject">
+                    <option>No course</option>
+                  </select>
+                  <select class="quick-add-select" aria-label="Priority">
+                    <option>Medium</option>
+                  </select>
                 </div>
-              </article>
+              </form>
+
+              <div class="notebook-tasks-surface">
+                <div class="notebook-task-list">
+                  <!-- Collapsed: no subtasks panel, manage row hidden below the breakpoint. -->
+                  <article class="notebook-task-row sticky-task-note" data-priority="high" data-manage="off">
+                    <div class="task-row-left">
+                      <button class="drag-grip-btn" type="button" aria-label="Reorder">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24"></svg>
+                      </button>
+                      <button class="task-complete-btn" type="button" aria-label="Complete">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24"></svg>
+                      </button>
+                    </div>
+                    <div class="task-row-body">
+                      <div class="task-row-title-bar">
+                        <a class="task-row-title" href="#">Revise cardiovascular pharmacology block 3</a>
+                        <button class="task-subtasks-toggle" type="button" aria-expanded="false" aria-label="Subtasks">
+                          <span class="font-mono font-bold">2/5</span
+                          ><svg class="w-3 h-3" viewBox="0 0 24 24"></svg>
+                        </button>
+                        <span class="task-priority-pill priority-high">High</span>
+                      </div>
+                      <div class="task-row-badges">
+                        <span class="task-subject-tag" data-color="teal"
+                          ><span class="subject-dot" data-color="teal"></span>Pharmacology</span
+                        >
+                        <!-- The merged pill: worst case is a long localised date plus an estimate. -->
+                        <span class="task-meta-pill"
+                          ><svg class="w-3 h-3" viewBox="0 0 24 24"></svg><time datetime="2026-09-12T15:00:00.000Z"
+                            >12 Sept 2026, 15:00</time
+                          ><span aria-hidden="true">·</span><span class="font-mono font-bold">45m</span></span
+                        >
+                      </div>
+                    </div>
+                    <div class="task-row-actions">
+                      <button class="task-action-icon-btn" type="button" aria-label="Move up">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24"></svg>
+                      </button>
+                      <button class="task-action-icon-btn" type="button" aria-label="Move down">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24"></svg>
+                      </button>
+                      <button class="task-action-icon-btn delete-btn" type="button" aria-label="Delete">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24"></svg>
+                      </button>
+                    </div>
+                  </article>
+
+                  <!-- Expanded, manage mode on, and :nth-child(3n + 2) so the tilt override is
+                       exercised too -- the base rule is not the only place transform is set. -->
+                  <article class="notebook-task-row sticky-task-note" data-priority="low" data-manage="on">
+                    <div class="task-row-left">
+                      <button class="drag-grip-btn" type="button" aria-label="Reorder">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24"></svg>
+                      </button>
+                      <button class="task-complete-btn" type="button" aria-label="Complete">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24"></svg>
+                      </button>
+                    </div>
+                    <div class="task-row-body">
+                      <div class="task-row-title-bar">
+                        <a class="task-row-title" href="#">مراجعة صيدلة القلب والأوعية الدموية</a>
+                        <button class="task-subtasks-toggle" type="button" aria-expanded="true" aria-label="Subtasks">
+                          <span class="font-mono font-bold">1/3</span
+                          ><svg class="w-3 h-3" viewBox="0 0 24 24"></svg>
+                        </button>
+                        <span class="task-priority-pill priority-low">Low</span>
+                      </div>
+                      <div class="task-row-badges">
+                        <span class="task-meta-pill"
+                          ><svg class="w-3 h-3" viewBox="0 0 24 24"></svg><span class="font-mono font-bold">45m</span></span
+                        >
+                      </div>
+                      <div class="notebook-subtasks-box" id="subtasks-fx">
+                        <label class="subtask-item"
+                          ><input type="checkbox" class="task-checkbox" /><span class="text-xs font-semibold"
+                            >Read chapter 4</span
+                          ></label
+                        >
+                      </div>
+                    </div>
+                    <div class="task-row-actions">
+                      <button class="task-action-icon-btn" type="button" aria-label="Move up">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24"></svg>
+                      </button>
+                      <button class="task-action-icon-btn" type="button" aria-label="Move down">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24"></svg>
+                      </button>
+                      <button class="task-action-icon-btn delete-btn" type="button" aria-label="Delete">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24"></svg>
+                      </button>
+                    </div>
+                  </article>
+                </div>
+              </div>
             </div>
-            <!-- The real app never renders a bare native input; each one sits in one of these
-                 three label wrappers, which is the actual clickable target. -->
-            <label class="subtask-item"
-              ><input type="checkbox" class="task-checkbox" /><span class="text-xs font-semibold"
-                >Read chapter 4</span
-              ></label
-            >
+
+            <!-- Owned by other pages, kept here as standalone tap-target probes:
+                 .task-checkbox-btn is the dashboard's, .subtask-row the task-detail page's. -->
+            <button class="task-checkbox-btn" type="button" aria-label="Toggle"></button>
             <label class="subtask-row"><input type="checkbox" /><span>Annotate slides</span></label>
             <label class="doodle-switch-label"
               ><input type="checkbox" class="doodle-switch-input" />
@@ -200,8 +350,302 @@
               ><input type="radio" name="fx-r" /><span>Weekly digest</span></label
             >
           </section>
+
+          <!-- ============ 11. /focus timer card ============ -->
+          <!-- The dial, the segmented tabs and the digit cells, as focus-workspace.tsx emits
+               them mid-session: a running timer at roughly a quarter elapsed, with the second
+               tab selected so the sliding indicator has somewhere to have slid to. The ring's
+               dasharray/dashoffset are the real computed numbers (2*PI*46, and 75% of it), and
+               so are the two gauge rings' -- a probe that only checked "the circles exist"
+               would pass on a ring wired to nothing. The medical pass added the graduations,
+               the monitor trace, the printed readouts and the two illustrated side panels; the
+               panels are here so the fullscreen probe can prove they do not spill, and they
+               inherit the same `display: none` the component's non-fullscreen state gets. -->
+          <section id="fx-timer">
+            <div class="focus-workspace-container">
+              <section class="focus-main-grid">
+                <div class="focus-art-panel focus-art-clinic" aria-hidden="true">
+                  <svg class="focus-art-watermark" viewBox="0 0 24 24"></svg>
+                  <div class="focus-art-row">
+                    <span class="focus-art-item art-md art-tone-danger art-drift-a"
+                      ><svg viewBox="0 0 24 24"></svg
+                    ></span>
+                    <span class="focus-art-item art-sm art-tone-primary art-drift-b"
+                      ><svg viewBox="0 0 24 24"></svg
+                    ></span>
+                  </div>
+                  <span class="focus-art-item art-xl art-tone-ink art-drift-c"
+                    ><svg viewBox="0 0 24 24"></svg
+                  ></span>
+                  <div class="focus-art-row">
+                    <span class="focus-art-item art-sm art-tone-muted art-drift-d"
+                      ><svg viewBox="0 0 24 24"></svg
+                    ></span>
+                    <span class="focus-art-item art-md art-tone-primary art-drift-e"
+                      ><svg viewBox="0 0 24 24"></svg
+                    ></span>
+                  </div>
+                </div>
+
+                <div class="doodle-timer-card">
+                  <p class="timer-chart-head">
+                    <span class="timer-chart-badge" aria-hidden="true"
+                      ><svg viewBox="0 0 24 24"></svg></span
+                    >Focus chart
+                  </p>
+
+                  <div class="timer-mode-segmented-tabs" role="tablist">
+                    <span class="timer-mode-indicator" aria-hidden="true" style="--tab-index: 1"></span>
+                    <button type="button" role="tab" aria-selected="false" class="timer-mode-tab">
+                      <span class="timer-mode-tab-name">Focus</span
+                      ><span class="timer-mode-tab-mins">25m</span>
+                    </button>
+                    <button type="button" role="tab" aria-selected="true" class="timer-mode-tab">
+                      <span class="timer-mode-tab-name">Short break</span
+                      ><span class="timer-mode-tab-mins">5m</span>
+                    </button>
+                    <button type="button" role="tab" aria-selected="false" class="timer-mode-tab">
+                      <span class="timer-mode-tab-name">Long break</span
+                      ><span class="timer-mode-tab-mins">15m</span>
+                    </button>
+                  </div>
+
+                  <button type="button" class="btn btn-ghost btn-sm fullscreen-trigger-btn">
+                    <span class="btn-icon-left"><svg class="w-4 h-4" viewBox="0 0 24 24"></svg></span
+                    >Focus mode
+                  </button>
+
+                  <div class="timer-status-row">
+                    <p class="timer-active-mode-label">Focus</p>
+                    <span class="timer-live-status running"
+                      ><i aria-hidden="true"></i>Session in progress</span
+                    >
+                  </div>
+
+                  <div class="timer-dial" data-status="running" data-finishing="off">
+                    <svg class="timer-ring" viewBox="0 0 100 100" aria-hidden="true">
+                      <circle class="timer-ring-track" cx="50" cy="50" r="46"></circle>
+                      <circle
+                        class="timer-gauge timer-gauge-minor"
+                        cx="50"
+                        cy="50"
+                        r="41.5"
+                        stroke-width="2.2"
+                        stroke-dasharray="0.7 3.645869837465881"
+                      ></circle>
+                      <circle
+                        class="timer-gauge timer-gauge-major"
+                        cx="50"
+                        cy="50"
+                        r="40.4"
+                        stroke-width="4.4"
+                        stroke-dasharray="1.5 19.653390534171272"
+                      ></circle>
+                      <circle
+                        class="timer-ring-progress"
+                        cx="50"
+                        cy="50"
+                        r="46"
+                        transform="rotate(-90 50 50)"
+                        stroke-dasharray="289.02652413026095"
+                        stroke-dashoffset="216.7698930976957"
+                      ></circle>
+                    </svg>
+                    <div class="timer-dial-inner">
+                      <svg class="timer-dial-pulse" viewBox="0 0 24 24"></svg>
+                      <output class="giant-timer-digits" aria-label="18:45 remaining">
+                        <span class="sr-only">18:45</span
+                        ><span class="timer-digit" aria-hidden="true"
+                          ><span class="timer-digit-value">1</span></span
+                        ><span class="timer-digit" aria-hidden="true"
+                          ><span class="timer-digit-value">8</span></span
+                        ><span class="timer-digit-sep" aria-hidden="true">:</span
+                        ><span class="timer-digit" aria-hidden="true"
+                          ><span class="timer-digit-value">4</span></span
+                        ><span class="timer-digit" aria-hidden="true"
+                          ><span class="timer-digit-value">5</span></span
+                        >
+                      </output>
+                      <span class="timer-ecg" aria-hidden="true">
+                        <svg viewBox="0 0 480 40" preserveAspectRatio="none">
+                          <path
+                            class="timer-ecg-line"
+                            d="M0 20 L8 20 Q13 12 18 20 L23 20 L26 25 L30 4 L34 31 L37 20 L44 20 Q50 11 56 20 L60 20 L68 20 Q73 12 78 20 L83 20 L86 25 L90 4 L94 31 L97 20 L104 20 Q110 11 116 20 L120 20 L128 20 Q133 12 138 20 L143 20 L146 25 L150 4 L154 31 L157 20 L164 20 Q170 11 176 20 L180 20 L188 20 Q193 12 198 20 L203 20 L206 25 L210 4 L214 31 L217 20 L224 20 Q230 11 236 20 L240 20 L248 20 Q253 12 258 20 L263 20 L266 25 L270 4 L274 31 L277 20 L284 20 Q290 11 296 20 L300 20 L308 20 Q313 12 318 20 L323 20 L326 25 L330 4 L334 31 L337 20 L344 20 Q350 11 356 20 L360 20 L368 20 Q373 12 378 20 L383 20 L386 25 L390 4 L394 31 L397 20 L404 20 Q410 11 416 20 L420 20 L428 20 Q433 12 438 20 L443 20 L446 25 L450 4 L454 31 L457 20 L464 20 Q470 11 476 20 L480 20"
+                          ></path>
+                        </svg>
+                      </span>
+                      <span>remaining</span>
+                    </div>
+                  </div>
+
+                  <dl class="timer-vitals">
+                    <div class="timer-vital"><dt>Dose</dt><dd>25m</dd></div>
+                    <div class="timer-vital"><dt>Progress</dt><dd>25%</dd></div>
+                  </dl>
+
+                  <p class="timer-context-pill">
+                    <span class="font-semibold text-xs text-muted">Task:</span> Finish the pharmacology
+                    problem set
+                  </p>
+
+                  <div class="timer-action-buttons">
+                    <button type="button" class="btn btn-primary btn-lg">Pause</button>
+                    <button type="button" class="btn btn-secondary btn-lg">Complete session</button>
+                  </div>
+
+                  <button type="button" class="doodle-distraction-btn mt-4">
+                    <span class="distraction-button-icon"
+                      ><svg class="w-4 h-4" viewBox="0 0 24 24"></svg></span
+                    ><span class="distraction-button-copy"
+                      ><strong>Log a distraction</strong
+                      ><small>Tap whenever your attention drifts.</small></span
+                    ><span class="distraction-counter-badge">3</span>
+                  </button>
+                </div>
+
+                <div class="focus-art-panel focus-art-lab" aria-hidden="true">
+                  <svg class="focus-art-watermark" viewBox="0 0 24 24"></svg>
+                  <div class="focus-art-row">
+                    <span class="focus-art-item art-md art-tone-success art-drift-e"
+                      ><svg viewBox="0 0 24 24"></svg
+                    ></span>
+                    <span class="focus-art-item art-sm art-tone-primary art-drift-d"
+                      ><svg viewBox="0 0 24 24"></svg
+                    ></span>
+                  </div>
+                  <span class="focus-art-item art-xl art-tone-ink art-drift-c"
+                    ><svg viewBox="0 0 24 24"></svg
+                  ></span>
+                  <div class="focus-art-row">
+                    <span class="focus-art-item art-sm art-tone-muted art-drift-b"
+                      ><svg viewBox="0 0 24 24"></svg
+                    ></span>
+                    <span class="focus-art-item art-md art-tone-primary art-drift-a"
+                      ><svg viewBox="0 0 24 24"></svg
+                    ></span>
+                  </div>
+                </div>
+
+                <aside class="focus-sidebar-card">
+                  <div class="focus-field">
+                    <label class="focus-field-label" for="fx-focus-course">Course</label>
+                    <select class="focus-select" id="fx-focus-course">
+                      <option>No course</option>
+                    </select>
+                  </div>
+                </aside>
+              </section>
+            </div>
+          </section>
         </main>
       </div>
+    </div>
+
+    <!-- ============ 10. bottom-nav clearance ============ -->
+    <!-- A second, isolated shell: the real `.app-frame > .app-content + .mobile-navigation`
+         structure with a page far taller than any viewport. The point is the end of a long
+         page -- the fixed bar used to cover it, because a later `padding-block` shorthand
+         reset the bottom clearance the mobile media query had set. -->
+    <div class="app-frame" id="fx-navclear">
+      <main class="app-content">
+        <div style="height: 1600px">Tall page body</div>
+        <p class="fx-last-line">Last line of a long page.</p>
+      </main>
+      <nav class="mobile-navigation" aria-label="Primary">
+        <a href="#" aria-current="page"><svg width="20" height="20"></svg><span>Today</span></a>
+        <a href="#"><svg width="20" height="20"></svg><span>Tasks</span></a>
+        <a href="#"><svg width="20" height="20"></svg><span>Focus</span></a>
+        <button type="button" class="mobile-more-trigger">
+          <svg width="20" height="20"></svg><span>More</span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- ============ 12. desktop sidebar vertical fill ============ -->
+    <!-- A third isolated shell. The page body is ONE LINE here and the check grows it to
+         /analytics length in place, because the two regimes fail differently and `.app-frame`
+         only sets `min-height: 100vh`. With a short body the frame is the viewport, and the
+         leftover height -- whatever the viewport has over the logo + nav + footer stack -- is
+         what `justify-content: space-between` used to split into gaps above and below the nav.
+         With a long body the frame is instead thousands of pixels tall, so before
+         `height: 100dvh` the sidebar stretched to all of it, the nav grew into all of it, and
+         the footer ended up at the bottom of the document rather than the screen. All four
+         groups and the real footer stack are present because the leftover is viewport height
+         minus their combined height -- a fixture with fewer rows would find gaps where the app
+         has none, and one with more would find none where the app has them. -->
+    <div class="app-frame" id="fx-sidebar">
+      <aside class="app-sidebar">
+        <a class="app-wordmark" href="#" aria-label="Alex Study">
+          <!-- AlexStudyLogo: the icon is sized by `.app-sidebar svg`, not by its own
+               width/height attributes, so the wordmark's height is the text's. -->
+          <span class="inline-flex items-center gap-2.5 select-none" style="display: inline-flex; align-items: center; gap: 0.6rem">
+            <svg width="34" height="34" viewBox="0 0 48 48" class="shrink-0" aria-hidden="true"></svg>
+            <span style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; letter-spacing: -0.01em">Alex Study</span>
+          </span>
+        </a>
+        <nav class="sidebar-nav" aria-label="Primary navigation">
+          <div class="sidebar-group">
+            <span class="sidebar-group-title">Study</span>
+            <a href="#" aria-current="page"><svg viewBox="0 0 24 24"></svg><span>Dashboard</span></a>
+            <a href="#"><svg viewBox="0 0 24 24"></svg><span>Tasks</span></a>
+            <a href="#"><svg viewBox="0 0 24 24"></svg><span>Focus</span></a>
+            <div class="sidebar-rule"></div>
+          </div>
+          <div class="sidebar-group">
+            <span class="sidebar-group-title">Planning</span>
+            <a href="#"><svg viewBox="0 0 24 24"></svg><span>Calendar</span></a>
+            <a href="#"><svg viewBox="0 0 24 24"></svg><span>Exam Plan</span></a>
+            <a href="#"><svg viewBox="0 0 24 24"></svg><span>Goals</span></a>
+            <div class="sidebar-rule"></div>
+          </div>
+          <div class="sidebar-group">
+            <span class="sidebar-group-title">Insights</span>
+            <a href="#"><svg viewBox="0 0 24 24"></svg><span>Sessions</span></a>
+            <a href="#"><svg viewBox="0 0 24 24"></svg><span>AI Insights</span></a>
+            <a href="#"><svg viewBox="0 0 24 24"></svg><span>Analytics</span></a>
+            <div class="sidebar-rule"></div>
+          </div>
+          <!-- No trailing rule: the component only draws one between groups. -->
+          <div class="sidebar-group">
+            <span class="sidebar-group-title">Community</span>
+            <a href="#"><svg viewBox="0 0 24 24"></svg><span>Lobbies</span></a>
+            <a href="#"><svg viewBox="0 0 24 24"></svg><span>Friends</span></a>
+            <a href="#"><svg viewBox="0 0 24 24"></svg><span>Challenges</span></a>
+          </div>
+        </nav>
+        <div class="app-sidebar-footer">
+          <a href="#"
+            ><svg viewBox="0 0 24 24"></svg><span>Notifications</span
+            ><strong class="notification-badge">3</strong></a
+          >
+          <a href="#"><svg viewBox="0 0 24 24"></svg><span>Settings</span></a>
+          <div class="pt-2 pb-1 border-t border-dashed border-line">
+            <span class="sidebar-group-title block mb-1">Study Mood</span>
+            <div class="relative w-full text-start">
+              <button type="button" class="study-mood-sidebar-btn" aria-expanded="false">
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="study-mood-icon-bubble"><svg viewBox="0 0 24 24"></svg></span>
+                  <div class="flex flex-col min-w-0 text-start">
+                    <span class="text-xs font-extrabold text-foreground truncate">Lofi Notebook</span>
+                    <span class="text-[10px] text-muted font-bold truncate">Animated Theme</span>
+                  </div>
+                </div>
+                <svg class="w-4 h-4 text-muted" viewBox="0 0 24 24"></svg>
+              </button>
+            </div>
+          </div>
+          <button
+            type="button"
+            class="flex items-center justify-center gap-2 p-1.5 mt-1 rounded-md border border-line bg-surface text-xs font-bold text-muted transition-colors"
+          >
+            <svg class="w-4 h-4" viewBox="0 0 24 24"></svg><span>Sign out</span>
+          </button>
+          <div class="shell-profile">
+            <span aria-hidden="true">A</span><strong class="truncate">Study Account</strong>
+          </div>
+        </div>
+      </aside>
+      <div class="app-content"><p>Short page body.</p></div>
     </div>
   </body>
 </html>

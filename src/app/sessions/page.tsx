@@ -5,7 +5,7 @@ import { SessionList } from "@/components/sessions/session-list";
 import { PageShell } from "@/components/ui/page-shell";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
-import { Play } from "lucide-react";
+import { History, Play } from "lucide-react";
 import { SessionManager } from "@/components/sessions/session-manager";
 
 export default async function SessionsPage() {
@@ -21,6 +21,7 @@ export default async function SessionsPage() {
   return (
     <PageShell dir={ar ? "rtl" : "ltr"}>
       <PageHeader
+        icon={History}
         eyebrow={ar ? "سجل الدراسة" : "Study record"}
         title={ar ? "كل دقيقة لها قصة." : "Every minute has a story."}
         description={

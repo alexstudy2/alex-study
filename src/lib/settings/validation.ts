@@ -11,7 +11,7 @@ export const profileSettingsSchema = z
 
 export const studyPreferencesSchema = z
   .object({
-    theme: z.enum(["SYSTEM", "LIGHT", "DARK", "GIRLY"]).optional(),
+    studyMood: z.enum(["NOTEBOOK", "SAKURA", "COSMIC", "AURORA", "SUNSET"]).optional(),
     defaultFocusMinutes: z.coerce.number().int().min(5).max(120).optional(),
     defaultShortBreakMinutes: z.coerce.number().int().min(1).max(30).optional(),
     defaultLongBreakMinutes: z.coerce.number().int().min(5).max(60).optional(),

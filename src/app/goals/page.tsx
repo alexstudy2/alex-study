@@ -6,6 +6,7 @@ import { GoalWorkspace } from "@/components/goals/goal-workspace";
 import { PageShell } from "@/components/ui/page-shell";
 import { PageHeader } from "@/components/ui/page-header";
 import type { Goal } from "@/components/goals/types";
+import { Target } from "lucide-react";
 
 export default async function GoalsPage() {
   const user = await requireUser();
@@ -23,6 +24,7 @@ export default async function GoalsPage() {
   return (
     <PageShell dir={ar ? "rtl" : "ltr"}>
       <PageHeader
+        icon={Target}
         eyebrow={ar ? "أهداف الدراسة" : "Study goals"}
         title={ar ? "اجعل التقدم مرئيًا." : "Make progress visible."}
         description={

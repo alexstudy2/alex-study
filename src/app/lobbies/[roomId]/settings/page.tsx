@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db/prisma";
 import { requireUser } from "@/lib/auth/session";
 import { PageShell } from "@/components/ui/page-shell";
 import { PageHeader } from "@/components/ui/page-header";
+import { Settings } from "lucide-react";
 
 export default async function LobbySettingsPage({
   params,
@@ -21,6 +22,7 @@ export default async function LobbySettingsPage({
   return (
     <PageShell size="narrow" dir={ar ? "rtl" : "ltr"}>
       <PageHeader
+        icon={Settings}
         backHref={`/lobbies/${roomId}`}
         backLabel={ar ? "الغرفة" : "Room"}
         isRtl={ar}

@@ -5,6 +5,7 @@ import { InsightList } from "@/components/insights/insight-list";
 import { insightSelect } from "@/lib/insights/service";
 import { PageShell } from "@/components/ui/page-shell";
 import { PageHeader } from "@/components/ui/page-header";
+import { Lightbulb } from "lucide-react";
 
 export default async function InsightsPage() {
   const user = await requireUser();
@@ -22,6 +23,7 @@ export default async function InsightsPage() {
   return (
     <PageShell dir={ar ? "rtl" : "ltr"}>
       <PageHeader
+        icon={Lightbulb}
         eyebrow={ar ? "رؤى مدعومة بالذكاء الاصطناعي" : "AI-supported insights"}
         title={ar ? "إشارة صغيرة، وليست حكمًا." : "A small signal, never a verdict."}
         description={

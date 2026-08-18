@@ -12,10 +12,12 @@ import {
   AlertCircle,
   Volume2,
   History,
-  Sparkles,
-  Clock3,
+  Stethoscope,
+  HeartPulse,
+  Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MedicalArtClinic, MedicalArtLab } from "./medical-art";
 import type { TimerMode, TimerRun } from "./types";
 
 type Option = {
@@ -75,7 +77,12 @@ const copy = {
     ready: "Ready when you are",
     running: "Session in progress",
     paused: "Timer paused",
+    done: "Session complete",
     remaining: "remaining",
+    minShort: "m",
+    chart: "Focus chart",
+    dose: "Dose",
+    progress: "Progress",
   },
   ar: {
     focus: "تركيز",
@@ -110,7 +117,12 @@ const copy = {
     ready: "جاهز عندما تكون مستعدًا",
     running: "الجلسة قيد التشغيل",
     paused: "المؤقت متوقف مؤقتًا",
+    done: "اكتملت الجلسة",
     remaining: "متبقي",
+    minShort: "د",
+    chart: "بطاقة التركيز",
+    dose: "الجرعة",
+    progress: "التقدم",
   },
 };
 
@@ -120,6 +132,55 @@ function formatClock(seconds: number) {
     .toString()
     .padStart(2, "0")}:${(safe % 60).toString().padStart(2, "0")}`;
 }
+
+/* The ring lives in a 0..100 viewBox; r=46 with a 5-unit stroke puts its outer edge at
+   48.5, so nothing is cropped. The circumference is computed rather than declared with
+   `pathLength="100"` -- that attribute is the tidier form but Safari has a long history
+   of ignoring it on <circle>, and a silently unscaled dash array means a ring that never
+   moves. */
+const RING_RADIUS = 46;
+const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
+
+/* Gauge graduations, drawn as two dashed circles rather than seventy-two <line> elements: a
+   dash pattern laid around a circle already *is* a ring of radial ticks. `stroke-width` is the
+   tick's radial length and the dash length is its tangential width, so the only arithmetic is
+   one division -- circumference over count, less the ink, is the gap.
+
+   Both rings are built outwards from a shared outer edge so the long and short graduations
+   line up on the same rim; that is why the major ring, being the longer tick, sits at the
+   smaller radius. A <circle> starts its dash pattern at 3 o'clock and runs clockwise, and both
+   30 and 6 divide 90, so the graduations land on the clock positions without a rotation. */
+const TICK_RIM = 42.6;
+function gauge(count: number, length: number, ink: number) {
+  const r = TICK_RIM - length / 2;
+  return {
+    r,
+    strokeWidth: length,
+    strokeDasharray: `${ink} ${(2 * Math.PI * r) / count - ink}`,
+  };
+}
+const TICKS_MINOR = gauge(60, 2.2, 0.7);
+const TICKS_MAJOR = gauge(12, 4.4, 1.5);
+
+/* One cardiac cycle on a baseline of 20 in a 40-unit-tall box: a flat segment, the small P
+   bump, the QRS spike, then the broad T wave. Eight of them make a 480-unit strip that the
+   stylesheet scrolls leftwards by exactly half its own width -- 240 units is four whole beats,
+   so the window it scrolls through is identical at both ends of the loop and there is no seam
+   to hide. The beat is a function rather than eight hand-written copies because the seam only
+   holds while every beat is the same width. */
+function ecgBeat(x: number) {
+  return (
+    `L${x + 8} 20 Q${x + 13} 12 ${x + 18} 20 L${x + 23} 20 L${x + 26} 25 L${x + 30} 4` +
+    ` L${x + 34} 31 L${x + 37} 20 L${x + 44} 20 Q${x + 50} 11 ${x + 56} 20 L${x + 60} 20`
+  );
+}
+const ECG_BEATS = 8;
+const ECG_PATH = `M0 20 ${Array.from({ length: ECG_BEATS }, (_, i) => ecgBeat(i * 60)).join(" ")}`;
+
+/* How long the dial is left alone to finish before the celebration card covers it. Paired
+   with the 520ms ring fill and the 420ms check in components.css -- long enough that both
+   land, short enough that it never reads as the app having hung. */
+const FINISH_FLOURISH_MS = 700;
 
 export function FocusWorkspace(props: Props) {
   const t = copy[props.locale];
@@ -146,9 +207,21 @@ export function FocusWorkspace(props: Props) {
   } | null>(null);
   const [taskCompleted, setTaskCompleted] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
+  /* The window between "the session is over" and "here is the summary card", during which
+     the dial fills itself and stamps a check. Purely presentational -- the request has
+     already succeeded by the time this is true. */
+  const [finishing, setFinishing] = useState(false);
+  const finishTimeout = useRef<number | null>(null);
   const [sound, setSound] = useState(props.preferences.ambientSound ?? "off");
   const audioContext = useRef<AudioContext | null>(null);
   const noiseNode = useRef<AudioNode | null>(null);
+
+  useEffect(
+    () => () => {
+      if (finishTimeout.current !== null) window.clearTimeout(finishTimeout.current);
+    },
+    [],
+  );
 
   const enterFullscreen = useCallback(async () => {
     setFocusMode(true);
@@ -225,6 +298,32 @@ export function FocusWorkspace(props: Props) {
   const elapsedPercent = Math.min(
     100,
     Math.max(0, ((totalSeconds - remaining) / Math.max(1, totalSeconds)) * 100),
+  );
+  /* The flourish fills the ring regardless of where it had got to: "Complete session" is
+     also how you end a session early, and a ring frozen at 40% is a poor full stop. */
+  const ringProgress = finishing ? 1 : elapsedPercent / 100;
+  const dialStatus = !timer
+    ? "ready"
+    : timer.status === "PAUSED"
+      ? "paused"
+      : timer.status === "RUNNING"
+        ? "running"
+        : "done";
+  const clock = formatClock(remaining);
+  /* The two readouts under the dial. Both are already implicit in the ring and the digits;
+     they are here because a gauge with a printed scale beside it reads as an instrument, and
+     because "how long is this session" is otherwise only visible before you start it. */
+  const doseMinutes = Math.round(totalSeconds / 60);
+  const progressLabel = `${Math.round(elapsedPercent)}%`;
+
+  const modeTabs = [
+    { value: "FOCUS" as TimerMode, label: t.focus, minutes: props.preferences.focus },
+    { value: "SHORT_BREAK" as TimerMode, label: t.short, minutes: props.preferences.shortBreak },
+    { value: "LONG_BREAK" as TimerMode, label: t.long, minutes: props.preferences.longBreak },
+  ];
+  const activeTabIndex = Math.max(
+    0,
+    modeTabs.findIndex((tab) => tab.value === mode),
   );
 
   const toggleSound = useCallback(
@@ -330,14 +429,28 @@ export function FocusWorkspace(props: Props) {
       if (data.serverNow) setServerOffset(new Date(data.serverNow).getTime() - Date.now());
 
       if (action === "complete") {
-        setCelebration({
+        const summary = {
           duration: data.timer.durationSeconds - remaining,
           distractions: data.timer.session?.distractionCount ?? 0,
           taskTitle: data.timer.task?.title,
           taskId: data.timer.task?.id,
           subjectName: data.timer.subject?.name,
-        });
+        };
         setTaskCompleted(false);
+        /* Read at the moment of the action rather than held in state: this is the only
+           place the preference is needed, and a media query listener for it would be more
+           machinery than one boolean deserves. With reduced motion there is no flourish to
+           wait for, so the card must not be delayed either. */
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          setCelebration(summary);
+        } else {
+          setFinishing(true);
+          finishTimeout.current = window.setTimeout(() => {
+            finishTimeout.current = null;
+            setCelebration(summary);
+            setFinishing(false);
+          }, FINISH_FLOURISH_MS);
+        }
       }
 
       if (action === "cancel") {
@@ -413,38 +526,55 @@ export function FocusWorkspace(props: Props) {
         )}
 
         <section className="focus-main-grid">
+          {/* The illustrated panels that flank the dial. They exist only in fullscreen -- there
+              is no room for them beside the setup sidebar, and rendering them anyway to hide
+              them with CSS would mean twenty always-mounted icons on a page that already has a
+              per-second render. The stylesheet also drops them below the width where the
+              middle column would have to give up space to make room. */}
+          {focusMode && <MedicalArtClinic />}
+
           {/* 1. Master Timer Card */}
           <div className="doodle-timer-card">
+            {/* Chart header: the badge that makes the card read as a patient chart rather than
+                a generic panel. Decorative twin of the mode label below it, so the icon is
+                hidden and the text is the accessible name of nothing -- it is a heading. */}
+            <p className="timer-chart-head">
+              <span className="timer-chart-badge" aria-hidden="true">
+                <Activity />
+              </span>
+              {t.chart}
+            </p>
+
             {/* Mode Switcher Tabs (Only when timer is stopped) */}
             {!timer && (
               <div className="timer-mode-segmented-tabs" role="tablist">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={mode === "FOCUS"}
-                  onClick={() => setMode("FOCUS")}
-                  className={`timer-mode-tab ${mode === "FOCUS" ? "active" : ""}`}
-                >
-                  {t.focus} ({props.preferences.focus}m)
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={mode === "SHORT_BREAK"}
-                  onClick={() => setMode("SHORT_BREAK")}
-                  className={`timer-mode-tab ${mode === "SHORT_BREAK" ? "active" : ""}`}
-                >
-                  {t.short} ({props.preferences.shortBreak}m)
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={mode === "LONG_BREAK"}
-                  onClick={() => setMode("LONG_BREAK")}
-                  className={`timer-mode-tab ${mode === "LONG_BREAK" ? "active" : ""}`}
-                >
-                  {t.long} ({props.preferences.longBreak}m)
-                </button>
+                {/* The pill slides between the three cells; the tabs themselves only change
+                    colour. It sits before them in the DOM so it paints underneath without
+                    needing a z-index on every tab. `--tab-index` is set here rather than on
+                    the parent because a child's transform must not be driven by a variable
+                    on an ancestor -- the variable would inherit into every descendant and
+                    any of them could pick it up by accident. */}
+                <span
+                  className="timer-mode-indicator"
+                  aria-hidden="true"
+                  style={{ "--tab-index": activeTabIndex } as React.CSSProperties}
+                />
+                {modeTabs.map((tab) => (
+                  <button
+                    key={tab.value}
+                    type="button"
+                    role="tab"
+                    aria-selected={mode === tab.value}
+                    onClick={() => setMode(tab.value)}
+                    className="timer-mode-tab"
+                  >
+                    <span className="timer-mode-tab-name">{tab.label}</span>
+                    <span className="timer-mode-tab-mins">
+                      {tab.minutes}
+                      {t.minShort}
+                    </span>
+                  </button>
+                ))}
               </div>
             )}
 
@@ -465,24 +595,108 @@ export function FocusWorkspace(props: Props) {
               <p className="timer-active-mode-label">
                 {mode === "FOCUS" ? t.focus : mode === "SHORT_BREAK" ? t.short : t.long}
               </p>
-              <span className={`timer-live-status ${timer?.status?.toLowerCase() ?? "ready"}`}>
+              <span className={`timer-live-status ${dialStatus}`}>
                 <i aria-hidden="true" />
-                {!timer ? t.ready : timer.status === "PAUSED" ? t.paused : t.running}
+                {dialStatus === "ready"
+                  ? t.ready
+                  : dialStatus === "paused"
+                    ? t.paused
+                    : dialStatus === "done"
+                      ? t.done
+                      : t.running}
               </span>
             </div>
 
+            {/* `key` restarts the entrance animation on exactly the two events that deserve
+                one -- starting a session and cancelling back to idle -- without a class to
+                add and then remove. */}
             <div
+              key={timer?.id ?? "idle"}
               className="timer-dial"
-              style={{ "--timer-progress": `${elapsedPercent * 3.6}deg` } as React.CSSProperties}
+              data-status={dialStatus}
+              data-finishing={finishing ? "on" : "off"}
             >
+              {/* Replaces a conic-gradient, which had to repaint the whole 19rem circle on
+                  every tick. `rotate(-90 50 50)` is an attribute, not CSS, so the element's
+                  transform stays available to the breathing animation. Clockwise in RTL too:
+                  clocks do not mirror. */}
+              <svg className="timer-ring" viewBox="0 0 100 100" aria-hidden="true">
+                <circle className="timer-ring-track" cx="50" cy="50" r={RING_RADIUS} />
+                {/* Graduations inside the ring, on the annulus between it and the plate. Two
+                    dashed circles; see the gauge() helper for how a dash array becomes ticks. */}
+                <circle className="timer-gauge timer-gauge-minor" cx="50" cy="50" {...TICKS_MINOR} />
+                <circle className="timer-gauge timer-gauge-major" cx="50" cy="50" {...TICKS_MAJOR} />
+                <circle
+                  className="timer-ring-progress"
+                  cx="50"
+                  cy="50"
+                  r={RING_RADIUS}
+                  transform="rotate(-90 50 50)"
+                  strokeDasharray={RING_LENGTH}
+                  strokeDashoffset={RING_LENGTH * (1 - ringProgress)}
+                />
+              </svg>
               <div className="timer-dial-inner">
-                <Clock3 aria-hidden="true" />
-                <output className="giant-timer-digits" aria-label={`${formatClock(remaining)} ${t.remaining}`}>
-                  {formatClock(remaining)}
+                {finishing ? (
+                  <Check className="timer-dial-check" aria-hidden="true" />
+                ) : dialStatus === "ready" ? (
+                  <Stethoscope aria-hidden="true" />
+                ) : (
+                  /* Beats while the session runs and holds still while it is paused, which is
+                     the same information the status pill carries in words. */
+                  <HeartPulse className="timer-dial-pulse" aria-hidden="true" />
+                )}
+                <output className="giant-timer-digits" aria-label={`${clock} ${t.remaining}`}>
+                  {/* The digit cells are decorative scaffolding for the roll animation, so
+                      they are hidden and one plain string is left for assistive tech --
+                      otherwise `role="status"` would announce the clock character by
+                      character. Keeping real text (not just the label) is what makes the
+                      live region fire at all when the value changes. */}
+                  <span className="sr-only">{clock}</span>
+                  {clock.split("").map((ch, index) =>
+                    ch === ":" ? (
+                      <span key={`sep-${index}`} className="timer-digit-sep" aria-hidden="true">
+                        :
+                      </span>
+                    ) : (
+                      <span key={`digit-${index}`} className="timer-digit" aria-hidden="true">
+                        {/* Keyed on the character: React remounts this span only when the
+                            digit actually changes, which is what makes the animation run
+                            per-digit instead of on all four every second. */}
+                        <span key={ch} className="timer-digit-value">
+                          {ch}
+                        </span>
+                      </span>
+                    ),
+                  )}
                 </output>
+                {/* The monitor trace. One static path in a clipping window that the stylesheet
+                    slides sideways -- a transform on a composited layer rather than anything
+                    redrawn per frame, and the only element in the plate that is pure texture. */}
+                <span className="timer-ecg" aria-hidden="true">
+                  <svg viewBox="0 0 480 40" preserveAspectRatio="none">
+                    <path className="timer-ecg-line" d={ECG_PATH} />
+                  </svg>
+                </span>
                 <span>{t.remaining}</span>
               </div>
             </div>
+
+            {/* Printed scale beside the gauge. `direction: ltr` on the values, not the row: the
+                labels are translated and belong in the reading order, the numbers do not. */}
+            <dl className="timer-vitals">
+              <div className="timer-vital">
+                <dt>{t.dose}</dt>
+                <dd>
+                  {doseMinutes}
+                  {t.minShort}
+                </dd>
+              </div>
+              <div className="timer-vital">
+                <dt>{t.progress}</dt>
+                <dd>{progressLabel}</dd>
+              </div>
+            </dl>
 
             {/* Context: Linked task / subject */}
             {timer?.task && (
@@ -584,6 +798,8 @@ export function FocusWorkspace(props: Props) {
               </p>
             )}
           </div>
+
+          {focusMode && <MedicalArtLab />}
 
           {/* 2. Side Settings Card (Hidden in Fullscreen) */}
           {!focusMode && (

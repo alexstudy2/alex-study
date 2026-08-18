@@ -2,9 +2,12 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { Sparkles, BookOpen, Moon, Compass, Coffee, Heart, Check, ChevronDown } from "lucide-react";
-import type { StudyMood } from "./study-background";
-
-export const MOOD_STORAGE_KEY = "alex-study-bg-mood";
+import {
+  MOOD_STORAGE_KEY,
+  applyMood,
+  saveMood,
+  type StudyMood,
+} from "@/lib/settings/study-mood";
 
 export const STUDY_MOODS: {
   id: StudyMood;
@@ -65,24 +68,19 @@ export const STUDY_MOODS: {
 export function StudyBackgroundSelector({
   locale = "en",
   variant = "sidebar",
+  initialMood = "notebook",
 }: {
   locale?: "en" | "ar";
   variant?: "sidebar" | "compact" | "cards";
+  initialMood?: StudyMood;
 }) {
-  const [currentMood, setCurrentMood] = useState<StudyMood>("notebook");
+  const [currentMood, setCurrentMood] = useState<StudyMood>(initialMood);
   const [isOpen, setIsOpen] = useState(false);
   const [, startTransition] = useTransition();
 
+  /* Sync only. The starting mood is server-rendered (both as this prop and as `data-mood`
+     on <html>), so there is no localStorage read on mount to flash the palette. */
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(MOOD_STORAGE_KEY) as StudyMood | null;
-      if (saved && STUDY_MOODS.some((m) => m.id === saved)) {
-        setCurrentMood(saved);
-      }
-    } catch {
-      // Ignore
-    }
-
     const handleStorage = (e: StorageEvent) => {
       if (e.key === MOOD_STORAGE_KEY && e.newValue) {
         startTransition(() => setCurrentMood(e.newValue as StudyMood));
@@ -93,21 +91,17 @@ export function StudyBackgroundSelector({
   }, []);
 
   const selectMood = (mood: StudyMood) => {
+    const previous = currentMood;
     startTransition(() => {
       setCurrentMood(mood);
-      try {
-        document.documentElement.dataset.mood = mood;
-        localStorage.setItem(MOOD_STORAGE_KEY, mood);
-        window.dispatchEvent(
-          new StorageEvent("storage", {
-            key: MOOD_STORAGE_KEY,
-            newValue: mood,
-          })
-        );
-      } catch {
-        // Ignore
-      }
+      applyMood(mood);
       setIsOpen(false);
+    });
+    /* Optimistic: the palette has already switched. Undo the whole thing if the write
+       fails, so the UI never shows a preference the server did not accept. */
+    void saveMood(mood).catch(() => {
+      setCurrentMood(previous);
+      applyMood(previous);
     });
   };
 
@@ -115,6 +109,37 @@ export function StudyBackgroundSelector({
   const title = isAr ? "أجواء وخلفية المذاكرة" : "Study Background Mood";
   const activeMoodObj = STUDY_MOODS.find((m) => m.id === currentMood) ?? STUDY_MOODS[0];
   const ActiveIcon = activeMoodObj.icon;
+
+  /* Flat grid of tappable cards. Used inside the mobile navigation sheet, where a
+     nested dropdown would fight the sheet's focus trap. */
+  if (variant === "cards") {
+    return (
+      <div className="study-mood-card-grid" role="radiogroup" aria-label={title}>
+        {STUDY_MOODS.map((m) => {
+          const Icon = m.icon;
+          const active = currentMood === m.id;
+          return (
+            <button
+              key={m.id}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              onClick={() => selectMood(m.id)}
+              className={`study-mood-card ${active ? "active" : ""}`}
+            >
+              <span className="study-mood-card-icon" style={{ color: m.colorToken }}>
+                <Icon className="w-4 h-4" aria-hidden="true" />
+              </span>
+              <span className="study-mood-card-label">
+                {isAr ? m.labelAr : m.labelEn}
+              </span>
+              {active && <Check className="study-mood-card-check" aria-hidden="true" />}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
 
   if (variant === "sidebar") {
     return (

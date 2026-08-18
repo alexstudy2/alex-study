@@ -3,6 +3,7 @@ import { Delius_Swash_Caps, Delius, JetBrains_Mono, IBM_Plex_Sans_Arabic } from 
 import { getLocale, getMessages } from "next-intl/server";
 import { AppShell } from "@/components/navigation/app-shell";
 import { StudyBackground } from "@/components/ui/study-background";
+import { moodFromEnum } from "@/lib/settings/study-mood";
 import { Providers } from "@/components/providers";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
@@ -56,35 +57,32 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         where: { id: session.user.id },
         select: {
           name: true,
-          preference: { select: { locale: true, theme: true } },
+          preference: { select: { locale: true, studyMood: true } },
           _count: { select: { notifications: { where: { readAt: null } } } },
         },
       })
     : null;
   const locale = profile?.preference?.locale.toLowerCase() ?? (await getLocale());
   const messages = await getMessages({ locale });
+  /* Rendered onto <html> so the correct palette is in the very first paint. Reading it
+     from localStorage after hydration is what caused the flash of the wrong theme. */
+  const mood = moodFromEnum(profile?.preference?.studyMood);
   return (
     <html
       lang={locale}
       dir={locale === "ar" ? "rtl" : "ltr"}
       className={`${deliusSwashCaps.variable} ${deliusBody.variable} ${jetbrainsMono.variable} ${ibmPlexArabic.variable}`}
-      data-theme={
-        profile?.preference?.theme === "DARK"
-          ? "dark"
-          : profile?.preference?.theme === "GIRLY"
-            ? "girly"
-            : "light"
-      }
+      data-mood={mood}
     >
       <body className="min-h-full flex flex-col relative">
-        <StudyBackground />
+        <StudyBackground initialMood={mood} />
         <Providers messages={messages} session={session} locale={locale}>
           <AppShell
             user={
               profile ? { name: profile.name, locale: profile.preference?.locale ?? "EN" } : null
             }
             unreadCount={profile?._count.notifications ?? 0}
-            initialTheme={profile?.preference?.theme ?? "LIGHT"}
+            initialMood={mood}
           >
             {children}
           </AppShell>

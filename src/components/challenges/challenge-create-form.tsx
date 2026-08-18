@@ -78,7 +78,7 @@ export function ChallengeCreateForm({
   return (
     <main className="challenge-form-shell" dir={ar ? "rtl" : "ltr"}>
       <header className="challenge-form-header">
-        <div>
+        <div className="page-header-text">
           <Link className="wordmark" href="/challenges">
             Alex Study
           </Link>

@@ -978,101 +978,21 @@
   box-shadow: var(--shadow-doodle);
 }
 
-/* 3. The Master Study Notebook Card */
-.master-notebook-card {
-  background: var(--surface);
-  border: 2px solid var(--secondary);
-  border-radius: var(--radius-doodle-card);
-  box-shadow: var(--shadow-doodle-md);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
+/* 3. The Master Study Notebook Card
+   ---------------------------------
+   The rules for this page's shell used to be split across two blocks ~470 lines apart: an
+   original flat-list design here, and the later "pinboard of sticky notes" redesign down at
+   the `Tasks pinboard` comment. Because components.css is one file they simply cascaded into
+   each other -- some declarations composed, some were silently dead, and nothing said which
+   was which. Everything now lives in the pinboard block, which is the design that actually
+   ships. Only rules with no counterpart there stayed behind.
 
-/* Integrated Quick-Add Row */
-.notebook-quick-add-line {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  background: var(--surface-sunken);
-  border-bottom: 2px dashed var(--secondary);
-  flex-wrap: wrap;
-}
-
-.quick-add-left-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
-}
-
-.quick-add-input {
-  flex: 1;
-  min-width: 200px;
-  border: 0;
-  background: transparent;
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  color: var(--foreground);
-  outline: none;
-  padding: var(--space-1) 0;
-}
+   The `.notebook-task-row` base rules were the clearest casualty: the component renders
+   `notebook-task-row sticky-task-note` together on every card, so `.notebook-task-row.sticky-task-note`
+   (0,2,0) outranked all of them and every declaration was unreachable. */
 
 .quick-add-input::placeholder {
   color: var(--muted);
-}
-
-.quick-add-options {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.quick-add-select {
-  padding: 0.35rem 0.65rem;
-  border-radius: var(--radius-md);
-  border: 1.5px solid var(--secondary);
-  background: var(--surface);
-  color: var(--foreground);
-  font-size: var(--text-xs);
-  font-weight: 700;
-  cursor: pointer;
-  outline: none;
-}
-
-/* Notebook Tasks Surface */
-.notebook-tasks-surface {
-  display: flex;
-  flex-direction: column;
-  min-height: 280px;
-}
-
-.notebook-task-list {
-  display: flex;
-  flex-direction: column;
-}
-
-.notebook-task-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-5);
-  border-bottom: 1.5px solid var(--line);
-  background: var(--surface);
-  transition: background var(--transition-fast);
-}
-
-.notebook-task-row:last-child {
-  border-bottom: 0;
-}
-
-.notebook-task-row:hover {
-  background: var(--surface-hover);
-}
-
-.notebook-task-row.completed {
-  opacity: 0.55;
 }
 
 .task-row-left {
@@ -1194,23 +1114,25 @@
   color: var(--muted);
 }
 
-.task-subtasks-pill {
+/* Not a pill. It reads as part of the title line -- a count with a caret -- because it is the
+   only one of the old four badges that was a control rather than a label, and mixing the two
+   in one row was most of why that row felt busy. min-height holds the WCAG 2.5.8 24px floor
+   now that there is no padding or border to carry it. */
+.task-subtasks-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  padding: 3px 8px;
-  border-radius: var(--radius-full);
-  font-size: 11px;
-  background: var(--surface-sunken);
-  border: 1.5px solid var(--secondary);
-  color: var(--secondary);
-  cursor: pointer;
-  transition: all var(--transition-fast);
+  gap: 2px;
   min-height: 1.5rem;
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
 }
 
-.task-subtasks-pill:hover {
-  background: var(--primary-subtle);
+.task-subtasks-toggle:hover {
+  color: var(--foreground);
 }
 
 .notebook-subtasks-box {
@@ -1445,8 +1367,12 @@
 @media (max-width: 900px) { .lobby-studio-grid { grid-template-columns: minmax(0, 1fr); } .lobby-members-panel { position: static; } }
 @media (max-width: 600px) { .lobby-timer-setup { grid-template-columns: 1fr 1fr; } .lobby-duration-presets { grid-column: 1 / -1; } .lobby-my-task-form, .lobby-chat-card form { grid-template-columns: 1fr; } .lobby-message-list article { max-width: 100%; } }
 
-/* Tasks pinboard: tactile sticky notes with subject-aware accents. */
+/* Tasks pinboard: tactile sticky notes with subject-aware accents.
+   Sole owner of the notebook shell -- see the breadcrumb at "3. The Master Study Notebook
+   Card" above for why the earlier copies of these selectors are gone. */
 .master-notebook-card {
+  display: flex;
+  flex-direction: column;
   border: 2px solid var(--secondary);
   border-radius: var(--radius-doodle-card);
   background:
@@ -1457,13 +1383,19 @@
 }
 
 .notebook-quick-add-line {
+  display: flex;
   align-items: stretch;
+  gap: var(--space-2);
+  flex-wrap: wrap;
   padding: var(--space-4);
   border-bottom: 2px dashed var(--secondary);
   background: var(--surface);
 }
 
 .quick-add-left-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 2.5rem;
   min-height: 2.75rem;
   border: 1.5px solid var(--secondary);
@@ -1472,19 +1404,57 @@
 }
 
 .quick-add-input {
+  flex: 1;
+  min-width: 200px;
   min-height: 2.75rem;
   padding: 0.5rem 0.75rem;
   border: 2px solid var(--secondary);
   border-radius: var(--radius-md);
   background: var(--surface);
   box-shadow: var(--shadow-doodle-xs);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--foreground);
+  outline: none;
 }
 
 .quick-add-input:focus { border-color: var(--primary-strong); }
-.quick-add-options { flex-wrap: wrap; }
-.quick-add-select { min-height: 2.75rem; border-width: 2px; box-shadow: var(--shadow-doodle-xs); }
 
-.notebook-tasks-surface { padding: var(--space-5); }
+.quick-add-options {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.quick-add-select {
+  min-height: 2.75rem;
+  padding: 0.35rem 0.65rem;
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-doodle-xs);
+  color: var(--foreground);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+}
+
+/* Both of these are mobile affordances; above the breakpoint the controls they gate are
+   already on screen, so showing a toggle for them would be pure noise. */
+.notebook-manage-toggle,
+.quick-add-options-toggle {
+  display: none;
+}
+
+.notebook-tasks-surface {
+  display: flex;
+  flex-direction: column;
+  min-height: 280px;
+  padding: var(--space-5);
+}
+
 .notebook-task-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
@@ -1524,11 +1494,16 @@
   transform: translateX(-50%) rotate(-2deg);
 }
 
-.notebook-task-row.sticky-task-note:hover {
-  z-index: 2;
-  background: color-mix(in srgb, var(--note-color) 25%, var(--surface));
-  box-shadow: 6px 7px 0 var(--secondary);
-  transform: translateY(-3px) rotate(0deg);
+/* Gated on a hovering pointer. A touch tap leaves :hover latched on the tapped element in
+   every mobile browser, so without this the card the user last touched stays lifted and
+   darkened while they scroll -- reading as a stuck selection rather than a hover. */
+@media (hover: hover) {
+  .notebook-task-row.sticky-task-note:hover {
+    z-index: 2;
+    background: color-mix(in srgb, var(--note-color) 25%, var(--surface));
+    box-shadow: 6px 7px 0 var(--secondary);
+    transform: translateY(-3px) rotate(0deg);
+  }
 }
 
 .notebook-task-row.sticky-task-note.dragging { z-index: 5; opacity: 0.85; box-shadow: 8px 9px 0 var(--secondary); }
@@ -1593,11 +1568,6 @@
   pointer-events: none;
   z-index: 2;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-}
-
-:root[data-theme="dark"] .sticky-tape-top {
-  background: rgba(202, 138, 4, 0.5);
-  border-color: var(--line-strong);
 }
 
 :root[data-mood="sakura"] .sticky-tape-top {
@@ -1742,7 +1712,7 @@
   gap: var(--space-2);
 }
 
-:root[data-theme="dark"] .sticky-empty-state {
+:root[data-mood="cosmic"] .sticky-empty-state {
   background: rgba(0, 0, 0, 0.2);
 }
 
@@ -1788,28 +1758,97 @@
 .course-name-input, .course-color-select { min-height: 2.6rem; border: 2px solid var(--secondary); border-radius: var(--radius-md); background: var(--surface); color: var(--foreground); padding: 0.45rem 0.7rem; font: inherit; }
 .detailed-form-drawer { padding: var(--space-5); border: 2px solid var(--secondary); border-radius: var(--radius-doodle-card); background: var(--surface); box-shadow: var(--shadow-doodle); }
 
-@media (max-width: 720px) {
+/* ================= Tasks page: mobile layout =================
+   768px, not the 720px this block used to use. Everything else that reacts to "this is a
+   phone" -- the bottom nav, the Phase 4 comfort pass, the page-header step-down -- switches
+   at 768, and a card that keeps its pinboard tilt for the 48px between the two is the kind
+   of inconsistency nobody can reproduce on purpose. */
+@media (max-width: 768px) {
   .notebook-tasks-surface { padding: var(--space-4); }
   .notebook-task-list { grid-template-columns: 1fr; }
-  .notebook-task-row.sticky-task-note { min-height: 12rem; transform: none; }
-  .quick-add-options, .quick-add-options > * { width: 100%; }
+
+  .notebook-task-row.sticky-task-note {
+    /* 12rem was still the pinboard's number: it kept every note the same height so the grid
+       read as a wall of paper. One per row, it is just dead scroll under short tasks. */
+    min-height: 0;
+    /* The extra top padding existed only to clear the tape strip, which is gone below. */
+    padding: var(--space-4);
+    transform: none;
+  }
+
+  /* The tape and the tilt are a set: both only make sense against neighbouring notes, and
+     both have to be switched off by selector, because the base rule is not the only place
+     they are set -- :nth-child re-declares transform for two out of every three cards. */
+  .notebook-task-row.sticky-task-note:nth-child(3n + 2),
+  .notebook-task-row.sticky-task-note:nth-child(3n) { transform: none; }
+  .notebook-task-row.sticky-task-note::before { display: none; }
+
+  /* Paired with min-height above -- leaving this at 10rem would put the dead space back
+     inside the card instead of around it. */
+  .sticky-task-note .task-row-body { min-height: 0; }
+
+  /* Manage mode. Hidden by default, revealed for the whole list by the header toggle: the
+     move buttons exist because touch drag-and-drop is unreliable, which is a reason to keep
+     them reachable, not a reason to show three buttons and a divider on every card. Delete
+     stays available here and on the task detail page. */
+  .notebook-task-row[data-manage="off"] .task-row-actions { display: none; }
+
+  .notebook-manage-toggle,
+  .quick-add-options-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    padding: 0 var(--space-2);
+    border: 2px solid var(--secondary);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    box-shadow: var(--shadow-doodle-xs);
+    color: var(--foreground);
+    font-size: var(--text-xs);
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .notebook-manage-toggle.active,
+  .quick-add-options-toggle.active {
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+
+  /* Quick add collapses to [pen] [input] [options] [add]. The two selects live in
+     .quick-add-options, which is the only part that folds away -- submit was moved out of
+     that wrapper in the component so it cannot be hidden with them. */
+  .notebook-quick-add-line[data-options="off"] .quick-add-options { display: none; }
+  .quick-add-options { flex: 1 1 100%; }
+  .quick-add-options > .quick-add-select { flex: 1 1 calc(50% - var(--space-2)); min-width: 0; }
+
+  /* Only min-width moves; the base rule's `flex: 1` (= `1 1 0%`) has to survive. Flexbox
+     decides where to wrap from base sizes *before* it shrinks anything, and a bare
+     `<input type="text">` has an intrinsic base of ~20 characters -- so with any non-zero
+     basis the icon and the input alone filled a 320px row and pushed submit to its own
+     line, which is the opposite of collapsing. With basis 0 the input contributes nothing
+     to that decision and simply absorbs whatever the other three leave. */
+  .quick-add-input { min-width: 0; }
+
+  /* `.btn-sm` is a flat 32px. Next to a 44px input and a 44px options toggle that reads as
+     a mistake, and it is the primary action of the row. Wins on source order -- same
+     specificity as `.btn-sm`, declared later in this file. */
+  .quick-add-submit { height: 2.75rem; }
+
   .inline-new-course-popup { grid-template-columns: 1fr; }
 }
 
-@media (max-width: 480px) {
-  .notebook-quick-add-line {
-    flex-wrap: wrap;
-  }
-  .notebook-quick-add-line input {
-    min-width: 0;
-    flex: 1 1 100%;
-  }
-  .notebook-quick-add-line select {
-    flex: 1 1 calc(50% - var(--space-2));
-  }
-  .notebook-task-row .inline-actions {
-    gap: var(--space-1);
-  }
+/* The row is [pen 40][input][options 44][add 74] plus three 8px gaps and 2x16px of card
+   padding, so the input gets `viewport - 248`. That is 112px at 360px -- tight but typable --
+   and 72px at 320px, which is about six characters and not enough to see what you wrote.
+   The pen is the only part of that sum carrying no function, so below 360px it goes and the
+   input gets its 48px back. 359 rather than 360 because 360 itself is fine and is by far the
+   most common small Android width. */
+@media (max-width: 359px) {
+  .quick-add-left-icon { display: none; }
 }
 
 /* ================= Focus Workspace & Fullscreen Zen Mode ================= */
@@ -1823,10 +1862,12 @@
 /* Fullscreen Immersive Mode */
 .focus-workspace-container.fullscreen-focus-active {
   position: fixed;
+  /* `inset: 0` already sizes this to the viewport, and it tracks a mobile browser's
+     collapsing URL bar. The `100vw`/`100vh` pair it replaced did not: 100vh is the *large*
+     viewport, so the bottom of the timer sat under the browser chrome on a phone, and
+     100vw ignores the desktop scrollbar and forced a horizontal overflow. */
   inset: 0;
   z-index: 99999;
-  width: 100vw;
-  height: 100vh;
   background: var(--surface-sunken);
   background-image: radial-gradient(var(--line) 1.2px, transparent 1.2px);
   background-size: 24px 24px;
@@ -1834,7 +1875,9 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  /* Deliberately covers the bottom nav (z-index 50), so it owes the safe area itself. */
   padding: clamp(var(--space-4), 3vh, var(--space-8)) var(--space-4);
+  padding-bottom: calc(clamp(var(--space-4), 3vh, var(--space-8)) + env(safe-area-inset-bottom, 0px));
   margin: 0;
   overflow-y: auto;
   box-sizing: border-box;
@@ -1843,7 +1886,8 @@
 /* Sticky Note Exit Button in Fullscreen Focus Mode */
 .fullscreen-exit-sticky-btn {
   position: fixed;
-  top: var(--space-5);
+  /* The only way out of fullscreen, so it must not sit under a notch or status bar. */
+  top: calc(var(--space-5) + env(safe-area-inset-top, 0px));
   right: var(--space-5);
   z-index: 100000;
   width: 2.85rem;
@@ -1980,45 +2024,10 @@
   padding: clamp(var(--space-8), 8vw, var(--space-12));
 }
 
-/* Mode Segmented Switcher */
-.timer-mode-segmented-tabs {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px;
-  background: var(--surface-sunken);
-  border: 2px solid var(--secondary);
-  border-radius: var(--radius-full);
-  box-shadow: var(--shadow-doodle-xs);
-  margin-bottom: var(--space-4);
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.timer-mode-tab {
-  padding: 0.4rem 0.9rem;
-  border-radius: var(--radius-full);
-  font-size: var(--text-xs);
-  font-weight: 800;
-  font-family: var(--font-sans);
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all var(--transition-fast);
-}
-
-.timer-mode-tab:hover {
-  color: var(--foreground);
-}
-
-.timer-mode-tab.active {
-  background: var(--primary);
-  color: var(--primary-foreground);
-  border: 1.5px solid var(--secondary);
-  box-shadow: 1px 1px 0px var(--secondary);
-}
+/* Mode segmented switcher: see the "Focus timer refresh" section below. The tabs became a
+   fixed 3-column grid with one sliding indicator, which has nothing in common with the
+   inline-flex-plus-active-class version that used to live here, so it is defined once there
+   rather than half here and half there. */
 
 .fullscreen-trigger-btn {
   position: absolute;
@@ -2041,27 +2050,8 @@
   margin: 0;
 }
 
-/* Giant Timer Output */
-.giant-timer-digits {
-  font-family: var(--font-mono);
-  font-size: clamp(4rem, 14vw, 7.5rem);
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-  margin: var(--space-3) 0 var(--space-4);
-  color: var(--secondary);
-  letter-spacing: -0.02em;
-  line-height: 1;
-  padding: 0.35rem 1.5rem;
-  border-radius: var(--radius-doodle-card);
-  background: var(--surface-sunken);
-  border: 2px dashed var(--secondary);
-  display: block;
-}
-
-.fullscreen-focus-active .giant-timer-digits {
-  font-size: clamp(5.5rem, 18vw, 10rem);
-  padding: 0.5rem 2rem;
-}
+/* Giant timer output: also defined once in the "Focus timer refresh" section, because the
+   digits are now individually animated cells rather than one text node. */
 
 .timer-context-pill {
   font-size: var(--text-xs);
@@ -2082,27 +2072,7 @@
   flex-wrap: wrap;
 }
 
-/* Distraction Button */
-.doodle-distraction-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: 0.4rem 0.9rem;
-  border-radius: var(--radius-full);
-  border: 2px dashed var(--warning);
-  background: var(--surface-sunken);
-  color: var(--foreground);
-  font-family: var(--font-sans);
-  font-size: var(--text-xs);
-  font-weight: 800;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.doodle-distraction-btn:hover {
-  background: var(--warning-subtle, #FEF3C7);
-  transform: translateY(-1px);
-}
+/* Distraction button: single definition in the "Focus timer refresh" section. */
 
 .distraction-counter-badge {
   display: inline-flex;
@@ -2119,20 +2089,8 @@
   font-family: var(--font-mono);
 }
 
-/* Sidebar Setup Card */
-.focus-sidebar-card {
-  padding: var(--space-5);
-  border: 2px solid var(--secondary);
-  border-radius: var(--radius-doodle-card);
-  background: var(--surface);
-  box-shadow: var(--shadow-doodle);
-}
-
-.focus-field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
+/* Sidebar setup card and .focus-field: single definitions in the "Focus timer refresh"
+   section. Every declaration that used to be here was re-declared there verbatim. */
 
 /* Celebration Overlay */
 .celebration-overlay {
@@ -2207,9 +2165,10 @@
   min-height: 38rem;
   justify-content: center;
   overflow: hidden;
-  background:
-    linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 100% 2rem,
-    var(--surface);
+  /* The ruled-paper `background` shorthand that used to be here never painted: the shared card
+     rule further down the file sets `background-color` and the corner-doodle `background-image`
+     as longhands, and a longhand later in the file beats an earlier shorthand every time. The
+     card's surface is set for real in the medical section below, past both of them. */
 }
 
 .doodle-timer-card::before,
@@ -2227,9 +2186,88 @@
 .doodle-timer-card::before { top: 0.8rem; left: 2rem; }
 .doodle-timer-card::after { right: 2rem; bottom: 0.8rem; transform: rotate(5deg); }
 
-.timer-mode-segmented-tabs { position: relative; z-index: 1; border-radius: var(--radius-md); }
-.timer-mode-tab { min-height: 2.5rem; border-radius: var(--radius-sm); }
-.timer-mode-tab.active { color: var(--secondary); background: var(--primary); }
+/* Three equal cells with no gap, so the sliding pill can be exactly one cell wide and move
+   by whole multiples of its own width. A gap would force `calc(100% + gap)` here and the
+   same arithmetic again in the width, and the two drift apart the moment either changes. */
+.timer-mode-segmented-tabs {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: min(22rem, 100%);
+  margin-bottom: var(--space-4);
+  padding: 4px;
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  box-shadow: var(--shadow-doodle-xs);
+}
+
+/* Out of the grid flow so it can sit under the labels. The percentage resolves against the
+   parent's padding box, which is 8px wider than the grid's content box -- hence the -8px
+   before the divide. `--tab-dir` flips the travel for Arabic instead of a duplicated rule:
+   grid places cell 0 on the right in RTL and `inset-inline-start` follows it there, but
+   `translateX` is physical and still has to be told to go the other way. */
+.timer-mode-indicator {
+  --tab-index: 0;
+  --tab-dir: 1;
+  position: absolute;
+  inset-block: 4px;
+  inset-inline-start: 4px;
+  width: calc((100% - 8px) / 3);
+  border: 1.5px solid var(--secondary);
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  box-shadow: 1px 1px 0 var(--secondary);
+  transform: translateX(calc(var(--tab-index) * var(--tab-dir) * 100%));
+  transition: transform 160ms var(--ease-in-out);
+}
+
+[dir="rtl"] .timer-mode-indicator { --tab-dir: -1; }
+
+/* `position` only so the labels paint above the pill: an absolutely positioned sibling
+   paints after all static content regardless of DOM order, so without this the pill would
+   cover the text it is meant to sit behind. */
+.timer-mode-tab {
+  position: relative;
+  display: grid;
+  place-items: center;
+  gap: 0.05rem;
+  min-height: 2.75rem;
+  padding: 0.35rem 0.25rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  cursor: pointer;
+  /* Colour only. `all` would also animate `background: transparent`, so the old instant
+     swap would cross-fade underneath the sliding pill and read as two transitions. */
+  transition: color 160ms ease;
+}
+
+.timer-mode-tab:hover { color: var(--foreground); }
+
+/* `aria-selected` is the state, so it may as well be the selector -- one source of truth
+   instead of a class that has to be kept in step with it. */
+.timer-mode-tab[aria-selected="true"] { color: var(--secondary); }
+.timer-mode-tab[aria-selected="true"] .timer-mode-tab-mins { color: var(--secondary); opacity: 0.75; }
+
+/* clamp rather than --text-xs: at 320px a cell is about 86px, and "Long break" /
+   "استراحة طويلة" only stay on one line below ~11px. */
+.timer-mode-tab-name {
+  font-size: clamp(0.68rem, 2.5vw, var(--text-xs));
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.timer-mode-tab-mins {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 800;
+  line-height: 1;
+}
 
 .timer-status-row {
   display: flex;
@@ -2258,44 +2296,149 @@
 .timer-live-status i { width: 0.55rem; height: 0.55rem; border: 1px solid var(--secondary); border-radius: 50%; background: var(--muted); }
 .timer-live-status.running i { background: var(--success); animation: timer-pulse 1.5s ease-in-out infinite; }
 .timer-live-status.paused i { background: var(--warning); }
+.timer-live-status.done i { background: var(--success); }
 
 .timer-dial {
-  --timer-progress: 0deg;
+  position: relative;
   display: grid;
   place-items: center;
   width: min(19rem, 72vw);
   aspect-ratio: 1;
   margin: var(--space-5) auto;
-  padding: 0.75rem;
-  border: 2px solid var(--secondary);
   border-radius: 50%;
-  background: conic-gradient(var(--primary) var(--timer-progress), var(--surface-sunken) 0);
-  box-shadow: var(--shadow-doodle-md);
-  transition: background 0.25s linear;
+  /* The outer solid border and the conic-gradient that used to be here are both gone: the
+     SVG ring is the frame now, and two concentric circles a pixel apart only ever looked
+     like a rendering mistake. The gradient also repainted the whole 19rem circle per tick. */
+  animation: dial-in 280ms var(--ease-out) both;
+}
+
+.timer-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transition: opacity 200ms var(--ease-out);
+}
+
+.timer-ring-track,
+.timer-ring-progress {
+  fill: none;
+  stroke-width: 5;
+}
+
+.timer-ring-track { stroke: var(--surface-sunken); }
+
+.timer-ring-progress {
+  stroke: var(--primary);
+  stroke-linecap: round;
+  /* linear because the value underneath advances linearly -- easing each tick would make
+     the ring visibly lag the digits it wraps. 0.35s so one tick always lands before the
+     next arrives. This is a deliberate exception to transform/opacity-only: it repaints a
+     stroke rather than compositing a full-circle gradient, which is what it replaced. */
+  transition: stroke-dashoffset 0.35s linear;
+}
+
+/* Breathing goes on the ring, not the dial: the dial owns the entrance animation and one
+   element cannot run two transforms without fill-mode games, and scaling the dial would
+   scale the digits, which makes text shimmer. 1.5% over 4s is deliberately at the edge of
+   perception -- this runs for the whole session, so it has the smallest possible budget. */
+.timer-dial[data-status="running"] .timer-ring {
+  animation: timer-breathe 4s var(--ease-in-out) infinite;
+}
+
+/* Paused reads at a glance instead of only in the status pill: the breathing stops, because
+   it is gated on the attribute above, and the ring steps back. Opacity, so nothing reflows
+   and the digits stay at full contrast -- they are still the thing you are looking at. */
+.timer-dial[data-status="paused"] .timer-ring { opacity: 0.55; }
+
+/* The finish fills the ring from wherever it had reached, so it needs a longer, eased
+   sweep than a one-second tick. */
+.timer-dial[data-finishing="on"] .timer-ring-progress {
+  transition: stroke-dashoffset 520ms var(--ease-out);
 }
 
 .timer-dial-inner {
+  position: relative;
+  z-index: 1;
   display: grid;
   place-items: center;
-  width: 100%;
-  height: 100%;
-  padding: var(--space-4);
-  border: 2px dashed var(--secondary);
+  /* Sized rather than inset with padding on the dial: percentage padding resolves against
+     the *containing block's* inline size, not the element's own, so `padding: 8%` on the
+     dial was 8% of the timer card -- 20px at 320px and 49px at 1440px, which shrank the
+     plate to two thirds of the dial on desktop. A percentage width on the child resolves
+     against the dial, which is what the arithmetic needs.
+
+     74% rather than the 84% it started at, because the annulus between the plate and the ring
+     is no longer empty: the gauge graduations live there. The long ticks reach in to r=38.2 in
+     the ring's 0..100 viewBox (see the gauge() helper in focus-workspace.tsx), so a plate of
+     radius 37 clears them, and the ring stroke's inner edge at 43.5 is well clear above. */
+  width: 74%;
+  height: 74%;
+  padding: var(--space-3);
   border-radius: 50%;
+  /* The dashed border is gone for the same reason as the dial's: one ring, one plate, the
+     digits. `--surface` still reads against the card's pastel yellow, so the plate is
+     visible on its own without being outlined. */
   background: var(--surface);
 }
 
 .timer-dial-inner > svg { width: 1.25rem; height: 1.25rem; color: var(--primary-strong); }
 .timer-dial-inner > span { color: var(--muted); font-size: var(--text-xs); font-weight: 800; }
 
+/* Same box as the clock icon it replaces, so the plate does not reflow on the swap. Needs
+   to out-specify `.timer-dial-inner > svg` above, which is why it is written as a child. */
+.timer-dial-inner > .timer-dial-check {
+  color: var(--success);
+  animation: dial-check 420ms var(--ease-out) 120ms both;
+}
+
 .giant-timer-digits {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin: var(--space-2) 0;
   padding: 0;
   border: 0;
   background: transparent;
-  font-size: clamp(3.4rem, 8vw, 5.2rem);
+  color: var(--secondary);
+  font-family: var(--font-mono);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  /* Capped lower than the old 4.6rem: the plate came in from 84% of the dial to 74% to make
+     room for the gauge graduations, and the trace now takes a strip of its height too. At
+     4.1rem the five cells come to about 187px inside a 225px plate, which leaves room for a
+     wider fallback mono than the one this machine happens to have. */
+  font-size: clamp(3rem, 7vw, 4.1rem);
   letter-spacing: 0;
   line-height: 1;
+  /* The cells are flex items, and flex order follows `direction` -- so in Arabic the clock
+     would lay out as 43:21. Bidi would have handled a single text node correctly; separate
+     boxes it will not. */
+  direction: ltr;
+}
+
+/* Fixed cells so each digit rolls in place: the value inside is remounted whenever it
+   changes, and an auto-width cell would jump between glyph widths mid-animation. `1ch` is
+   exactly one digit in a tabular mono face. The height is 1.25em rather than 1em because
+   `overflow: hidden` clips against the box, not the glyph, and a digit's outline overflows
+   a line-height:1 line box by about a tenth of an em at each end. */
+.timer-digit,
+.timer-digit-sep {
+  display: grid;
+  place-items: center;
+  height: 1.25em;
+  overflow: hidden;
+}
+
+.timer-digit { width: 1ch; }
+/* Narrower than a digit so the colon does not sit in a full mono cell and pull the two
+   halves apart, but not so narrow that the glyph's own 1ch advance gets clipped by the
+   `overflow: hidden` above -- a colon's ink is a fraction of its advance and stays centred. */
+.timer-digit-sep { width: 0.75ch; opacity: 0.55; }
+
+.timer-digit-value {
+  display: block;
+  animation: digit-in 140ms var(--ease-out) both;
 }
 
 .timer-action-buttons { position: relative; z-index: 1; width: 100%; }
@@ -2315,7 +2458,18 @@
   background: var(--warning-subtle);
   color: var(--foreground);
   box-shadow: 3px 3px 0 var(--warning);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 800;
   text-align: start;
+  cursor: pointer;
+  /* Named properties rather than `all`: the button's hover state moves and re-shadows it,
+     and `all` would drag `border-color` into the same 140ms, so the `.confirmed` flash on a
+     logged distraction would fade in instead of landing. */
+  transition:
+    transform 140ms var(--ease-out),
+    box-shadow 140ms var(--ease-out),
+    background-color 140ms ease;
 }
 
 .doodle-distraction-btn:hover {
@@ -2392,7 +2546,10 @@
   font-family: var(--font-sans);
   box-shadow: var(--shadow-doodle-xs);
   outline: none;
-  transition: all var(--transition-fast);
+  /* Only the two things :focus actually changes. */
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease;
   cursor: pointer;
 }
 
@@ -2413,11 +2570,55 @@
   padding: clamp(var(--space-5), 3.5vw, var(--space-8)) clamp(var(--space-4), 3vw, var(--space-6));
 }
 .fullscreen-focus-active .giant-timer-digits {
-  font-size: clamp(3.2rem, 7vw, 4.8rem);
+  font-size: clamp(3.2rem, 7vw, 4.4rem);
   padding: 0;
 }
 
 @keyframes timer-pulse { 50% { transform: scale(1.25); } }
+
+/* Runs once when a session starts and once when one is cancelled -- the component keys the
+   dial on the timer id, so React remounts it and the animation replays without a class to
+   add and then remove. 0.94 rather than something smaller: an entrance that starts near
+   zero reads as a zoom, not an arrival. */
+@keyframes dial-in {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes timer-breathe {
+  50% { transform: scale(1.015); }
+}
+
+/* Fires on every digit that changes, which for the seconds column is once a second. That
+   frequency is why it is 140ms and 28% and starts at 0.15 opacity rather than 0: enough to
+   register as movement in the corner of your eye, not enough to draw it. */
+@keyframes digit-in {
+  from { opacity: 0.15; transform: translateY(-28%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dial-check {
+  from { opacity: 0; transform: scale(0.92) rotate(-10deg); }
+  to { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Fewer and gentler, not zero. What goes is everything that exists only for delight. What
+     stays is the ring's own transition: it is the progress readout, and a stroke that jumps
+     in four visible steps a minute is more distracting than one that slides, not less.
+     These all match the specificity of the rules above and come later in the file -- a media
+     query adds none of its own, so equal specificity plus source order is the whole
+     mechanism. */
+  .timer-dial,
+  .timer-dial[data-status="running"] .timer-ring,
+  .timer-digit-value,
+  .timer-dial-inner > .timer-dial-check,
+  .timer-live-status.running i {
+    animation: none;
+  }
+
+  .timer-mode-indicator { transition: none; }
+}
 
 @media (max-width: 860px) {
   .focus-main-grid { grid-template-columns: 1fr; }
@@ -2428,17 +2629,349 @@
 @media (max-width: 520px) {
   .doodle-timer-card { min-height: 31rem; padding: var(--space-5) var(--space-3); }
   .fullscreen-trigger-btn { position: static; margin-bottom: var(--space-3); }
-  .timer-mode-segmented-tabs { width: 100%; flex-wrap: wrap; gap: var(--space-1); }
-  .timer-mode-tab { flex: 1 1 6rem; white-space: normal; }
   .timer-action-buttons .btn-lg { flex: 1 1 9rem; min-width: 0; }
 }
 
-@media (max-width: 400px) {
-  .timer-mode-tab {
-    flex: 1 1 100%;
-    font-size: 0.75rem;
-    padding: var(--space-2);
-    text-align: center;
+/* The tabs no longer wrap -- they are three fixed columns and the labels shrink instead --
+   so the old `flex: 1 1 100%` / `white-space: normal` overrides for 520px and 400px are
+   gone. All that is still worth doing at the narrow end is buying the labels their
+   horizontal padding back. */
+@media (max-width: 360px) {
+  .timer-mode-tab { padding-inline: 0.1rem; }
+}
+
+/* ==========================================================================================
+   Focus timer, medical instrument pass
+   ------------------------------------------------------------------------------------------
+   The dial stops being a progress circle on a card and becomes a gauge on a chart: a sunken
+   bezel carrying graduations, a lit plate of graph paper with a monitor trace across it, and
+   two printed readouts beside it. Everything is token-driven, so the four light moods and the
+   dark one all get a coherent instrument without a single per-mood override -- `--secondary`
+   is the ink either way, and `--surface-sunken` is darker than `--surface` in all five.
+   ========================================================================================== */
+
+/* Two class names to get past the shared card rules further down the file, which set
+   `background-color` twice on `.doodle-timer-card` (once `--surface`, then the pastel yellow)
+   and would otherwise win on source order. Only the colour is taken over: `background-image`
+   is left alone so the hand-drawn corner markings the card shares with every other card in the
+   app survive. Pulled towards `--surface` because a clinical chart is paler than a sticky note
+   and the pastel was doing all the talking. */
+.focus-workspace-container .doodle-timer-card {
+  background-color: color-mix(in srgb, var(--card-pastel-yellow) 76%, var(--surface));
+}
+
+.timer-chart-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 var(--space-2);
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.timer-chart-badge {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 1.5px solid var(--secondary);
+  border-radius: var(--radius-sm);
+  background: var(--danger-subtle);
+  color: var(--danger);
+  box-shadow: 1px 1px 0 var(--secondary);
+}
+
+.timer-chart-badge svg { width: 0.9rem; height: 0.9rem; }
+
+/* The bezel. The dial was transparent before, which left the graduations floating on the card;
+   sunken behind them they read as milled into an instrument face. */
+.timer-dial {
+  background: var(--surface-sunken);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--surface) 60%, transparent),
+    0 2px 6px color-mix(in srgb, var(--secondary) 14%, transparent);
+}
+
+/* The track has to change with the bezel: it was `--surface-sunken` too, which is now the
+   colour immediately behind it, so the groove had vanished. */
+.timer-ring-track {
+  stroke: color-mix(in srgb, var(--secondary) 18%, var(--surface-sunken));
+}
+
+.timer-gauge { fill: none; stroke-linecap: butt; }
+.timer-gauge-minor { stroke: color-mix(in srgb, var(--secondary) 38%, transparent); }
+.timer-gauge-major { stroke: color-mix(in srgb, var(--secondary) 72%, transparent); }
+
+/* A lit stroke rather than a printed one. The filter's repaint region is the arc's bounding
+   box and the arc only moves once a second, so this costs a great deal less than the
+   full-circle conic gradient the ring replaced -- and it is what makes the gauge look powered
+   rather than drawn. */
+.timer-ring-progress {
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--primary) 55%, transparent));
+}
+
+.timer-dial-inner {
+  /* Included in the 74% by the global `box-sizing: border-box`, so the plate's diameter and
+     everything measured against it are unchanged -- this only takes 2px off the content box. */
+  border: 2px solid color-mix(in srgb, var(--secondary) 22%, transparent);
+  /* ECG graph paper: a fine 6px grid with a heavier line every fifth, which is how the real
+     stuff is ruled. `--danger` because chart paper is printed in red, mixed down far enough
+     that the digits on top of it lose no contrast. */
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--danger) 22%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--danger) 22%, transparent) 1px, transparent 1px),
+    linear-gradient(to right, color-mix(in srgb, var(--danger) 9%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--danger) 9%, transparent) 1px, transparent 1px);
+  background-size: 30px 30px, 30px 30px, 6px 6px, 6px 6px;
+  background-position: center;
+  box-shadow: inset 0 0 14px color-mix(in srgb, var(--secondary) 10%, transparent);
+}
+
+.timer-dial-inner > svg { color: var(--danger); }
+
+/* Beats while the session runs; the selector is gated on the dial's status so a paused timer
+   gets a still heart, which is the same information the status pill carries in words. Scale
+   only, on an element with nothing else to say, at the frequency of a resting pulse. */
+.timer-dial[data-status="running"] .timer-dial-pulse {
+  animation: timer-heartbeat 1.5s var(--ease-in-out) infinite;
+}
+
+/* The window the trace scrolls through. `overflow: hidden` is what makes the strip a monitor
+   rather than a picture of a waveform, and the width is a percentage of the plate so it stays
+   inside the circle at every dial size. */
+.timer-ecg {
+  display: block;
+  width: 70%;
+  height: 1.5rem;
+  overflow: hidden;
+  opacity: 0.85;
+}
+
+/* Twice the window, so translating it by half its own width lands the loop on an identical
+   frame -- see ECG_PATH. `preserveAspectRatio: none` lets the strip stretch to whatever shape
+   the window is, and the non-scaling stroke is what stops that stretch from turning the ink
+   into a wedge. */
+.timer-ecg svg {
+  width: 200%;
+  height: 100%;
+}
+
+.timer-ecg-line {
+  fill: none;
+  stroke: var(--success-strong);
+  stroke-width: 2px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Constant motion, so linear: an eased scroll would visibly slow at the turn and the trace
+   would look like it was being dragged. Only while running -- a paused monitor holds its last
+   sweep, and an idle one has nothing to trace. */
+.timer-dial[data-status="running"] .timer-ecg svg {
+  animation: ecg-sweep 5s linear infinite;
+}
+
+.timer-dial[data-status="ready"] .timer-ecg { opacity: 0.35; }
+.timer-dial[data-status="paused"] .timer-ecg { opacity: 0.5; }
+
+/* The printed scale beside the gauge. `direction: ltr` sits on the value, not the row: the
+   labels are translated and belong in the reading order, a percentage and a minute count do
+   not. */
+.timer-vitals {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 0;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  border: 1.5px solid var(--secondary);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-doodle-xs);
+  overflow: hidden;
+}
+
+.timer-vital {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 6.5rem;
+  padding: 0.35rem 0.85rem;
+}
+
+/* A divider drawn with a border rather than a separate element, on every cell but the first,
+   so it never doubles up and never needs a `:last-child` to take it off again. */
+.timer-vital + .timer-vital {
+  border-inline-start: 1.5px dashed var(--line-strong);
+}
+
+.timer-vital dt {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.timer-vital dd {
+  margin: 0;
+  color: var(--secondary);
+  direction: ltr;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* ====== Fullscreen: illustrated panels flanking the dial ==================================
+   The component mounts these only in fullscreen, so everything here is scoped to the class
+   that turns fullscreen on. They stay off until the viewport is wide enough that the middle
+   column gives up nothing to make room: below that there is no honest place for a 22rem
+   drawing, and squeezing the timer to find one would trade the thing being used for the
+   decoration around it. */
+.focus-art-panel { display: none; }
+
+@media (min-width: 1180px) {
+  /* Three columns with the card in the middle. The outer two are `1fr` and the middle is
+     capped at the same 40rem the card already caps itself to, so the drawings take the whole
+     of whatever is left over and grow with the window instead of at the timer's expense. */
+  .fullscreen-focus-active .focus-main-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 40rem) minmax(0, 1fr);
+    align-items: center;
+    justify-items: center;
+    gap: clamp(var(--space-4), 2.5vw, var(--space-8));
+    max-width: 92rem;
+  }
+
+  .fullscreen-focus-active .focus-art-panel {
+    position: relative;
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: clamp(var(--space-5), 4vh, var(--space-10));
+    width: 100%;
+    max-width: 22rem;
+    min-height: 24rem;
+    /* Nothing in here can be scrolled to, so nothing in here may create scroll: the drawings
+       are tilted and floating, and a tilted box's corners stick out past its layout width. */
+    overflow: hidden;
+    color: var(--secondary);
+  }
+}
+
+.focus-art-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(var(--space-4), 2vw, var(--space-8));
+}
+
+.focus-art-item {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  animation: art-drift 9s var(--ease-in-out) infinite;
+}
+
+/* One absolute ink weight for every drawing whatever its size. `non-scaling-stroke` takes the
+   stroke out of the viewBox's coordinate system, so a 24-unit icon blown up to fourteen rems
+   keeps a hairline instead of a nineteen-pixel slab, and the three sizes below need no stroke
+   width of their own. It is set on the paths as well as the svg because a presentation
+   attribute on a child would beat an inherited CSS value from the parent. Where the effect is
+   unsupported the drawings simply come out bolder -- no geometry depends on it. */
+.focus-art-item svg { width: 100%; height: 100%; }
+
+.focus-art-item svg,
+.focus-art-item svg * {
+  stroke-width: 2.1px;
+  vector-effect: non-scaling-stroke;
+}
+
+.art-xl { width: clamp(9rem, 16vw, 15.5rem); }
+.art-md { width: clamp(3.5rem, 5.5vw, 5.5rem); }
+.art-sm { width: clamp(2.5rem, 3.6vw, 3.6rem); }
+
+.art-tone-ink { color: var(--secondary); opacity: 0.92; }
+.art-tone-primary { color: var(--primary-strong); }
+.art-tone-danger { color: var(--danger); }
+.art-tone-success { color: var(--success-strong); }
+.art-tone-muted { color: var(--muted-foreground); opacity: 0.8; }
+
+/* Each piece gets its own period, its own phase and its own tilt: five drawings rising in step
+   read as a carousel rather than as things pinned to a wall. The delays are negative so the
+   loop is already mid-cycle on the first frame and nothing waits eleven seconds to move. The
+   tilt is on the svg and the float on the wrapper, because one element cannot hold two
+   transforms -- the animation would wipe the tilt out on its first frame. */
+.art-drift-a { animation-duration: 7.5s; animation-delay: -0.6s; }
+.art-drift-b { animation-duration: 9s; animation-delay: -3.4s; }
+.art-drift-c { animation-duration: 11s; animation-delay: -1.8s; }
+.art-drift-d { animation-duration: 8.2s; animation-delay: -5.1s; }
+.art-drift-e { animation-duration: 10s; animation-delay: -2.5s; }
+
+.art-drift-a svg { transform: rotate(-8deg); }
+.art-drift-b svg { transform: rotate(6deg); }
+.art-drift-c svg { transform: rotate(-3deg); }
+.art-drift-d svg { transform: rotate(10deg); }
+.art-drift-e svg { transform: rotate(-6deg); }
+
+/* An organ silhouette sitting behind each panel's drawings -- a heart on the clinic side, lungs
+   on the lab side. Filled rather than outlined: a tenth of an opacity is enough to read as a
+   shape but not enough to hold a hairline, so an outline at this strength would just vanish.
+   `--danger` is the printed red of a chart in all five moods, and CSS beats the `fill="none"`
+   and `stroke-width="2"` presentation attributes the icon ships with because both sit on the
+   same element. Negative z-index puts it under the panel's own drawings while leaving it above
+   the fullscreen backdrop, whose container is the nearest stacking context. */
+.focus-art-watermark {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 17rem;
+  height: 17rem;
+  margin: auto;
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 1.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  color: var(--danger);
+  opacity: 0.11;
+}
+
+@keyframes timer-heartbeat {
+  0%, 100% { transform: scale(1); }
+  18% { transform: scale(1.2); }
+  32% { transform: scale(1); }
+  46% { transform: scale(1.12); }
+}
+
+/* Exactly half the strip's width, which is four whole beats -- the frame at 100% is identical
+   to the frame at 0% and the loop has no seam. */
+@keyframes ecg-sweep {
+  to { transform: translateX(-50%); }
+}
+
+@keyframes art-drift {
+  50% { transform: translateY(-9px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Same rule as above: fewer and gentler, not zero. The three loops that run for the whole
+     session go -- a heartbeat, a scrolling trace and five bobbing drawings are all delight and
+     none of them is a readout. The selectors match the ones they override exactly, because a
+     media query adds no specificity of its own and source order is doing all the work. */
+  .timer-dial[data-status="running"] .timer-dial-pulse,
+  .timer-dial[data-status="running"] .timer-ecg svg,
+  .focus-art-item {
+    animation: none;
   }
 }
 
@@ -2729,26 +3262,26 @@
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-:root[data-theme="dark"] .ui-card,
-:root[data-theme="dark"] .today-card,
-:root[data-theme="dark"] .metric-card,
-:root[data-theme="dark"] .goal-card,
-:root[data-theme="dark"] .insight-card,
-:root[data-theme="dark"] .room-card,
-:root[data-theme="dark"] .exam-plan-card,
-:root[data-theme="dark"] .challenge-list-card,
-:root[data-theme="dark"] .privacy-card,
-:root[data-theme="dark"] .social-panel,
-:root[data-theme="dark"] .dashboard-card,
-:root[data-theme="dark"] .stat-card,
-:root[data-theme="dark"] .task-card,
-:root[data-theme="dark"] .session-card,
-:root[data-theme="dark"] .focus-sidebar-card,
-:root[data-theme="dark"] .focus-timer-card,
-:root[data-theme="dark"] .doodle-timer-card,
-:root[data-theme="dark"] .lobby-card,
-:root[data-theme="dark"] .friend-card,
-:root[data-theme="dark"] .notification-card {
+:root[data-mood="cosmic"] .ui-card,
+:root[data-mood="cosmic"] .today-card,
+:root[data-mood="cosmic"] .metric-card,
+:root[data-mood="cosmic"] .goal-card,
+:root[data-mood="cosmic"] .insight-card,
+:root[data-mood="cosmic"] .room-card,
+:root[data-mood="cosmic"] .exam-plan-card,
+:root[data-mood="cosmic"] .challenge-list-card,
+:root[data-mood="cosmic"] .privacy-card,
+:root[data-mood="cosmic"] .social-panel,
+:root[data-mood="cosmic"] .dashboard-card,
+:root[data-mood="cosmic"] .stat-card,
+:root[data-mood="cosmic"] .task-card,
+:root[data-mood="cosmic"] .session-card,
+:root[data-mood="cosmic"] .focus-sidebar-card,
+:root[data-mood="cosmic"] .focus-timer-card,
+:root[data-mood="cosmic"] .doodle-timer-card,
+:root[data-mood="cosmic"] .lobby-card,
+:root[data-mood="cosmic"] .friend-card,
+:root[data-mood="cosmic"] .notification-card {
   border-color: #475569;
   background-image:
     url("data:image/svg+xml,%3Csvg width='32' height='32' viewBox='0 0 32 32' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M6 4 C16 4, 28 16, 28 26' stroke='%2338BDF8' stroke-width='2' stroke-linecap='round' stroke-dasharray='3 3'/%3E%3Ccircle cx='23' cy='9' r='2.5' fill='%23FBBF24'/%3E%3Cpath d='M12 4 L14 8' stroke='%2338BDF8' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E"),
@@ -3992,14 +4525,11 @@
   padding: var(--space-4) var(--space-4) var(--space-8);
 }
 
-.exam-plan-detail-header {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin-bottom: var(--space-6);
-  padding-bottom: var(--space-4);
-  border-bottom: 2px dashed var(--secondary);
-}
+/* `.exam-plan-detail-header` deliberately has no rule here. It is one of the 22 selectors in
+   the shared page-header list in shell.css, and components.css is imported after shell.css --
+   so the copy that used to live here won on source order at equal specificity. Once the shared
+   rule became a bordered card, its leftover `border-bottom: 2px dashed` overrode only the
+   bottom edge, leaving this one page a solid card with a dashed bottom. */
 
 .exam-plan-attribution {
   display: flex;
@@ -4542,176 +5072,6 @@
   border-top: 2px dashed var(--line);
 }
 
-/* ================= Mood Contrast Color Schemes ================= */
-:root[data-mood="notebook"]:not([data-theme="dark"]) {
-  --background: #F4EFEA;
-  --sidebar-background: #F8F4EE;
-  --surface: #FEFCE8;
-  --surface-elevated: #FEF9C3;
-  --surface-sunken: #EDE7DC;
-  --surface-hover: #FDF9C8;
-  --card-pastel-yellow: #FEFCE8;
-  --card-pastel-sky: #F0F9FF;
-  --card-pastel-mint: #F0FDF4;
-  --card-pastel-peach: #FFF7ED;
-  --card-pastel-lavender: #FAF5FF;
-  --secondary: #263D5B;
-  --secondary-strong: #1a2c42;
-  --text: #111827;
-  --foreground: #111827;
-  --muted: #475569;
-  --line: #CBD5E1;
-  --line-strong: #263D5B;
-  --border-doodle: 2px solid #263D5B;
-}
-
-/* Cosmic is the only dark mood, and it is deliberately unguarded so it applies over the
-   light and girly themes too. That means it must restate every token those themes derive
-   from a light palette — otherwise values like --secondary-foreground: #FFFFFF survive
-   next to cosmic's near-white --secondary and render invisible text. */
-:root[data-mood="cosmic"] {
-  --background: #0E1626;
-  --sidebar-background: #131C2E;
-  --surface: #182234;
-  --surface-elevated: #1E293B;
-  --surface-sunken: #0F1726;
-  --surface-hover: #223048;
-  --card-pastel-yellow: #262118;
-  --card-pastel-sky: #13273E;
-  --card-pastel-mint: #132A20;
-  --card-pastel-peach: #2B1E17;
-  --card-pastel-lavender: #241834;
-  --primary: #49B6E5;
-  --primary-strong: #70c7ed;
-  --primary-foreground: #111827;
-  --primary-subtle: rgba(73, 182, 229, 0.18);
-  --secondary: #E2E8F0;
-  --secondary-strong: #FFFFFF;
-  --secondary-foreground: #111827;
-  --secondary-subtle: rgba(226, 232, 240, 0.12);
-  --success: #22C55E;
-  --success-strong: #4ADE80;
-  --success-foreground: #111827;
-  --success-subtle: rgba(34, 197, 94, 0.18);
-  --warning: #F59E0B;
-  --warning-strong: #FBBF24;
-  --warning-foreground: #111827;
-  --warning-subtle: rgba(245, 158, 11, 0.18);
-  --danger: #EF4444;
-  --danger-strong: #F87171;
-  --danger-foreground: #111827;
-  --danger-subtle: rgba(239, 68, 68, 0.18);
-  --text: #F8FAFC;
-  --foreground: #F8FAFC;
-  --muted: #94A3B8;
-  --muted-foreground: #94A3B8;
-  --muted-surface: #182234;
-  --line: #334155;
-  --line-strong: #E2E8F0;
-  --accent: #49B6E5;
-  --accent-strong: #70c7ed;
-  --accent-foreground: #111827;
-  --accent-subtle: rgba(73, 182, 229, 0.18);
-  --focus: #49B6E5;
-  --focus-ring: rgba(73, 182, 229, 0.45);
-  --focus-outline: 2px dashed #49B6E5;
-  --border-doodle: 2px solid #64748B;
-  --border-doodle-thin: 1.5px solid #64748B;
-  --border-doodle-dashed: 2px dashed #64748B;
-  --shadow-doodle-xs: 1.5px 1.5px 0px rgba(0, 0, 0, 0.5);
-  --shadow-doodle: 2px 2px 0px rgba(0, 0, 0, 0.6);
-  --shadow-doodle-md: 3px 3px 0px rgba(0, 0, 0, 0.7);
-  --shadow-doodle-lg: 4px 4px 0px rgba(0, 0, 0, 0.8);
-  --shadow-doodle-xl: 6px 6px 0px rgba(0, 0, 0, 0.9);
-}
-
-:root[data-mood="sakura"]:not([data-theme="dark"]) {
-  --background: #FFF1F5;
-  --sidebar-background: #FDF2F8;
-  --surface: #FFF5F7;
-  --surface-elevated: #FFE4E6;
-  --surface-sunken: #F5E6EC;
-  --surface-hover: #FED7E2;
-  --card-pastel-yellow: #FEF9C3;
-  --card-pastel-sky: #F3E8FF;
-  --card-pastel-mint: #ECFDF5;
-  --card-pastel-peach: #FFE4E6;
-  --card-pastel-lavender: #F5D0FE;
-  --primary: #F43F5E;
-  --primary-strong: #BE123C;
-  --secondary: #6B21A8;
-  --secondary-strong: #581C87;
-  --text: #3B0764;
-  --foreground: #3B0764;
-  --muted: #86198F;
-  --line: #E9D5FF;
-  --line-strong: #7E22CE;
-  --border-doodle: 2px solid #7E22CE;
-  --shadow-doodle-xs: 1.5px 1.5px 0px rgba(107, 33, 168, 0.35);
-  --shadow-doodle: 2px 2px 0px rgba(107, 33, 168, 0.4);
-  --shadow-doodle-md: 3px 3px 0px rgba(107, 33, 168, 0.45);
-  --shadow-doodle-lg: 4px 4px 0px rgba(107, 33, 168, 0.5);
-  --shadow-doodle-xl: 6px 6px 0px rgba(107, 33, 168, 0.55);
-}
-
-:root[data-mood="aurora"]:not([data-theme="dark"]) {
-  --background: #EBF5EF;
-  --sidebar-background: #DEF2E6;
-  --surface: #F0FDF4;
-  --surface-elevated: #DCFCE7;
-  --surface-sunken: #D5EAE0;
-  --surface-hover: #E2F8EB;
-  --card-pastel-yellow: #FEF9C3;
-  --card-pastel-sky: #E0F2FE;
-  --card-pastel-mint: #DCFCE7;
-  --card-pastel-peach: #FFEDD5;
-  --card-pastel-lavender: #EDE9FE;
-  --primary: #059669;
-  --primary-strong: #047857;
-  --secondary: #164E3A;
-  --secondary-strong: #064E3B;
-  --text: #064E3B;
-  --foreground: #064E3B;
-  --muted: #065F46;
-  --line: #A7F3D0;
-  --line-strong: #065F46;
-  --border-doodle: 2px solid #065F46;
-  --shadow-doodle-xs: 1.5px 1.5px 0px rgba(6, 95, 70, 0.35);
-  --shadow-doodle: 2px 2px 0px rgba(6, 95, 70, 0.4);
-  --shadow-doodle-md: 3px 3px 0px rgba(6, 95, 70, 0.45);
-  --shadow-doodle-lg: 4px 4px 0px rgba(6, 95, 70, 0.5);
-  --shadow-doodle-xl: 6px 6px 0px rgba(6, 95, 70, 0.55);
-}
-
-:root[data-mood="sunset"]:not([data-theme="dark"]) {
-  --background: #FDF3EA;
-  --sidebar-background: #F8E8DA;
-  --surface: #FFFBEB;
-  --surface-elevated: #FEF3C7;
-  --surface-sunken: #EFE0D0;
-  --surface-hover: #FEF0D4;
-  --card-pastel-yellow: #FEF08A;
-  --card-pastel-sky: #E0F2FE;
-  --card-pastel-mint: #ECFDF5;
-  --card-pastel-peach: #FFEDD5;
-  --card-pastel-lavender: #F3E8FF;
-  --primary: #D97706;
-  --primary-strong: #B45309;
-  --secondary: #5A2906;
-  --secondary-strong: #451A03;
-  --text: #451A03;
-  --foreground: #451A03;
-  --muted: #92400E;
-  --line: #FED7AA;
-  --line-strong: #92400E;
-  --border-doodle: 2px solid #78350F;
-  --shadow-doodle-xs: 1.5px 1.5px 0px rgba(120, 53, 15, 0.35);
-  --shadow-doodle: 2px 2px 0px rgba(120, 53, 15, 0.4);
-  --shadow-doodle-md: 3px 3px 0px rgba(120, 53, 15, 0.45);
-  --shadow-doodle-lg: 4px 4px 0px rgba(120, 53, 15, 0.5);
-  --shadow-doodle-xl: 6px 6px 0px rgba(120, 53, 15, 0.55);
-}
-
 /* ================= Authentic Flat Study Backgrounds (No AI Gradients) ================= */
 .study-ambient-canvas {
   position: fixed;
@@ -4813,7 +5173,7 @@
   will-change: transform;
 }
 
-:root[data-theme="dark"] .study-curva-drawing {
+:root[data-mood="cosmic"] .study-curva-drawing {
   opacity: 0.9;
   filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.4));
   --curva-stroke: #94A3B8;
@@ -5087,6 +5447,62 @@
   background: var(--surface-sunken);
   border: 1px solid var(--secondary);
   flex-shrink: 0;
+}
+
+/* Card grid variant — flat, tappable, no nested popover. Used in the mobile sheet. */
+.study-mood-card-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.study-mood-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 48px;
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-doodle-btn);
+  background: var(--surface);
+  color: var(--foreground);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-align: start;
+  cursor: pointer;
+  box-shadow: var(--shadow-doodle-xs);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.study-mood-card-icon {
+  display: grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  border: 1px solid var(--secondary);
+}
+
+.study-mood-card-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.study-mood-card-check {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  margin-inline-start: auto;
+  color: var(--primary);
+}
+
+.study-mood-card.active {
+  background: var(--primary-subtle);
+  box-shadow: var(--shadow-doodle);
 }
 
 @media (pointer: coarse) {

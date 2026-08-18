@@ -1,30 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { MOOD_STORAGE_KEY, type StudyMood } from "@/lib/settings/study-mood";
 
-export type StudyMood = "notebook" | "cosmic" | "aurora" | "sunset" | "sakura";
-
-const MOOD_STORAGE_KEY = "alex-study-bg-mood";
-
-export function StudyBackground() {
-  const [mood, setMood] = useState<StudyMood>("notebook");
+export function StudyBackground({ initialMood = "notebook" }: { initialMood?: StudyMood }) {
+  const [mood, setMood] = useState<StudyMood>(initialMood);
   const [, startTransition] = useTransition();
   const containerRef = useRef<HTMLDivElement>(null);
   const mousePosRef = useRef({ x: 50, y: 50 });
   const targetPosRef = useRef({ x: 50, y: 50 });
   const rafIdRef = useRef<number | null>(null);
 
-  // Load saved mood from localStorage
+  /* Cross-tab and cross-component sync only. The starting mood arrives from the server as
+     a prop, so there is nothing to read on mount -- that mount read is what used to repaint
+     the entire background one frame after hydration. */
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(MOOD_STORAGE_KEY) as StudyMood | null;
-      if (saved && ["notebook", "cosmic", "aurora", "sunset", "sakura"].includes(saved)) {
-        setMood(saved);
-      }
-    } catch {
-      // Ignore
-    }
-
     const handleStorage = (e: StorageEvent) => {
       if (e.key === MOOD_STORAGE_KEY && e.newValue) {
         startTransition(() => setMood(e.newValue as StudyMood));
@@ -43,6 +33,10 @@ export function StudyBackground() {
   useEffect(() => {
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReduced) return;
+    /* No pointer to follow on a touch device, so this loop would run every frame for a
+       spotlight that never moves -- pure battery drain on the platform that can least
+       afford it. */
+    if (!window.matchMedia("(pointer: fine)").matches) return;
 
     const handlePointerMove = (e: PointerEvent) => {
       const x = (e.clientX / window.innerWidth) * 100;

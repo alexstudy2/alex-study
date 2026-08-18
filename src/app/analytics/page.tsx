@@ -4,6 +4,7 @@ import { analyticsAggregate } from "@/lib/analytics/aggregate";
 import { AnalyticsView } from "@/components/analytics/analytics-view";
 import { PageShell } from "@/components/ui/page-shell";
 import { PageHeader } from "@/components/ui/page-header";
+import { BarChart3 } from "lucide-react";
 
 export default async function AnalyticsPage() {
   const user = await requireUser();
@@ -16,6 +17,7 @@ export default async function AnalyticsPage() {
   return (
     <PageShell dir={ar ? "rtl" : "ltr"}>
       <PageHeader
+        icon={BarChart3}
         eyebrow={ar ? "تحليلات شخصية" : "Personal analytics"}
         title={ar ? "لاحظ النمط، لا تحكم على نفسك." : "Notice the pattern, not the pressure."}
         description={

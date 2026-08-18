@@ -537,3 +537,124 @@
 
 /* ================= Exam Plans ================= */
 /* .exam-plan-create-layout (and its 860px breakpoint) are owned by components.css. */
+
+/* =====================================================================
+   Mobile comfort pass
+   =====================================================================
+   Deliberately the last block in the whole cascade. globals.css is imported after
+   tokens/base/shell/components, so its own rules already outrank all of them; putting
+   these here means every override below lands regardless of which file owns the base
+   rule. Same-specificity + later-source-order is doing the work -- the mechanic that
+   silently ate the bottom-nav clearance, used on purpose this time.
+
+   Scope: decoration only, never layout. The doodle personality is the point of this
+   app, so nothing is removed -- shadows drop one step and borders thin by 0.5px. What
+   made these pages read as cluttered on a phone was never one card, it was forty of
+   them stacked vertically each carrying a hard 2-3px offset shadow and a 2px border.
+   Desktop is untouched.
+
+   Not included here (they must stay visually separated from the page behind them):
+   .celebration-card, .confirm-dialog-content, .study-mood-dropdown-menu, and the
+   timer dial, which Phase 7 redesigns. */
+
+@media (max-width: 768px) {
+  /* --- 1. One step down the shadow scale, 0.5px off the border --- */
+  /* `border-width` rather than `border`, so the dashed cards stay dashed. Cards with
+     `border-style: none` are unaffected by a width change, which is why they can sit
+     in the same list safely. */
+  .active-timer-banner,
+  .analytics-ai-panel,
+  .analytics-panel,
+  .analytics-wide-panel,
+  .challenge-list-card,
+  .danger-zone-card,
+  .dashboard-card,
+  .dashboard-hero-card,
+  .dashboard-memo-card,
+  .dashboard-task-card,
+  .doodle-timer-card,
+  .editor-panel,
+  .exam-plan-card,
+  .exam-plan-form-panel,
+  .exam-plan-recent-panel,
+  .focus-sidebar-card,
+  .focus-timer-card,
+  .friend-card,
+  .goal-card,
+  .insight-card,
+  .leaderboard-table-panel,
+  .lobby-card,
+  .lobby-chat-card,
+  .lobby-members-panel,
+  .lobby-timer-card,
+  .manual-session-panel,
+  .master-notebook-card,
+  .metric-card,
+  .notebook-state-box,
+  .notebook-subtasks-box,
+  .notification-card,
+  .privacy-card,
+  .public-card,
+  .public-challenge-card,
+  .reflection-card,
+  .result-badge-panel,
+  .result-share-panel,
+  .room-card,
+  .session-card,
+  .settings-notebook-card,
+  .social-panel,
+  .stat-card,
+  /* Only ever rendered as this pair, so a bare `.sticky-task-note` here would lose to
+     the base rule on specificity and quietly do nothing. */
+  .notebook-task-row.sticky-task-note,
+  .study-mood-card,
+  .task-card,
+  .today-card,
+  .today-tasks-sticky-card,
+  .ui-card,
+  /* Owned by this file rather than components.css. */
+  .auth-content,
+  .insight-list article,
+  .join-list article,
+  .lobby-form,
+  .message-list article,
+  .room-chat,
+  .room-grid article,
+  .room-sidebar,
+  .room-timer {
+    box-shadow: var(--shadow-doodle-xs);
+    border-width: 1.5px;
+  }
+
+  /* --- 2. Visual priority: let the secondary action recede --- */
+  /* Both buttons currently carry the same offset shadow, so a screen with one of each
+     reads as two equally loud primary actions. Flattening the secondary is enough to
+     establish the hierarchy without changing either colour. */
+  .secondary-button {
+    box-shadow: none;
+  }
+
+  /* --- 3. Breathing room between major sections --- */
+  /* Once the borders are thinner, whitespace is what separates sections, so the
+     page-level stacks step up to 20px. Grids *inside* a card (.form-grid, .month-grid,
+     .study-mood-card-grid) are deliberately excluded -- they are dense by design. */
+  .calendar-workspace,
+  .focus-workspace-container,
+  .notebook-workspace,
+  .room-grid {
+    gap: var(--space-5);
+  }
+}
+
+/* --- 4. Very small screens: drop the non-essential sub-copy --- */
+/* Under 380px a two-line description under every heading costs more vertical space
+   than it earns. Only decorative sub-copy goes; form hints and empty-state text stay,
+   because those are the cases where the user actually needs the explanation. */
+@media (max-width: 379px) {
+  .dashboard-hero-sub,
+  .header-subtitle,
+  .settings-hero-subtitle,
+  .ui-card-description {
+    display: none;
+  }
+}

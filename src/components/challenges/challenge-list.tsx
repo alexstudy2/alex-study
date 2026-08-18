@@ -3,14 +3,15 @@
 import Link from "next/link";
 import { useState } from "react";
 import {
+  ArrowLeft,
+  ArrowRight,
+  Award,
+  Flag,
   Medal,
+  Plus,
+  Swords,
   Target,
   TrendingUp,
-  Flag,
-  Plus,
-  ArrowRight,
-  ArrowLeft,
-  Award,
 } from "lucide-react";
 import { PageShell } from "@/components/ui/page-shell";
 import { PageHeader } from "@/components/ui/page-header";
@@ -72,6 +73,7 @@ export function ChallengeList({
   return (
     <PageShell dir={ar ? "rtl" : "ltr"}>
       <PageHeader
+        icon={Swords}
         eyebrow={ar ? "تحديات فردية" : "One-to-one challenges"}
         title={ar ? "تنافس على عادات حقيقية." : "Compete on habits that hold up."}
         description={

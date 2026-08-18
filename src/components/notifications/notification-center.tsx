@@ -81,6 +81,7 @@ export function NotificationCenter({
   return (
     <PageShell dir={ar ? "rtl" : "ltr"}>
       <PageHeader
+        icon={Bell}
         eyebrow={ar ? "مركز التحديثات" : "Update center"}
         title={ar ? "الإشعارات" : "Notifications"}
         description={

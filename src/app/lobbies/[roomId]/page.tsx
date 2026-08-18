@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth/session";
 import { LobbyRoom } from "@/components/lobbies/lobby-room";
 import { PageShell } from "@/components/ui/page-shell";
 import { PageHeader } from "@/components/ui/page-header";
+import { Users } from "lucide-react";
 
 export default async function LobbyDetailPage({
   params,
@@ -42,6 +43,7 @@ export default async function LobbyDetailPage({
   return (
     <PageShell dir={ar ? "rtl" : "ltr"}>
       <PageHeader
+        icon={Users}
         backHref="/lobbies"
         backLabel={ar ? "الغرف" : "Lobbies"}
         isRtl={ar}

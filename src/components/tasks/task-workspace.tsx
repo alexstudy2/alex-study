@@ -33,6 +33,8 @@ import {
   X,
   ListTodo,
   PenTool,
+  ArrowUpDown,
+  SlidersHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TaskForm } from "./task-form";
@@ -48,6 +50,7 @@ function TaskRowItem({
   onRefresh,
   onDelete,
   pending,
+  manageMode,
 }: {
   task: Task;
   locale: "en" | "ar";
@@ -56,6 +59,7 @@ function TaskRowItem({
   onRefresh: () => void;
   onDelete: () => void;
   pending: boolean;
+  manageMode: boolean;
 }) {
   const ar = locale === "ar";
   const [expanded, setExpanded] = useState(false);
@@ -65,6 +69,9 @@ function TaskRowItem({
   });
 
   const isCompleted = task.status === "COMPLETED";
+  const doneSubtasks = task.subtasks.filter((s) => s.status === "COMPLETED").length;
+  const minutes = task.estimatedMinutes && task.estimatedMinutes > 0 ? task.estimatedMinutes : null;
+  const subtasksPanelId = `subtasks-${task.id}`;
 
   async function toggleSubtask(subtaskId: string, isDone: boolean) {
     if (subtaskPending) return;
@@ -86,6 +93,7 @@ function TaskRowItem({
       } as React.CSSProperties}
       className={`notebook-task-row sticky-task-note ${isDragging ? "dragging" : ""} ${isCompleted ? "completed" : ""}`}
       data-priority={task.priority.toLowerCase()}
+      data-manage={manageMode ? "on" : "off"}
       aria-busy={pending}
     >
       <div className="task-row-left">
@@ -125,6 +133,25 @@ function TaskRowItem({
             {task.title}
           </Link>
 
+          {/* Plain inline `2/5` rather than a fourth pill: it belongs to the title, not to the
+              metadata row, and it was the one badge in that row that was actually a control. */}
+          {task.subtasks.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setExpanded(!expanded)}
+              disabled={pending}
+              className="task-subtasks-toggle"
+              aria-expanded={expanded}
+              aria-controls={subtasksPanelId}
+              aria-label={ar ? "المهام الفرعية" : "Subtasks"}
+            >
+              <span className="font-mono font-bold">
+                {doneSubtasks}/{task.subtasks.length}
+              </span>
+              {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
+          )}
+
           <span className={`task-priority-pill priority-${task.priority.toLowerCase()}`}>
             {task.priority === "LOW"
               ? ar ? "منخفضة" : "Low"
@@ -144,40 +171,37 @@ function TaskRowItem({
             </span>
           )}
 
-          {task.dueAt && (
-            <time className="task-meta-pill">
-              <Calendar className="w-3 h-3 text-muted" />
-              {new Intl.DateTimeFormat(locale === "ar" ? "ar-EG" : "en-GB", {
-                dateStyle: "medium",
-                timeStyle: "short",
-              }).format(new Date(task.dueAt))}
-            </time>
-          )}
-
-          {task.estimatedMinutes && (
-            <span className="task-meta-pill font-mono font-bold">
-              <Clock className="w-3 h-3 text-muted" />
-              {task.estimatedMinutes} {ar ? "د" : "min"}
+          {/* Due date and estimate are one fact -- when, and for how long -- so they share a
+              single pill instead of two. `<time>` only wraps the date part; the estimate is
+              a duration, not a datetime, and mislabelling it would be worse than no markup. */}
+          {(task.dueAt || minutes) && (
+            <span className="task-meta-pill">
+              {task.dueAt ? (
+                <Calendar className="w-3 h-3 text-muted" />
+              ) : (
+                <Clock className="w-3 h-3 text-muted" />
+              )}
+              {task.dueAt && (
+                <time dateTime={new Date(task.dueAt).toISOString()}>
+                  {new Intl.DateTimeFormat(locale === "ar" ? "ar-EG" : "en-GB", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  }).format(new Date(task.dueAt))}
+                </time>
+              )}
+              {task.dueAt && minutes && <span aria-hidden="true">·</span>}
+              {minutes && (
+                <span className="font-mono font-bold">
+                  {minutes}
+                  {ar ? "د" : "m"}
+                </span>
+              )}
             </span>
-          )}
-
-          {task.subtasks.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setExpanded(!expanded)}
-              disabled={pending}
-              className="task-subtasks-pill"
-            >
-              <span className="font-mono font-bold">
-                {task.subtasks.filter((s) => s.status === "COMPLETED").length}/{task.subtasks.length}
-              </span>
-              {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-            </button>
           )}
         </div>
 
         {expanded && task.subtasks.length > 0 && (
-          <div className="notebook-subtasks-box">
+          <div className="notebook-subtasks-box" id={subtasksPanelId}>
             {task.subtasks.map((subtask) => {
               const subtaskCompleted = subtask.status === "COMPLETED";
               return (
@@ -256,6 +280,10 @@ export function TaskWorkspace({
   const [quickPriority, setQuickPriority] = useState<"LOW" | "MEDIUM" | "HIGH" | "URGENT">("MEDIUM");
   const [isSubmittingQuick, setIsSubmittingQuick] = useState(false);
   const [pendingTaskId, setPendingTaskId] = useState<string | null>(null);
+  /* Both default to closed and are only surfaced below 768px -- above it the controls they
+     gate are always on screen, so the toggles themselves are display:none there. */
+  const [manageMode, setManageMode] = useState(false);
+  const [quickOptionsOpen, setQuickOptionsOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -449,6 +477,19 @@ export function TaskWorkspace({
         </div>
 
         <div className="header-actions">
+          {/* Mobile only. Touch drag-and-drop is unreliable, so the per-card move/delete
+              buttons have to stay reachable -- but one toggle for the whole list beats three
+              permanently-visible buttons on every card. */}
+          <button
+            type="button"
+            onClick={() => setManageMode(!manageMode)}
+            className={`notebook-manage-toggle ${manageMode ? "active" : ""}`}
+            aria-pressed={manageMode}
+          >
+            <ArrowUpDown className="w-4 h-4" />
+            <span>{ar ? "ترتيب" : "Arrange"}</span>
+          </button>
+
           <Button
             variant="secondary"
             size="sm"
@@ -553,7 +594,11 @@ export function TaskWorkspace({
       {/* 4. The Master Study Notebook Card */}
       <main className="master-notebook-card">
         {/* Integrated Quick-Add Row at the top of the notebook */}
-        <form onSubmit={handleQuickAdd} className="notebook-quick-add-line">
+        <form
+          onSubmit={handleQuickAdd}
+          className="notebook-quick-add-line"
+          data-options={quickOptionsOpen ? "on" : "off"}
+        >
           <div className="quick-add-left-icon">
             <PenTool className="w-4 h-4 text-muted" />
           </div>
@@ -570,6 +615,31 @@ export function TaskWorkspace({
             className="quick-add-input"
             disabled={isSubmittingQuick}
           />
+
+          {/* Mobile only. Two <select>s competing with the input every time is the noise the
+              redesign is removing; the primary action is type-a-title-and-submit. */}
+          <button
+            type="button"
+            onClick={() => setQuickOptionsOpen(!quickOptionsOpen)}
+            className={`quick-add-options-toggle ${quickOptionsOpen ? "active" : ""}`}
+            aria-expanded={quickOptionsOpen}
+            aria-label={ar ? "خيارات المهمة" : "Task options"}
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+          </button>
+
+          {/* Outside .quick-add-options: that wrapper is what collapses on mobile, and submit
+              has to stay on screen with the input. */}
+          <Button
+            type="submit"
+            variant="primary"
+            size="sm"
+            className="quick-add-submit"
+            disabled={!quickTitle.trim() || isSubmittingQuick}
+            leftIcon={<Plus className="w-4 h-4" />}
+          >
+            {ar ? "إضافة" : "Add"}
+          </Button>
 
           <div className="quick-add-options">
             <select
@@ -597,16 +667,6 @@ export function TaskWorkspace({
               <option value="HIGH">{ar ? "أولوية عالية" : "High"}</option>
               <option value="URGENT">{ar ? "أولوية عاجلة" : "Urgent"}</option>
             </select>
-
-            <Button
-              type="submit"
-              variant="primary"
-              size="sm"
-              disabled={!quickTitle.trim() || isSubmittingQuick}
-              leftIcon={<Plus className="w-4 h-4" />}
-            >
-              {ar ? "إضافة" : "Add"}
-            </Button>
           </div>
         </form>
 
@@ -656,6 +716,7 @@ export function TaskWorkspace({
                       onRefresh={() => void load()}
                       onDelete={() => void deleteTask(task.id)}
                       pending={pendingTaskId === task.id}
+                      manageMode={manageMode}
                     />
                   ))}
                 </div>

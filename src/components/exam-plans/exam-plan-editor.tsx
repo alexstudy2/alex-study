@@ -233,7 +233,7 @@ export function ExamPlanEditor({
   return (
     <main className="exam-plan-detail-shell" dir={ar ? "rtl" : "ltr"}>
       <header className="exam-plan-detail-header">
-        <div>
+        <div className="page-header-text">
           <Link className="wordmark" href="/dashboard">
             Alex Study
           </Link>

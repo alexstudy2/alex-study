@@ -17,11 +17,12 @@ enum AppLocale {
   AR
 }
 
-enum Theme {
-  SYSTEM
-  LIGHT
-  DARK
-  GIRLY
+enum StudyMood {
+  NOTEBOOK
+  SAKURA
+  COSMIC
+  AURORA
+  SUNSET
 }
 
 enum ConsentStatus {
@@ -243,7 +244,7 @@ model UserPreference {
   id                          String    @id @default(uuid())
   userId                      String    @unique
   locale                      AppLocale @default(EN)
-  theme                       Theme     @default(SYSTEM)
+  studyMood                   StudyMood @default(NOTEBOOK)
   defaultFocusMinutes         Int       @default(25)
   defaultShortBreakMinutes    Int       @default(5)
   defaultLongBreakMinutes     Int       @default(15)

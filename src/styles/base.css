@@ -16,7 +16,9 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
-html[data-theme="dark"] {
+/* Cosmic is the only dark mood, so it alone drives native form controls and default
+   scrollbars dark. Re-keyed from the removed data-theme system. */
+html[data-mood="cosmic"] {
   color-scheme: dark;
 }
 

@@ -110,7 +110,7 @@ export function ChallengeResult({
   return (
     <main className="challenge-result-shell" dir={ar ? "rtl" : "ltr"}>
       <header className="result-header">
-        <div>
+        <div className="page-header-text">
           <Link className="wordmark" href="/challenges">
             Alex Study
           </Link>

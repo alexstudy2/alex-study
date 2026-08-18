@@ -5,6 +5,7 @@ import { sessionInclude } from "@/lib/sessions/queries";
 import { PageShell } from "@/components/ui/page-shell";
 import { PageHeader } from "@/components/ui/page-header";
 import { SessionManager } from "@/components/sessions/session-manager";
+import { Clock } from "lucide-react";
 
 export default async function SessionDetailPage({
   params,
@@ -24,6 +25,7 @@ export default async function SessionDetailPage({
   return (
     <PageShell dir={ar ? "rtl" : "ltr"}>
       <PageHeader
+        icon={Clock}
         backHref="/sessions"
         backLabel={ar ? "كل الجلسات" : "All sessions"}
         isRtl={ar}

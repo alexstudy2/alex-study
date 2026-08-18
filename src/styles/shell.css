@@ -86,9 +86,15 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding-block: var(--space-2) var(--space-4);
+  /* Was a bare flex column with a dashed underline, which read as unfinished next to
+     /tasks and /dashboard -- both of which already frame their own headers as cards. Now
+     every secondary page gets the same treatment, so none of them is the odd one out. */
+  padding: var(--space-4) var(--space-5);
   margin-bottom: var(--space-6);
-  border-bottom: 2px dashed var(--secondary);
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-doodle-card);
+  background: var(--surface);
+  box-shadow: var(--page-header-shadow);
 }
 
 @media (min-width: 640px) {
@@ -145,9 +151,37 @@
 .challenge-detail-header h1,
 .result-header h1,
 .leaderboard-header h1 {
-  font-size: clamp(1.8rem, 3.5vw, 2.5rem);
+  /* 6vw rather than 3.5vw: the old ramp did not clear the 1.8rem floor until ~1140px, so
+     every phone and most tablets saw the minimum size. The floor is deliberately left at
+     1.8rem -- the plan suggested dropping it to 1.6rem, but that makes 360px *smaller*,
+     which is the opposite of the "never looks squeezed" goal. */
+  font-size: clamp(1.8rem, 6vw, 2.5rem);
   line-height: 1.15;
+  /* Delius Swash Caps has generous side bearings; a touch of negative tracking stops the
+     display sizes reading as loose without affecting the 1.8rem floor much. */
+  letter-spacing: -0.01em;
+  /* Two-line titles wrap evenly instead of leaving one orphaned word -- matters most for
+     Arabic, which runs longer than the English for the same heading. */
+  text-wrap: balance;
   margin: 0;
+}
+
+/* The icon badge sits beside the title block, not above it, so the eyebrow/title/description
+   stack keeps its own rhythm. */
+.page-header-main {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.page-header-text {
+  min-width: 0;
+}
+
+/* Without this the badge is a flex item that can be squeezed to nothing by a long title. */
+.page-header-main > .header-icon-box {
+  flex: 0 0 auto;
 }
 
 .page-header-container p,
@@ -263,7 +297,19 @@
   padding: var(--space-4);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  /* Viewport-bound, not document-bound. `.app-frame` only sets `min-height`, so with no height
+     of its own the sidebar stretched to whichever column was taller -- fine on a short page,
+     but /analytics runs to several thousand pixels, and the nav grew into all of it. That put
+     the footer at the bottom of the *document* and left a dead stretch under the nav on screen.
+     One viewport tall and stuck to the top means the fill and the footer both stay on screen,
+     and the nav scrolls itself when 12 items plus the footer do not fit a short laptop. */
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  /* No `justify-content: space-between`. Any height left over after the logo, nav and footer
+     was distributed between the three of them as visible gaps -- 161px above and below the nav
+     on a 1440px-tall screen, 521px on a 4K one. The nav absorbs it instead (see
+     `.sidebar-nav`), which is also what keeps the footer at the bottom. */
   gap: var(--space-4);
   box-shadow: 2px 0 0 rgba(0, 0, 0, 0.04);
 }
@@ -272,10 +318,6 @@
   .app-sidebar {
     display: none;
   }
-
-  .app-content {
-    padding-bottom: calc(72px + env(safe-area-inset-bottom, 16px));
-  }
 }
 
 .app-wordmark {
@@ -283,12 +325,21 @@
   align-items: center;
   padding: var(--space-2);
   text-decoration: none;
+  /* Pinned at its content height: the nav is the only child that flexes. */
+  flex: 0 0 auto;
 }
 
 .app-sidebar nav {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  /* The one flexible child, so the sidebar's leftover height ends up here rather than between
+     the three children -- and on a viewport too short for all 12 items plus the footer, the nav
+     is also the one that gives space back. `min-height: 0` is what makes that second half work:
+     a flex item's automatic minimum size would otherwise floor the nav at its content height
+     and push the footer off the bottom instead of letting `overflow-y` scroll. */
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   padding-inline-end: 2px;
 }
@@ -297,6 +348,8 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  /* Groups keep their content height; the nav scrolls rather than compressing them. */
+  flex: 0 0 auto;
 }
 
 .sidebar-group-title {
@@ -309,17 +362,25 @@
   padding: 4px 8px 2px;
 }
 
+/* One rule, not two. This was declared here (1.5px, --line, `margin: var(--space-2) 0`) and
+   again further down (2px, --secondary, `margin-block`, a radius and an opacity), so the
+   dividers between nav groups were assembled out of whichever half won the cascade. Merged
+   into the later block's values, which is what was rendering. */
 .sidebar-rule {
-  height: 1.5px;
-  background: var(--line);
-  margin: var(--space-2) 0;
+  height: 2px;
+  margin-block: var(--space-2);
+  background: var(--secondary);
+  border-radius: 999px;
+  opacity: 0.25;
+  /* A 2px flex item is the first thing a tight column would shrink away. */
+  flex: 0 0 auto;
 }
 
 .app-sidebar nav a,
 .app-sidebar-footer > a,
 .app-sidebar-footer > button,
 .mobile-navigation a,
-.mobile-navigation summary {
+.mobile-more-trigger {
   min-height: 42px;
   display: flex;
   align-items: center;
@@ -340,7 +401,7 @@
 .app-sidebar-footer > a:hover,
 .app-sidebar-footer > button:hover,
 .mobile-navigation a:hover,
-.mobile-navigation summary:hover {
+.mobile-more-trigger:hover {
   background: var(--surface-hover);
   border-color: var(--secondary);
   transform: translate(-1px, -1px);
@@ -371,20 +432,18 @@
   color: inherit;
 }
 
-.sidebar-rule {
-  height: 2px;
-  margin-block: var(--space-2);
-  background: var(--secondary);
-  border-radius: 999px;
-  opacity: 0.25;
-}
-
 .app-sidebar-footer {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
   padding-top: var(--space-3);
   border-top: 2px dashed var(--secondary);
+  /* Held at its content height, so a nav too tall for the sidebar scrolls instead of
+     squeezing the footer. `margin-block-start: auto` is a fallback only: the nav's flex-grow
+     resolves first and leaves no free space for an auto margin to absorb, so this is inert
+     unless the nav ever stops growing (very few nav items, or a `flex: none` regression). */
+  flex: 0 0 auto;
+  margin-block-start: auto;
 }
 
 .shell-profile {
@@ -430,7 +489,12 @@
   min-width: 0;
   overflow-y: auto;
   padding-inline: clamp(var(--space-4), 3.5vw, var(--space-8));
-  padding-block: var(--space-2);
+  padding-top: var(--space-2);
+  /* Longhand, not `padding-block`. This rule is declared after the mobile media query that
+     used to own the bottom clearance, so the shorthand quietly reset padding-bottom to 8px
+     and the fixed bottom bar covered the end of every long page. The nav clearance now
+     lives in the token, which is 0px wherever the bar isn't rendered. */
+  padding-bottom: calc(var(--mobile-nav-total) + var(--space-4));
 }
 
 /* Mobile Bottom Navigation */
@@ -447,7 +511,7 @@
     bottom: 0;
     left: 0;
     right: 0;
-    height: calc(60px + env(safe-area-inset-bottom, 0px));
+    height: var(--mobile-nav-total);
     padding-bottom: env(safe-area-inset-bottom, 0px);
     background: var(--sidebar-background, #FAF7F0);
     border-top: 2.5px solid var(--secondary);
@@ -457,7 +521,7 @@
   }
 
   .mobile-navigation a,
-  .mobile-navigation summary {
+  .mobile-more-trigger {
     flex-direction: column;
     gap: 2px;
     font-size: 0.7rem;
@@ -473,22 +537,318 @@
     border: 1px solid var(--secondary);
     box-shadow: 1px 1px 0px var(--secondary);
   }
+}
 
-  .mobile-more-menu {
-    position: fixed;
-    bottom: 64px;
-    inset-inline-end: var(--space-2);
-    width: 220px;
-    max-height: calc(100dvh - 80px);
-    overflow-y: auto;
-    background: var(--surface);
-    border: 2px solid var(--secondary);
-    border-radius: var(--radius-md);
-    padding: var(--space-2);
-    box-shadow: 3px 3px 0px var(--secondary);
+/* ================= Mobile navigation top sheet ================= */
+.mobile-more-trigger {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-more-trigger {
     display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mobile-more-trigger[aria-expanded="true"] {
+    background: var(--primary);
+    color: var(--primary-foreground);
+    border: 1px solid var(--secondary);
+    box-shadow: 1px 1px 0px var(--secondary);
+  }
+}
+
+.mobile-more-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 199;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  visibility: hidden;
+  /* The sheet stays in the DOM; `visibility` flips discretely after the fade so the
+     exit transition can play, and keeps the closed sheet out of the tab order. */
+  transition: opacity 180ms var(--ease-out), visibility 0s linear 180ms;
+}
+
+.mobile-more-backdrop[data-state="open"] {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 240ms var(--ease-out), visibility 0s linear 0s;
+}
+
+.mobile-more-sheet {
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  max-height: min(92dvh, 760px);
+  background: var(--surface);
+  border: 2.5px solid var(--secondary);
+  border-top: none;
+  /* Organic bottom corners only — the sheet is flush with the top of the viewport. */
+  border-radius: 0 0 20px 26px / 0 0 22px 18px;
+  /* Clip the scrolling body to the sheet's rounded bottom corners. */
+  overflow: hidden;
+  box-shadow: var(--shadow-doodle-lg);
+  padding-top: env(safe-area-inset-top, 0px);
+  transform: translateY(-100%);
+  opacity: 0;
+  visibility: hidden;
+  /* Exit is quicker than enter: the user has already decided to dismiss. */
+  transition: transform 180ms var(--ease-out), opacity 180ms var(--ease-out),
+    visibility 0s linear 180ms;
+}
+
+.mobile-more-sheet[data-state="open"] {
+  transform: translateY(0);
+  opacity: 1;
+  visibility: visible;
+  transition: transform 240ms var(--ease-out), opacity 240ms var(--ease-out),
+    visibility 0s linear 0s;
+}
+
+.mobile-more-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 2px dashed var(--secondary);
+  background: var(--surface);
+}
+
+.mobile-more-brand {
+  display: inline-flex;
+  align-items: center;
+}
+
+.mobile-more-close {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-doodle-btn);
+  background: var(--surface-sunken);
+  color: var(--foreground);
+  box-shadow: var(--shadow-doodle-xs);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.mobile-more-close:hover {
+  background: var(--danger-subtle);
+  color: var(--danger);
+}
+
+.mobile-more-close svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  stroke-width: 2.4;
+}
+
+.mobile-more-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-4) var(--space-4) var(--space-6);
+}
+
+.mobile-more-profile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-doodle-card);
+  background: var(--surface-sunken);
+  box-shadow: var(--shadow-doodle-xs);
+}
+
+.mobile-more-profile > span {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border: 2px solid var(--secondary);
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: var(--text-base);
+}
+
+.mobile-more-profile div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mobile-more-profile strong {
+  font-family: var(--font-heading);
+  font-size: var(--text-base);
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-more-profile small {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.mobile-more-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.mobile-more-section .sidebar-group-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0;
+}
+
+.mobile-more-section-icon {
+  width: 0.9rem;
+  height: 0.9rem;
+  color: var(--primary);
+}
+
+/* Two columns keep the whole nav reachable without a long scroll. */
+.mobile-more-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.mobile-more-tile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 48px;
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-doodle-btn);
+  background: var(--surface);
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: var(--shadow-doodle-xs);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.mobile-more-tile svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: 0 0 1.15rem;
+  stroke-width: 2.2;
+  color: var(--primary);
+}
+
+.mobile-more-tile span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-more-tile[aria-current="page"] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: var(--shadow-doodle);
+}
+
+.mobile-more-tile[aria-current="page"] svg {
+  color: inherit;
+}
+
+.mobile-more-utility {
+  gap: var(--space-1);
+  padding-top: var(--space-3);
+  border-top: 2px dashed var(--secondary);
+}
+
+.mobile-more-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 48px;
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid transparent;
+  border-radius: var(--radius-doodle-btn);
+  background: transparent;
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.mobile-more-row svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: 0 0 1.15rem;
+  stroke-width: 2.2;
+  color: var(--primary);
+}
+
+.mobile-more-row[aria-current="page"] {
+  background: var(--primary-subtle);
+  border-color: var(--secondary);
+}
+
+.mobile-more-row.danger,
+.mobile-more-row.danger svg {
+  color: var(--danger);
+}
+
+.mobile-more-row.danger:hover {
+  background: var(--danger-subtle);
+}
+
+/* `.app-frame` has no height constraint, so `.app-content` grows with its content and the
+   document is what actually scrolls. Per CSS Overflow 3 §3.3 the viewport takes <body>'s
+   overflow when <html> is `visible`, so this one rule is the whole scroll lock -- the
+   matching `.app-content { overflow: hidden }` rule it used to carry was a no-op. */
+body.mobile-sheet-open {
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-more-sheet {
+    transform: none;
+    transition: opacity 150ms ease, visibility 0s linear 150ms;
+  }
+
+  .mobile-more-sheet[data-state="open"] {
+    transform: none;
+    transition: opacity 150ms ease, visibility 0s linear 0s;
+  }
+}
+
+/* The sheet is mobile-only; keep it out of the desktop render entirely. */
+@media (min-width: 769px) {
+  .mobile-more-sheet,
+  .mobile-more-backdrop {
+    display: none;
   }
 }
 

@@ -4,7 +4,7 @@
  */
 
 :root,
-:root[data-theme="light"] {
+:root[data-mood="notebook"] {
   /* ================= Brand & Color Palette ================= */
   --primary: #49B6E5;
   --primary-strong: #17698f;
@@ -134,10 +134,46 @@
   --transition-fast: 120ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-base: 180ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 260ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Easing curves for deliberate motion (sheets, dials, indicators). The built-in
+     CSS keywords are too weak for UI; these are the canonical strong curves. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-/* ================= Dark Mode (Playful Sketchbook Night) ================= */
-:root[data-theme="dark"] {
+/* ================= Mobile bottom navigation ================= */
+/* Anything padded or fixed against the bottom of the viewport must clear
+   --mobile-nav-total. It is 0px by default and only becomes non-zero at the breakpoint where
+   the bar is actually rendered, so a single calc() is correct at every width -- no duplicated
+   clearance inside a media query, which is how it got lost before.
+
+   These deliberately sit in their own bare `:root` block rather than in the palette block
+   above. That block's selector list includes `:root[data-mood="notebook"]`, specificity
+   (0,1,1), which outranks the bare `:root` inside the media query -- and @media adds no
+   specificity of its own. Declared up there, the override below would silently lose on the
+   default mood, collapsing the bar to its 2px border. */
+:root {
+  --mobile-nav-height: 60px;
+  --mobile-nav-total: 0px;
+  /* The shared page-header card's elevation. A token rather than a media query on the
+     header rule itself: that selector list is 22 classes long and already repeated three
+     times in shell.css, and one more copy just to change a shadow is how those lists
+     drift apart. Safe as a bare `:root` because no mood block declares it -- unlike
+     --shadow-doodle, which they all override. */
+  --page-header-shadow: var(--shadow-doodle);
+}
+
+@media (max-width: 768px) {
+  :root {
+    --mobile-nav-total: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px));
+    /* Matches the Phase 4 card step-down: the header must not out-shout the content. */
+    --page-header-shadow: var(--shadow-doodle-xs);
+  }
+}
+
+/* ================= Cosmic Starfield (the one dark mood) ================= */
+:root[data-mood="cosmic"] {
   --primary: #49B6E5;
   --primary-strong: #70c7ed;
   --primary-foreground: #111827;
@@ -163,13 +199,13 @@
   --danger-foreground: #111827;
   --danger-subtle: rgba(239, 68, 68, 0.18);
 
-  --surface: #1E293B;
-  --surface-elevated: #24344D;
-  --surface-sunken: #131D2D;
-  --surface-hover: #293B56;
+  --surface: #182234;
+  --surface-elevated: #1E293B;
+  --surface-sunken: #0F1726;
+  --surface-hover: #223048;
   /* Without these the light values from :root leak through, so the sidebar and the
      pastel cards rendered a near-white panel behind light dark-theme text. */
-  --sidebar-background: #16213A;
+  --sidebar-background: #131C2E;
 
   --card-pastel-yellow: #262118;
   --card-pastel-sky: #13273E;
@@ -179,11 +215,11 @@
 
   --text: #F8FAFC;
   --foreground: #F8FAFC;
-  --background: #0F172A;
+  --background: #0E1626;
 
   --muted: #94A3B8;
   --muted-foreground: #94A3B8;
-  --muted-surface: #1E293B;
+  --muted-surface: #182234;
 
   --line: #334155;
   --line-strong: #E2E8F0;
@@ -208,8 +244,8 @@
   --shadow-doodle-xl: 6px 6px 0px rgba(0, 0, 0, 0.9);
 }
 
-/* ================= Girly Pink & Violet Theme ================= */
-:root[data-theme="girly"] {
+/* ================= Sakura Bloom (pink & violet) ================= */
+:root[data-mood="sakura"] {
   --primary: #F43F5E;
   --primary-strong: #BE123C;
   --primary-foreground: #111827;
@@ -276,6 +312,152 @@
   --shadow-doodle-md: 3px 3px 0px rgba(107, 33, 168, 0.45);
   --shadow-doodle-lg: 4px 4px 0px rgba(107, 33, 168, 0.5);
   --shadow-doodle-xl: 6px 6px 0px rgba(107, 33, 168, 0.55);
+}
+
+/* ================= Zen Aurora (calm mint & cyan) ================= */
+:root[data-mood="aurora"] {
+  /* #047857 rather than the lighter #059669 so white button labels clear 4.5:1 (5.5:1). */
+  --primary: #047857;
+  --primary-strong: #065F46;
+  --primary-foreground: #FFFFFF;
+  --primary-subtle: #ECFDF5;
+
+  --secondary: #164E3A;
+  --secondary-strong: #064E3B;
+  --secondary-foreground: #FFFFFF;
+  --secondary-subtle: #E7F8F0;
+
+  --success: #15803D;
+  --success-strong: #166534;
+  --success-foreground: #FFFFFF;
+  --success-subtle: #F0FDF4;
+
+  --warning: #B45309;
+  --warning-strong: #92400E;
+  --warning-foreground: #FFFFFF;
+  --warning-subtle: #FFFBEB;
+
+  --danger: #BE123C;
+  --danger-strong: #9F1239;
+  --danger-foreground: #FFFFFF;
+  --danger-subtle: #FFF1F2;
+
+  --surface: #F0FDF4;
+  --surface-elevated: #DCFCE7;
+  --surface-sunken: #D5EAE0;
+  --surface-hover: #E2F8EB;
+  --sidebar-background: #DEF2E6;
+
+  --card-pastel-yellow: #FEF9C3;
+  --card-pastel-sky: #E0F2FE;
+  --card-pastel-mint: #DCFCE7;
+  --card-pastel-peach: #FFEDD5;
+  --card-pastel-lavender: #EDE9FE;
+
+  /* 9.3:1 on --surface */
+  --text: #064E3B;
+  --foreground: #064E3B;
+  --background: #EBF5EF;
+
+  /* 7.3:1 on --surface */
+  --muted: #065F46;
+  --muted-foreground: #0F766E;
+  --muted-surface: #E9F7F0;
+
+  --line: #A7F3D0;
+  --line-strong: #065F46;
+
+  --accent: #0E7490;
+  --accent-strong: #155E75;
+  --accent-foreground: #FFFFFF;
+  --accent-subtle: #E0F7FC;
+
+  --focus: #065F46;
+  --focus-ring: rgba(4, 120, 87, 0.45);
+  --focus-outline: 2px dashed #065F46;
+
+  --border-doodle: 2px solid #065F46;
+  --border-doodle-thin: 1.5px solid #0F766E;
+  --border-doodle-dashed: 2px dashed #34A38A;
+
+  --shadow-doodle-xs: 1.5px 1.5px 0px rgba(6, 95, 70, 0.35);
+  --shadow-doodle: 2px 2px 0px rgba(6, 95, 70, 0.4);
+  --shadow-doodle-md: 3px 3px 0px rgba(6, 95, 70, 0.45);
+  --shadow-doodle-lg: 4px 4px 0px rgba(6, 95, 70, 0.5);
+  --shadow-doodle-xl: 6px 6px 0px rgba(6, 95, 70, 0.55);
+}
+
+/* ================= Sunset Cafe (warm amber) ================= */
+:root[data-mood="sunset"] {
+  --primary: #D97706;
+  --primary-strong: #B45309;
+  /* Dark on amber (5.7:1); white would only reach 3.2:1. */
+  --primary-foreground: #2B1002;
+  --primary-subtle: #FEF3E2;
+
+  --secondary: #5A2906;
+  --secondary-strong: #451A03;
+  --secondary-foreground: #FFFFFF;
+  --secondary-subtle: #FDF0E6;
+
+  --success: #15803D;
+  --success-strong: #166534;
+  --success-foreground: #FFFFFF;
+  --success-subtle: #F0FDF4;
+
+  --warning: #A16207;
+  --warning-strong: #854D0E;
+  --warning-foreground: #FFFFFF;
+  --warning-subtle: #FEFCE8;
+
+  --danger: #C2410C;
+  --danger-strong: #9A3412;
+  --danger-foreground: #FFFFFF;
+  --danger-subtle: #FFF1E9;
+
+  --surface: #FFFBEB;
+  --surface-elevated: #FEF3C7;
+  --surface-sunken: #EFE0D0;
+  --surface-hover: #FEF0D4;
+  --sidebar-background: #F8E8DA;
+
+  --card-pastel-yellow: #FEF08A;
+  --card-pastel-sky: #E0F2FE;
+  --card-pastel-mint: #ECFDF5;
+  --card-pastel-peach: #FFEDD5;
+  --card-pastel-lavender: #F3E8FF;
+
+  /* 13:1 on --surface */
+  --text: #451A03;
+  --foreground: #451A03;
+  --background: #FDF3EA;
+
+  /* 6.9:1 on --surface */
+  --muted: #92400E;
+  --muted-foreground: #A3542A;
+  --muted-surface: #FBF1E4;
+
+  --line: #FED7AA;
+  --line-strong: #92400E;
+
+  --accent: #C2410C;
+  --accent-strong: #9A3412;
+  --accent-foreground: #FFFFFF;
+  --accent-subtle: #FFF1E3;
+
+  --focus: #78350F;
+  --focus-ring: rgba(217, 119, 6, 0.5);
+  --focus-outline: 2px dashed #78350F;
+
+  --border-doodle: 2px solid #78350F;
+  --border-doodle-thin: 1.5px solid #A3542A;
+  --border-doodle-dashed: 2px dashed #C97F4E;
+
+  --shadow-doodle-xs: 1.5px 1.5px 0px rgba(120, 53, 15, 0.35);
+  --shadow-doodle: 2px 2px 0px rgba(120, 53, 15, 0.4);
+  --shadow-doodle-md: 3px 3px 0px rgba(120, 53, 15, 0.45);
+  --shadow-doodle-lg: 4px 4px 0px rgba(120, 53, 15, 0.5);
+  --shadow-doodle-xl: 6px 6px 0px rgba(120, 53, 15, 0.55);
 }
 
 

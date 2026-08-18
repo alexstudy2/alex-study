@@ -11,6 +11,8 @@ import { mkdirSync, writeFileSync } from "node:fs";
 
 const BASE = process.env.AUDIT_BASE_URL ?? "http://localhost:3000";
 const SHOTS = process.argv.includes("--shots");
+// `--only=/calendar,/tasks` re-checks a single fix without paying for all 31 routes.
+const ONLY = (process.argv.find((a) => a.startsWith("--only=")) ?? "").slice(7).split(",").filter(Boolean);
 const OUT = "audit-out";
 
 const VIEWPORTS = [
@@ -216,7 +218,9 @@ async function main() {
   if (challenge) dynamicRoutes.push(`${challenge}/result`);
   await authCtx.close();
 
-  const routes = [...STATIC_ROUTES, ...dynamicRoutes];
+  const routes = [...STATIC_ROUTES, ...dynamicRoutes].filter(
+    (r) => ONLY.length === 0 || ONLY.includes(r),
+  );
   console.log(`[routes] auditing ${routes.length}:\n  ${routes.join("\n  ")}`);
 
   for (const vp of VIEWPORTS) {

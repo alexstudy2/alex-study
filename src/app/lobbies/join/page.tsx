@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth/session";
 import { JoinButton } from "@/components/lobbies/join-button";
 import { PageShell } from "@/components/ui/page-shell";
 import { PageHeader } from "@/components/ui/page-header";
+import { DoorOpen } from "lucide-react";
 
 export default async function JoinLobbyPage({
   searchParams,
@@ -21,6 +22,7 @@ export default async function JoinLobbyPage({
   return (
     <PageShell size="narrow" dir={ar ? "rtl" : "ltr"}>
       <PageHeader
+        icon={DoorOpen}
         backHref="/lobbies"
         backLabel={ar ? "الغرف" : "Lobbies"}
         isRtl={ar}

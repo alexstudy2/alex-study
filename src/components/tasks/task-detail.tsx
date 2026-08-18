@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Edit3,
-  Trash2,
-  Plus,
   Calendar,
   Clock,
+  Edit3,
+  ListChecks,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { PageShell } from "@/components/ui/page-shell";
 import { PageHeader } from "@/components/ui/page-header";
@@ -53,6 +54,7 @@ export function TaskDetail({
   return (
     <PageShell size="narrow" dir={ar ? "rtl" : "ltr"}>
       <PageHeader
+        icon={ListChecks}
         backHref="/tasks"
         backLabel={ar ? "كل المهام" : "All tasks"}
         isRtl={ar}
