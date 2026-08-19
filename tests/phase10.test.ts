@@ -6,6 +6,7 @@ import {
   AI_USER_DAILY_TOKEN_LIMIT,
   assessAIAllowance,
   hashAIInput,
+  typeDailyLimit,
 } from "@/lib/ai/policy";
 import {
   acceptExamPlanSchema,
@@ -136,7 +137,13 @@ describe("Phase 10 AI cost and audit policy", () => {
         userJobs: AI_USER_DAILY_JOB_LIMIT,
       }),
     ).toBe("ai_rate_limited");
-    expect(assessAIAllowance({ ...base, type: "EXAM_PLAN", typeJobs: 2 })).toBe("ai_rate_limited");
+    expect(
+      assessAIAllowance({ ...base, type: "EXAM_PLAN", typeJobs: typeDailyLimit("EXAM_PLAN") }),
+    ).toBe("ai_rate_limited");
+    // An unknown type falls back to one job a day, so a new insight cannot quietly become unlimited.
+    expect(assessAIAllowance({ ...base, type: "SOMETHING_NEW", typeJobs: 1 })).toBe(
+      "ai_rate_limited",
+    );
   });
 });
 

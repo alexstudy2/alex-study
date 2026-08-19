@@ -44,6 +44,25 @@
   --card-pastel-peach: #FFF7ED;
   --card-pastel-lavender: #FAF5FF;
 
+  /* ================= Course (subject) identity colours ================= */
+  /* One per value of subjectInputSchema.colorToken in src/lib/tasks/validation.ts. The names
+     are the enum's, so `--subject-${colorToken}` composes straight from the database value --
+     which is what task-workspace.tsx and dashboard-task-item.tsx both do.
+
+     Mid-saturation on purpose. Each one has to work as three different things: a solid 10px
+     dot, a 2px border, and 18% of a color-mix() against --surface for a sticky note's paper.
+     Anything lighter dies as a dot; anything darker stops reading as tinted paper. The seven
+     are spaced around the wheel far enough to stay tellable apart at dot size -- coral, amber
+     and rose are the close trio, so they are pushed to salmon / yellow-orange / crimson-pink
+     rather than three neighbouring oranges. */
+  --subject-teal: #0D9488;
+  --subject-coral: #F26B4E;
+  --subject-amber: #D97706;
+  --subject-violet: #7C3AED;
+  --subject-sky: #0284C7;
+  --subject-rose: #E11D48;
+  --subject-slate: #64748B;
+
   --text: #111827;
   --foreground: #111827;
   --background: #F4EFEA;
@@ -94,6 +113,17 @@
   --font-heading: var(--font-delius), "Delius Swash Caps", "Delius", cursive, sans-serif;
   --font-sans: var(--font-arabic), var(--font-delius-body), var(--font-delius), "Delius", system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-mono), "JetBrains Mono", ui-monospace, monospace;
+  /* Small UI labels and form controls that should read as hand-lettered rather than as chrome:
+     course chips, the quick-add field, the selects. Same Delius faces as --font-heading, with the
+     Arabic family spliced in ahead of the generic fallbacks -- font matching is per glyph, so
+     Latin still comes from Delius Swash Caps while Arabic resolves to IBM Plex Sans Arabic
+     instead of whatever the browser happens to call `cursive`. A separate token rather than a fix
+     to --font-heading, which would repaint every heading on every route. */
+  --font-label: var(--font-delius), "Delius Swash Caps", var(--font-arabic), "Delius", cursive, sans-serif;
+
+  /* One step wobblier than --radius-doodle-btn, for chips and pills that are small enough that
+     the btn radius reads as an ordinary rounded rectangle. */
+  --radius-doodle-chip: 12px 5px 10px 6px/6px 10px 5px 12px;
 
   /* ================= Doodle Tactile Styling & Shadows ================= */
   --border-doodle: 2px solid var(--secondary);
@@ -108,6 +138,17 @@
   /* `sm` sits between xs and the base step. Aliased rather than hard-coded so every
      theme and mood override of --shadow-doodle carries through automatically. */
   --shadow-doodle-sm: var(--shadow-doodle);
+
+  /* Hand-drawn replacement for the native <select> chevron -- two pen strokes with round caps,
+     deliberately not meeting at a clean point. A whole url() rather than just a colour because
+     nothing can interpolate a var() into the inside of a data URI string, and background-image
+     cannot pick up currentColor either; the same reasoning as the corner marks in
+     components.css. `#` is written %23 -- a raw hash inside url() starts a fragment.
+
+     One dark stroke covers notebook, sakura, aurora and sunset: every one of them has a dark
+     --secondary against a light --surface, and #263D5B reads as ink on all four papers. Cosmic
+     inverts that, so it is the only mood that redeclares this (below). */
+  --doodle-caret: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%23263D5B' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1.2 1.6 C3 3.4 4.4 6 6 6.4'/%3E%3Cpath d='M6 6.4 C7.5 5.8 9.2 3.2 10.9 1.3'/%3E%3C/svg%3E");
 
   --radius-xs: 4px;
   --radius-sm: 6px;
@@ -213,6 +254,19 @@
   --card-pastel-peach: #2B1E17;
   --card-pastel-lavender: #241834;
 
+  /* The 600-ish course colours from :root are near-invisible against a #182234 card, both as
+     a dot and mixed into paper. These are the 400 stops of the same seven hues: bright enough
+     to read as ink on dark, and 18% of one against a dark surface still lands as a tint you
+     can name. Cosmic is the only mood that needs this -- sakura, aurora and sunset are all
+     light-surfaced, so they inherit the base set. */
+  --subject-teal: #2DD4BF;
+  --subject-coral: #FB8B6B;
+  --subject-amber: #FBBF24;
+  --subject-violet: #A78BFA;
+  --subject-sky: #38BDF8;
+  --subject-rose: #FB7185;
+  --subject-slate: #94A3B8;
+
   --text: #F8FAFC;
   --foreground: #F8FAFC;
   --background: #0E1626;
@@ -242,6 +296,10 @@
   --shadow-doodle-md: 3px 3px 0px rgba(0, 0, 0, 0.7);
   --shadow-doodle-lg: 4px 4px 0px rgba(0, 0, 0, 0.8);
   --shadow-doodle-xl: 6px 6px 0px rgba(0, 0, 0, 0.9);
+
+  /* Same two strokes, light ink: the base #263D5B caret is all but invisible on a #182234
+     select. Identical path on purpose -- only the stroke colour differs. */
+  --doodle-caret: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%23E2E8F0' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1.2 1.6 C3 3.4 4.4 6 6 6.4'/%3E%3Cpath d='M6 6.4 C7.5 5.8 9.2 3.2 10.9 1.3'/%3E%3C/svg%3E");
 }
 
 /* ================= Sakura Bloom (pink & violet) ================= */

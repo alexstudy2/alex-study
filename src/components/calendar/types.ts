@@ -1,5 +1,6 @@
 export type CalendarEvent = {
-  type: "task" | "session";
+  /** "plan" events come from a Plan Forum note painted over the grid; they are read-only. */
+  type: "task" | "session" | "plan";
   id: string;
   startsAt: string | Date;
   title: string;

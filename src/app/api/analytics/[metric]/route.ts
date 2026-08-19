@@ -1,4 +1,5 @@
 import { analyticsAggregate } from "@/lib/analytics/aggregate";
+import { resolveAnalyticsWindow } from "@/lib/analytics/window";
 import { apiUser, invalid, unauthorized } from "@/lib/tasks/response";
 const allowed = [
   "study-hours",
@@ -15,10 +16,11 @@ export async function GET(request: Request, context: { params: Promise<{ metric:
   const { metric } = await context.params;
   if (!allowed.includes(metric)) return invalid();
   const params = new URL(request.url).searchParams;
-  const to = params.get("to") ? new Date(params.get("to")!) : new Date();
-  const from = params.get("from")
-    ? new Date(params.get("from")!)
-    : new Date(to.getTime() - 29 * 86400000);
+  /* Same Cairo-midnight window as /api/analytics/summary. Kept in step through the shared helper
+     rather than by copying the arithmetic, which is how the two drifted in the first place. */
+  const window = resolveAnalyticsWindow(Number(params.get("days")) || undefined);
+  const to = params.get("to") ? new Date(params.get("to")!) : window.to;
+  const from = params.get("from") ? new Date(params.get("from")!) : window.from;
   const data = await analyticsAggregate(user.id, from, to, params.get("subjectId") ?? undefined);
   const result =
     metric === "subjects"

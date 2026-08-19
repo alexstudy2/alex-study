@@ -4,7 +4,13 @@ export const AI_PROMPT_VERSION = "phase10-v1";
 export const AI_RETENTION_DAYS = 30;
 export const AI_USER_DAILY_TOKEN_LIMIT = 40_000;
 export const AI_GLOBAL_DAILY_TOKEN_LIMIT = 250_000;
-export const AI_USER_DAILY_JOB_LIMIT = 6;
+/**
+ * Raised from 6 once an exam plan could cost several OCR passes on top of the generation: a student
+ * photographing a four-page فهرس and then generating twice would have hit the ceiling before the
+ * nudges had a chance to run. The 40k-token user budget above is still the real governor -- this
+ * count only stops a runaway loop of cheap calls.
+ */
+export const AI_USER_DAILY_JOB_LIMIT = 14;
 
 const TYPE_DAILY_LIMITS: Record<string, number> = {
   DAILY_TIP: 2,
@@ -12,8 +18,22 @@ const TYPE_DAILY_LIMITS: Record<string, number> = {
   PERFORMANCE_DROP: 1,
   BURNOUT: 1,
   BEST_TIME: 1,
-  EXAM_PLAN: 2,
+  /**
+   * Raised from 2. A nudge is a broadcast the student reads once, but a plan proposal is meant to be
+   * argued with -- raise the daily capacity, drop a rest day, re-shoot a page of the فهرس, generate
+   * again -- and two a day made that impossible: one unlucky model reply in the morning left a single
+   * attempt for the rest of the day. The governors that actually bound the cost are the 40k-token user
+   * budget above and the 8-per-hour `generationRateLimit` on the route, both of which still hold.
+   */
+  EXAM_PLAN: 6,
+  /** One per page of a photographed index, with room to re-shoot a blurry one. */
+  EXAM_TOPICS: 8,
 };
+
+/** The per-type ceiling, exported so tests and callers name the limit instead of copying the number. */
+export function typeDailyLimit(type: string) {
+  return TYPE_DAILY_LIMITS[type] ?? 1;
+}
 
 export function assessAIAllowance(input: {
   globalTokens: number;
@@ -25,7 +45,7 @@ export function assessAIAllowance(input: {
   if (input.globalTokens >= AI_GLOBAL_DAILY_TOKEN_LIMIT) return "ai_budget_exhausted" as const;
   if (input.userTokens >= AI_USER_DAILY_TOKEN_LIMIT) return "ai_budget_exhausted" as const;
   if (input.userJobs >= AI_USER_DAILY_JOB_LIMIT) return "ai_rate_limited" as const;
-  if (input.typeJobs >= (TYPE_DAILY_LIMITS[input.type] ?? 1)) return "ai_rate_limited" as const;
+  if (input.typeJobs >= typeDailyLimit(input.type)) return "ai_rate_limited" as const;
   return null;
 }
 

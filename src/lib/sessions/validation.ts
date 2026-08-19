@@ -15,7 +15,14 @@ export const timerActionSchema = z.object({
   version: z.number().int().positive(),
   reflection: z.string().trim().max(1000).optional(),
 });
-export const distractionSchema = z.object({ note: z.string().trim().max(240).optional() });
+/* `.nullable()` as well as `.optional()`, like taskId/subjectId above: the "I got distracted"
+   button posts `{ note: null }` for the no-note case, and a bare `.optional()` accepts only
+   `undefined`, so zod rejected every click with "expected string, received null" -> 400 -> "The
+   timer could not be updated". The route already normalises with `parsed.data.note || null`, so
+   null was always the shape it was written to take. */
+export const distractionSchema = z.object({
+  note: z.string().trim().max(240).nullable().optional(),
+});
 const manualSessionFields = z.object({
     taskId: z.string().uuid().nullable().optional(),
     subjectId: z.string().uuid().nullable().optional(),

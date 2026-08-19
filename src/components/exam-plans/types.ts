@@ -1,3 +1,5 @@
+import type { ExamItemKind, QuestionStrategy } from "@/lib/exam-plans/topics";
+
 export type ExamPlanStatus =
   "GENERATING" | "PROPOSED" | "PARTIALLY_ACCEPTED" | "ACCEPTED" | "REJECTED";
 
@@ -11,6 +13,7 @@ export type ExamPlanItem = {
   id: string;
   title: string;
   notes: string | null;
+  kind: ExamItemKind;
   plannedDate: string | Date;
   estimatedMinutes: number;
   sortOrder: number;
@@ -30,6 +33,10 @@ export type ExamPlan = {
   locale: "EN" | "AR";
   model: string;
   promptVersion: string;
+  questionStrategy: QuestionStrategy;
+  dailyCapacityMinutes: number;
+  /** The Plan Forum copy, once published. Null until the student presses Publish. */
+  studyPlanId: string | null;
   contextPurgeAt: string | Date;
   contextPurgedAt: string | Date | null;
   acceptedAt: string | Date | null;
@@ -39,4 +46,5 @@ export type ExamPlan = {
   items: ExamPlanItem[];
 };
 
-export type SubjectOption = Pick<ExamPlanSubject, "id" | "name">;
+/** The colour comes along so the board paints a note the shade the forum will paint it after publish. */
+export type SubjectOption = Pick<ExamPlanSubject, "id" | "name" | "colorToken">;

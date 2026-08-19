@@ -414,102 +414,11 @@
   margin-bottom: var(--space-3);
 }
 
-.trend-chart {
-  height: 14rem;
-  display: flex;
-  align-items: end;
-  gap: 4px;
-  padding-top: var(--space-3);
-  border-bottom: 2px solid var(--secondary);
-}
-
-.trend-chart div {
-  flex: 1;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 4px;
-}
-
-.trend-chart i {
-  width: 100%;
-  max-width: 1.5rem;
-  background: var(--primary);
-  border: 1.5px solid var(--secondary);
-  border-bottom: 0;
-  border-radius: 4px 4px 0 0;
-}
-
-.trend-chart span {
-  font-size: 0.65rem;
-  font-weight: 700;
-  color: var(--muted);
-}
-
-.analytics-panel table {
-  width: 100%;
-  margin-top: var(--space-5);
-  border-collapse: collapse;
-  font-variant-numeric: tabular-nums;
-  font-size: var(--text-xs);
-}
-
-.analytics-panel caption {
-  text-align: start;
-  font-weight: 800;
-  margin-bottom: var(--space-2);
-}
-
-.analytics-panel th,
-.analytics-panel td {
-  padding: var(--space-2);
-  border-bottom: 1.5px solid var(--line);
-  text-align: start;
-}
-
-.analytics-columns {
-  display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
-  gap: var(--space-4);
-}
-
-@media (max-width: 768px) {
-  .analytics-columns {
-    grid-template-columns: 1fr;
-  }
-}
-
-.subject-bar {
-  display: grid;
-  grid-template-columns: 8rem minmax(0, 1fr) 4rem;
-  align-items: center;
-  gap: var(--space-3);
-  margin: var(--space-2) 0;
-}
-
-@media (max-width: 480px) {
-  .subject-bar {
-    grid-template-columns: minmax(0, 1fr) 3rem;
-    gap: var(--space-2);
-  }
-}
-
-.subject-bar > div {
-  height: 12px;
-  background: var(--surface-sunken);
-  border: 1.5px solid var(--secondary);
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.subject-bar i {
-  display: block;
-  height: 100%;
-  background: var(--primary);
-  border-radius: 999px;
-}
+/* Removed from here: .trend-chart (a hand-rolled CSS bar chart from before recharts),
+   .analytics-panel table/caption/th/td, .analytics-columns and .subject-bar. None of those class
+   names appears in any component any more. The table rules were the actively harmful ones: this
+   file outranks components.css for a repeated selector, so `.analytics-panel table` would have
+   restyled the day x hour heatmap from three rules away. */
 
 /* ================= AI Insights ================= */
 /* .insight-workspace / .insight-toolbar / .insight-list are owned by components.css. */
@@ -577,6 +486,8 @@
   .exam-plan-card,
   .exam-plan-form-panel,
   .exam-plan-recent-panel,
+  .exam-strategy-card,
+  .exam-topic-card,
   .focus-sidebar-card,
   .focus-timer-card,
   .friend-card,
@@ -593,6 +504,8 @@
   .notebook-state-box,
   .notebook-subtasks-box,
   .notification-card,
+  .plan-card,
+  .plan-day-note,
   .privacy-card,
   .public-card,
   .public-challenge-card,

@@ -32,7 +32,7 @@ export default async function DashboardPage() {
   const today = getTaskDateWindow("today", now)!;
   const week = getTaskDateWindow("week", now)!;
 
-  const [todayTasks, weekTasks, todaySessions, weekSessions, goals, insight, timer] =
+  const [todayTasks, weekTasks, todaySessions, weekSessions, goals, insight, timer, subjects] =
     await Promise.all([
       prisma.task.findMany({
         where: {
@@ -84,6 +84,13 @@ export default async function DashboardPage() {
           accumulatedActiveSeconds: true,
           segmentStartedAt: true,
         },
+      }),
+      /* Feeds the quick-add's course picker. Same shape and ordering as /tasks (see
+         src/app/tasks/page.tsx) so a course sits in the same place in both lists. */
+      prisma.subject.findMany({
+        where: { userId: user.id, archivedAt: null },
+        select: { id: true, name: true, colorToken: true },
+        orderBy: { name: "asc" },
       }),
     ]);
 
@@ -179,7 +186,7 @@ export default async function DashboardPage() {
         {/* Left Column: Today's Tasks & Checklist */}
         <section className="dashboard-left-col flex flex-col gap-6">
           {/* Today's Tasks Sticky Note Card */}
-          <TodayTasksSticky tasks={todayTasks} ar={ar} />
+          <TodayTasksSticky tasks={todayTasks} subjects={subjects} ar={ar} />
 
           {/* AI Insight / Daily Study Note */}
           {insight && (

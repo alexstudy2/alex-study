@@ -40,7 +40,7 @@ export default async function InsightsPage() {
               {ar ? "التحليلات" : "Analytics"}
             </Link>
             <Link className="page-header-link" href="/exam-plans/new">
-              {ar ? "خطة امتحان" : "Exam planner"}
+              {ar ? "خطة امتحان AI" : "AI Exam Plan"}
             </Link>
           </div>
         }

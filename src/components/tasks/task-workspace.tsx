@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   DndContext,
@@ -35,8 +35,14 @@ import {
   PenTool,
   ArrowUpDown,
   SlidersHorizontal,
+  AlertTriangle,
+  ClipboardList,
+  Timer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DoodleLoader } from "@/components/ui/doodle-loader";
+import { EcgTrace, MedicalGlyph } from "@/components/ui/medical-doodles";
+import { dayBounds } from "@/lib/tasks/dates";
 import { TaskForm } from "./task-form";
 import type { Subject, Task } from "./types";
 
@@ -51,6 +57,7 @@ function TaskRowItem({
   onDelete,
   pending,
   manageMode,
+  dayStart,
 }: {
   task: Task;
   locale: "en" | "ar";
@@ -60,6 +67,8 @@ function TaskRowItem({
   onDelete: () => void;
   pending: boolean;
   manageMode: boolean;
+  /** Midnight tonight in the app's timezone -- see the `vitals` memo for why it is passed in. */
+  dayStart: Date;
 }) {
   const ar = locale === "ar";
   const [expanded, setExpanded] = useState(false);
@@ -72,6 +81,7 @@ function TaskRowItem({
   const doneSubtasks = task.subtasks.filter((s) => s.status === "COMPLETED").length;
   const minutes = task.estimatedMinutes && task.estimatedMinutes > 0 ? task.estimatedMinutes : null;
   const subtasksPanelId = `subtasks-${task.id}`;
+  const isOverdue = !isCompleted && Boolean(task.dueAt) && new Date(task.dueAt!) < dayStart;
 
   async function toggleSubtask(subtaskId: string, isDone: boolean) {
     if (subtaskPending) return;
@@ -89,13 +99,24 @@ function TaskRowItem({
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
-        "--note-color": `var(--${task.subject?.colorToken ?? "amber"})`,
+        /* `--subject-*`, not `--${colorToken}`. The bare form named tokens that do not exist,
+           which made --note-color guaranteed-invalid and took the whole color-mix() down with
+           it -- every note rendered with no paper at all. See tokens.css. */
+        "--note-color": `var(--subject-${task.subject?.colorToken ?? "teal"})`,
       } as React.CSSProperties}
       className={`notebook-task-row sticky-task-note ${isDragging ? "dragging" : ""} ${isCompleted ? "completed" : ""}`}
       data-priority={task.priority.toLowerCase()}
       data-manage={manageMode ? "on" : "off"}
+      data-overdue={isOverdue ? "yes" : "no"}
       aria-busy={pending}
     >
+      {/* Pure texture, behind everything, and the only reason the notes read as chart paper
+          rather than as coloured rectangles. Seeded on the course, not the task, so every card in
+          a course carries the same instrument and the board reads as grouped even when it is
+          sorted by hand -- loose tasks fall back to their own id, which still gives them a stable
+          glyph across reloads. */}
+      <MedicalGlyph seed={task.subject?.id ?? task.id} className="task-note-watermark" />
+
       <div className="task-row-left">
         <button
           type="button"
@@ -163,11 +184,32 @@ function TaskRowItem({
           </span>
         </div>
 
+        {/* The count in the toggle above says 2/5; the bar says how far along that is without
+            anyone having to do the division. aria-hidden because it is the same fact, and the
+            toggle already announces it. */}
+        {task.subtasks.length > 0 && (
+          <span className="task-subtask-bar" aria-hidden="true">
+            <span
+              style={{ width: `${Math.round((doneSubtasks / task.subtasks.length) * 100)}%` }}
+            />
+          </span>
+        )}
+
         <div className="task-row-badges">
           {task.subject && (
             <span className="task-subject-tag" data-color={task.subject.colorToken}>
               <span className="subject-dot" data-color={task.subject.colorToken} />
               {task.subject.name}
+            </span>
+          )}
+
+          {/* Plain words, and a chip rather than only a colour: a past due date is already in
+              the pill beside it, but "12 Aug" only reads as late if you happen to know today's
+              date. */}
+          {isOverdue && (
+            <span className="task-overdue-chip">
+              <AlertTriangle className="w-3 h-3" />
+              {ar ? "متأخرة" : "Overdue"}
             </span>
           )}
 
@@ -284,6 +326,9 @@ export function TaskWorkspace({
      gate are always on screen, so the toggles themselves are display:none there. */
   const [manageMode, setManageMode] = useState(false);
   const [quickOptionsOpen, setQuickOptionsOpen] = useState(false);
+  /* The empty state's primary action puts the caret in the quick-add line rather than opening
+     the detailed form: on an empty board the next thing anyone wants is to type one title. */
+  const quickInputRef = useRef<HTMLInputElement>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -434,11 +479,89 @@ export function TaskWorkspace({
   const filteredTasks = selectedSubjectId
     ? tasks.filter((task) => task.subject?.id === selectedSubjectId)
     : tasks;
-  const completedCount = tasks.filter((task) => task.status === "COMPLETED").length;
+
+  /**
+   * The four readouts in the vitals strip, plus the midnight boundary each card needs to know
+   * whether it is late.
+   *
+   * The day comes from getTaskDateWindow rather than a local startOfDay(): that helper pins the
+   * boundary to the app's timezone, which is the same one every server-rendered "today" count
+   * on the dashboard already uses. Computed from a plain new Date() here, a student on a
+   * different device clock would see the two pages disagree about which tasks are overdue.
+   *
+   * Keyed on `tasks` so it also re-derives on every refresh -- which is what keeps the boundary
+   * honest across a session left open past midnight.
+   */
+  const vitals = useMemo(() => {
+    const { start: dayStart, end: dayEnd } = dayBounds();
+
+    let open = 0;
+    let dueToday = 0;
+    let overdue = 0;
+    let done = 0;
+    for (const task of tasks) {
+      if (task.status === "COMPLETED") {
+        done += 1;
+        continue;
+      }
+      open += 1;
+      if (!task.dueAt) continue;
+      const due = new Date(task.dueAt);
+      if (due < dayStart) overdue += 1;
+      else if (due <= dayEnd) dueToday += 1;
+    }
+
+    return {
+      open,
+      dueToday,
+      overdue,
+      done,
+      percent: tasks.length ? Math.round((done / tasks.length) * 100) : 0,
+      dayStart,
+    };
+  }, [tasks]);
 
   const labels = ar
       ? { all: "الكل", today: "اليوم", upcoming: "القادمة", completed: "المكتملة" }
       : { all: "All", today: "Today", upcoming: "Upcoming", completed: "Completed" };
+
+  /* Which nothing is on screen matters: an empty "Completed" tab is progress not yet made, an
+     empty course is a filter, and an empty board is a blank page. Same scene, different words,
+     and each one names the thing that would fill it. */
+  const emptyCopy = selectedSubjectId
+    ? {
+        title: ar ? "لا مهام في هذا المقرر" : "Nothing in this course",
+        body: ar
+          ? "لم تُسجَّل أي مهمة تحت هذا المقرر بعد. أضف واحدة، أو اعرض كل المقررات."
+          : "No task has been filed under this course yet. Add one, or show every course.",
+      }
+    : filter === "completed"
+    ? {
+        title: ar ? "لا شيء مكتمل بعد" : "Nothing finished yet",
+        body: ar
+          ? "كل مهمة تُنجزها ستُحفظ هنا. ابدأ بواحدة صغيرة."
+          : "Every task you finish is filed here. Start with a small one.",
+      }
+    : filter === "today"
+    ? {
+        title: ar ? "لا مهام مستحقة اليوم" : "Nothing due today",
+        body: ar
+          ? "يومك خالٍ. استخدمه في مراجعة مبكرة، أو أضف مهمة لليوم."
+          : "Your day is clear. Use it to revise early, or add something for today.",
+      }
+    : filter === "upcoming"
+    ? {
+        title: ar ? "لا شيء في الأسبوع القادم" : "Nothing this week",
+        body: ar
+          ? "لا مواعيد قادمة خلال الأسبوع. خطِّط مبكرًا وستشكر نفسك لاحقًا."
+          : "No due dates in the week ahead. Plan early and thank yourself later.",
+      }
+    : {
+        title: ar ? "لوحتك فارغة" : "Your board is empty",
+        body: ar
+          ? "اكتب أول مهمة في السطر بالأعلى — اسم قصير يكفي، وتفاصيلها لاحقًا."
+          : "Write your first task in the line above — a short name is enough, details later.",
+      };
 
   return (
     <div className="notebook-workspace" dir={ar ? "rtl" : "ltr"}>
@@ -501,7 +624,36 @@ export function TaskWorkspace({
         </div>
       </header>
 
-      {/* 2. Subjects Divider Ribbon */}
+      {/* 2. Vitals: the whole board in four numbers, above the filters that would hide them.
+             Only once there is something to count -- four zeroes and a flat trace is a worse
+             empty state than the one further down. */}
+      {tasks.length > 0 && (
+        <section className="task-vitals-strip" aria-label={ar ? "ملخص المهام" : "Task summary"}>
+          <dl className="task-vitals">
+            <div className="task-vital" data-tone="open">
+              <dt>{ar ? "مفتوحة" : "Open"}</dt>
+              <dd>{vitals.open}</dd>
+            </div>
+            <div className="task-vital" data-tone="today">
+              <dt>{ar ? "اليوم" : "Today"}</dt>
+              <dd>{vitals.dueToday}</dd>
+            </div>
+            <div className="task-vital" data-tone="overdue" data-zero={vitals.overdue === 0 ? "yes" : "no"}>
+              <dt>{ar ? "متأخرة" : "Overdue"}</dt>
+              <dd>{vitals.overdue}</dd>
+            </div>
+            <div className="task-vital" data-tone="done">
+              <dt>{ar ? "مُنجز" : "Done"}</dt>
+              {/* dir=ltr on the value only: "٧٥%" belongs in the reading order, but a number
+                  followed by a percent sign is not mirrored in Arabic typography. */}
+              <dd dir="ltr">{vitals.percent}%</dd>
+            </div>
+          </dl>
+          <EcgTrace className="task-vitals-ecg" />
+        </section>
+      )}
+
+      {/* 3. Subjects Divider Ribbon */}
       <nav className="subjects-ribbon" aria-label={ar ? "تصفية المواد" : "Course filter"}>
         <div className="subjects-scroll">
           <button
@@ -576,7 +728,7 @@ export function TaskWorkspace({
         )}
       </nav>
 
-      {/* 3. Detailed Form Drawer if opened */}
+      {/* 4. Detailed Form Drawer if opened */}
       {showForm && (
         <div className="detailed-form-drawer">
           <TaskForm
@@ -591,7 +743,7 @@ export function TaskWorkspace({
         </div>
       )}
 
-      {/* 4. The Master Study Notebook Card */}
+      {/* 5. The Master Study Notebook Card */}
       <main className="master-notebook-card">
         {/* Integrated Quick-Add Row at the top of the notebook */}
         <form
@@ -605,6 +757,7 @@ export function TaskWorkspace({
 
           <input
             type="text"
+            ref={quickInputRef}
             value={quickTitle}
             onChange={(e) => setQuickTitle(e.target.value)}
             placeholder={
@@ -673,10 +826,10 @@ export function TaskWorkspace({
         {/* Notebook Tasks List Surface */}
         <div className="notebook-tasks-surface">
           {loading ? (
-            <div className="notebook-state-box">
-              <span className="loader" />
-              <p className="state-text">{ar ? "جارٍ تحميل مهامك…" : "Loading tasks…"}</p>
-            </div>
+            <DoodleLoader
+              className="notebook-state-box"
+              message={ar ? "جارٍ تحميل مهامك…" : "Loading tasks…"}
+            />
           ) : error ? (
             <div className="notebook-state-box error">
               <p className="text-danger font-bold mb-3">{error}</p>
@@ -686,21 +839,39 @@ export function TaskWorkspace({
             </div>
           ) : filteredTasks.length === 0 ? (
             <div className="notebook-empty-view">
-              <div className="empty-icon-circle">
-                <CheckCircle2 className="w-8 h-8 text-primary" />
+              {/* A blank chart on a clipboard with a flatline across it -- the one drawing that
+                  says "nothing recorded" without a word, and the beat at the end says it is
+                  waiting rather than broken. */}
+              <div className="empty-scene" aria-hidden="true">
+                <ClipboardList className="empty-scene-glyph" />
+                <EcgTrace className="empty-scene-ecg" variant="flatline" />
               </div>
-              <h3 className="empty-title">
-                {ar ? "دفترك خالٍ تمامًا في هذا التبويب" : "Your notebook is all clear"}
-              </h3>
-              <p className="empty-description">
-                {selectedSubjectId
-                  ? ar
-                    ? "لا توجد مهام مسجلة لهذا المقرر حاليًا."
-                    : "No tasks registered under this course."
-                  : ar
-                  ? "ابدأ بكتابة مهمتك الأولى في السطر بالأعلى للبدء."
-                  : "Type your first task in the line above to get started."}
-              </p>
+              <h3 className="empty-title">{emptyCopy.title}</h3>
+              <p className="empty-description">{emptyCopy.body}</p>
+              <div className="empty-actions">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  leftIcon={<Plus className="w-4 h-4" />}
+                  onClick={() => quickInputRef.current?.focus()}
+                >
+                  {ar ? "أضف مهمة" : "Add a task"}
+                </Button>
+                {selectedSubjectId ? (
+                  <Button variant="secondary" size="sm" onClick={() => setSelectedSubjectId(null)}>
+                    {ar ? "اعرض كل المقررات" : "Show all courses"}
+                  </Button>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    href="/focus"
+                    leftIcon={<Timer className="w-4 h-4" />}
+                  >
+                    {ar ? "ابدأ جلسة تركيز" : "Start a focus session"}
+                  </Button>
+                )}
+              </div>
             </div>
           ) : (
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={dragEnd}>
@@ -717,6 +888,7 @@ export function TaskWorkspace({
                       onDelete={() => void deleteTask(task.id)}
                       pending={pendingTaskId === task.id}
                       manageMode={manageMode}
+                      dayStart={vitals.dayStart}
                     />
                   ))}
                 </div>
@@ -731,12 +903,12 @@ export function TaskWorkspace({
             <div className="flex items-center gap-2 text-xs font-bold text-muted">
               <span>
                 {ar
-                  ? `تم إنجاز ${completedCount} من ${tasks.length} مهام`
-                  : `Completed ${completedCount} of ${tasks.length} tasks`}
+                  ? `تم إنجاز ${vitals.done} من ${tasks.length} مهام`
+                  : `Completed ${vitals.done} of ${tasks.length} tasks`}
               </span>
             </div>
             <div className="notebook-mini-progress">
-              <span style={{ width: `${Math.round((completedCount / tasks.length) * 100)}%` }} />
+              <span style={{ width: `${vitals.percent}%` }} />
             </div>
           </footer>
         )}

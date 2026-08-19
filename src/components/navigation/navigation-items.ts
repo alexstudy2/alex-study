@@ -7,6 +7,7 @@ import {
   History,
   LayoutDashboard,
   ListTodo,
+  StickyNote,
   Target,
   Timer,
   Trophy,
@@ -41,7 +42,8 @@ export const navigationGroups: NavigationGroup[] = [
     titleAr: "التخطيط",
     items: [
       { href: "/calendar", label: "Calendar", labelAr: "التقويم", icon: CalendarDays },
-      { href: "/exam-plans/new", label: "Exam Plan", labelAr: "خطة امتحان", icon: ClipboardList },
+      { href: "/plan-forum", label: "Plan Forum", labelAr: "منتدى الخطط", icon: StickyNote },
+      { href: "/exam-plans/new", label: "AI Exam Plan", labelAr: "خطة امتحان AI", icon: ClipboardList },
       { href: "/goals", label: "Goals", labelAr: "الأهداف", icon: Target },
     ],
   },

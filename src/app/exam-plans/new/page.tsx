@@ -7,7 +7,9 @@ export default async function NewExamPlanPage() {
   const [profile, recentPlans] = await Promise.all([
     prisma.user.findUnique({
       where: { id: user.id },
-      select: { aiNudgesEnabled: true },
+      /* weekStartsOn orders the rest-day toggles. Someone who set a Saturday-first week should not
+         have to hunt for their day off in a Sunday-first row. */
+      select: { aiNudgesEnabled: true, weekStartsOn: true },
     }),
     prisma.examPlan.findMany({
       where: { userId: user.id },
@@ -21,6 +23,7 @@ export default async function NewExamPlanPage() {
       locale={user.locale === "AR" ? "ar" : "en"}
       recentPlans={recentPlans}
       aiEnabled={profile?.aiNudgesEnabled ?? true}
+      weekStartsOn={profile?.weekStartsOn ?? 0}
     />
   );
 }

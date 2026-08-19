@@ -1,9 +1,33 @@
 <!doctype html>
-<html lang="en" data-theme="light" data-mood="notebook">
+<html lang="en" data-theme="light" data-mood="notebook" class="fx-font-vars">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="./css-geometry.css" />
+    <!--
+      Stands in for next/font. layout.tsx puts four generated classes on <html>, each declaring
+      one --font-* variable; without them every family in tokens.css that opens with
+      `var(--font-delius)` is guaranteed-invalid, which makes `font-family` invalid at
+      computed-value time and drops it to the inherited value. That is not a cosmetic gap in the
+      fixture: it silently deleted the declared family from every measured element, so text ran
+      in whatever Chromium inherits and the button-spill probe measured the wrong widths.
+
+      A class, not `:root`, to match the real specificity -- tokens.css declares
+      `--font-mono: var(--font-mono), ...` on `:root` (0,0,1), which in the app loses outright to
+      next/font's class (0,1,0) and takes its own fallback chain with it. Reproduced rather than
+      corrected, because the point of this file is to be wrong in the same places the app is.
+
+      The named faces are not installed offline, so glyph metrics still come from Chromium's
+      `cursive`/`sans-serif` -- what this fixes is the cascade, not the rasteriser.
+    -->
+    <style>
+      html.fx-font-vars {
+        --font-delius: "Delius Swash Caps";
+        --font-delius-body: "Delius";
+        --font-mono: "JetBrains Mono";
+        --font-arabic: "IBM Plex Sans Arabic";
+      }
+    </style>
   </head>
   <body>
     <!-- Reproduces the real app shell so the width chain (app-shell -> app-content -> page)
@@ -97,6 +121,24 @@
               </div>
             </div>
 
+            <!-- Four readouts and a trace, as task-workspace.tsx emits them between the header
+                 and the course filter. The numbers are the worst realistic case (three digits,
+                 and a percentage that has to stay LTR in Arabic), because the failure mode here
+                 is a label wrapping and making the four boxes different heights. -->
+            <section class="task-vitals-strip" aria-label="Task summary">
+              <dl class="task-vitals">
+                <div class="task-vital" data-tone="open"><dt>Open</dt><dd>128</dd></div>
+                <div class="task-vital" data-tone="today"><dt>Today</dt><dd>9</dd></div>
+                <div class="task-vital" data-tone="overdue" data-zero="no"><dt>Overdue</dt><dd>14</dd></div>
+                <div class="task-vital" data-tone="done"><dt>Done</dt><dd dir="ltr">62%</dd></div>
+              </dl>
+              <span class="ecg-trace task-vitals-ecg" aria-hidden="true">
+                <svg viewBox="0 0 480 40" preserveAspectRatio="none">
+                  <path class="ecg-trace-line" d="M0 20 L8 20 Q13 12 18 20 L23 20 L26 25 L30 4 L34 31 L37 20 L44 20 Q50 11 56 20 L60 20" />
+                </svg>
+              </span>
+            </section>
+
             <!-- Horizontal chip scroller. Present so the 2.5rem chip height is actually
                  measured against the tap-target floor rather than assumed. -->
             <nav class="subjects-ribbon" aria-label="Course filter">
@@ -189,7 +231,288 @@
             <div class="analytics-main">
               <div class="analytics-toolbar" id="overview">
                 <div><p class="eyebrow">Live study data</p><strong>Last 30 days</strong></div>
+                <!-- Two bare selects in a wrapping row, as analytics-view renders them: the drawn
+                     caret, the 44px coarse floor and the RTL caret edge are all measured off these. -->
+                <div class="analytics-toolbar-controls">
+                  <label>
+                    <svg class="w-4 h-4" viewBox="0 0 24 24"></svg><span class="sr-only">Range</span>
+                    <select><option>30 days</option></select>
+                  </label>
+                  <label>
+                    <svg class="w-4 h-4" viewBox="0 0 24 24"></svg><span class="sr-only">Course</span>
+                    <select><option>All courses</option></select>
+                  </label>
+                </div>
               </div>
+
+              <div class="analytics-summary">
+                <article>
+                  <div class="analytics-metric-head">
+                    <div class="analytics-metric-icon"><svg viewBox="0 0 24 24"></svg></div>
+                    <span class="analytics-delta" data-direction="up"
+                      ><svg viewBox="0 0 24 24"></svg><span aria-hidden="true">18%</span
+                      ><span class="sr-only">up on the previous period</span></span
+                    >
+                  </div>
+                  <span>Study time</span><strong>12h 30m</strong><small>18 active days</small>
+                </article>
+                <article>
+                  <div class="analytics-metric-head">
+                    <div class="analytics-metric-icon"><svg viewBox="0 0 24 24"></svg></div>
+                    <span class="analytics-delta" data-direction="down"
+                      ><svg viewBox="0 0 24 24"></svg><span aria-hidden="true">6 pts</span
+                      ><span class="sr-only">down on the previous period</span></span
+                    >
+                  </div>
+                  <span>Plan accuracy</span><strong>112%</strong><small>11h planned</small>
+                </article>
+                <article>
+                  <div class="analytics-metric-head">
+                    <div class="analytics-metric-icon"><svg viewBox="0 0 24 24"></svg></div>
+                    <span class="analytics-delta" data-direction="flat"
+                      ><svg viewBox="0 0 24 24"></svg><span aria-hidden="true">&mdash;</span
+                      ><span class="sr-only">unchanged from the previous period</span></span
+                    >
+                  </div>
+                  <span>Task completion</span><strong>74%</strong><small>17/23 due &middot; 19 done</small>
+                </article>
+                <article>
+                  <div class="analytics-metric-head">
+                    <div class="analytics-metric-icon"><svg viewBox="0 0 24 24"></svg></div>
+                    <span class="analytics-delta" data-direction="up"
+                      ><svg viewBox="0 0 24 24"></svg><span aria-hidden="true">2 pts</span
+                      ><span class="sr-only">up on the previous period</span></span
+                    >
+                  </div>
+                  <span>Focus quality</span><strong>73.6/100</strong><small>19 distractions</small>
+                </article>
+              </div>
+
+              <section class="analytics-panel analytics-wide-panel" id="fx-analytics-trends">
+                <header class="analytics-panel-heading">
+                  <div>
+                    <svg viewBox="0 0 24 24"></svg>
+                    <div><h2>Study rhythm</h2><p>Actual time compared with your daily plan.</p></div>
+                  </div>
+                </header>
+                <div class="analytics-chart analytics-trend-chart">
+                  <!-- Stands in for the recharts <AreaChart>, and reproduces the one assumption the
+                       whole re-skin rests on: that a var() in an SVG presentation attribute
+                       substitutes, so the charts can be themed from tokens instead of hexes. The
+                       gradient stops take their colour from a class for the same reason in reverse
+                       -- stop-color is the one property that never relies on the attribute path. -->
+                  <svg class="fx-chart-svg" viewBox="0 0 100 40" preserveAspectRatio="none" style="width: 100%; height: 100%">
+                    <defs>
+                      <linearGradient id="fxStudyFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop class="analytics-fill-top" offset="5%"></stop>
+                        <stop class="analytics-fill-bottom" offset="95%"></stop>
+                      </linearGradient>
+                    </defs>
+                    <rect class="fx-chart-fill" x="0" y="0" width="100" height="40" fill="url(#fxStudyFill)"></rect>
+                    <path class="fx-chart-line" d="M0 32 L30 12 L60 22 L100 8" fill="none" stroke="var(--primary-strong)" stroke-width="3"></path>
+                  </svg>
+                  <!-- recharts positions this wrapper itself; pinned here so it can be measured. -->
+                  <div class="recharts-tooltip-wrapper" style="position: absolute; top: 8px; inset-inline-start: 8px">
+                    <div class="analytics-tooltip">
+                      <p class="analytics-tooltip-label">12 Aug</p>
+                      <ul>
+                        <li><i style="background: var(--primary-strong)"></i><span>Actual</span><strong>1h 20m</strong></li>
+                        <li><i style="background: var(--secondary)"></i><span>Planned</span><strong>1h 30m</strong></li>
+                      </ul>
+                      <p class="analytics-tooltip-footer">3 sessions</p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="analytics-panel analytics-wide-panel" id="fx-analytics-consistency">
+                <header class="analytics-panel-heading">
+                  <div>
+                    <svg viewBox="0 0 24 24"></svg>
+                    <div><h2>Showing up</h2><p>One square per day &mdash; darker means longer.</p></div>
+                  </div>
+                </header>
+                <div class="analytics-consistency">
+                  <div class="analytics-calendar-wrap">
+                    <!-- 30 days over six week columns, with the leading and trailing pad cells the
+                         real grid emits for a range that does not start on the reader's weekday. -->
+                    <div class="analytics-calendar">
+                      <div class="analytics-calendar-days" aria-hidden="true">
+                        <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                      </div>
+                      <div class="analytics-calendar-grid" style="grid-template-columns: repeat(6, var(--cal-cell))">
+                        <span class="analytics-cal-cell" data-empty="true"></span><span class="analytics-cal-cell" data-level="2"></span><span class="analytics-cal-cell" data-level="0"></span><span class="analytics-cal-cell" data-level="4"></span><span class="analytics-cal-cell" data-level="1"></span><span class="analytics-cal-cell" data-level="3"></span>
+                        <span class="analytics-cal-cell" data-empty="true"></span><span class="analytics-cal-cell" data-level="1"></span><span class="analytics-cal-cell" data-level="3"></span><span class="analytics-cal-cell" data-level="2"></span><span class="analytics-cal-cell" data-level="0"></span><span class="analytics-cal-cell" data-level="4"></span>
+                        <span class="analytics-cal-cell" data-level="0"></span><span class="analytics-cal-cell" data-level="4"></span><span class="analytics-cal-cell" data-level="2"></span><span class="analytics-cal-cell" data-level="1"></span><span class="analytics-cal-cell" data-level="3"></span><span class="analytics-cal-cell" data-level="0"></span>
+                        <span class="analytics-cal-cell" data-level="3"></span><span class="analytics-cal-cell" data-level="2"></span><span class="analytics-cal-cell" data-level="1"></span><span class="analytics-cal-cell" data-level="4"></span><span class="analytics-cal-cell" data-level="0"></span><span class="analytics-cal-cell" data-level="2"></span>
+                        <span class="analytics-cal-cell" data-level="1"></span><span class="analytics-cal-cell" data-level="0"></span><span class="analytics-cal-cell" data-level="4"></span><span class="analytics-cal-cell" data-level="3"></span><span class="analytics-cal-cell" data-level="2"></span><span class="analytics-cal-cell" data-empty="true"></span>
+                        <span class="analytics-cal-cell" data-level="2"></span><span class="analytics-cal-cell" data-level="3"></span><span class="analytics-cal-cell" data-level="0"></span><span class="analytics-cal-cell" data-level="1"></span><span class="analytics-cal-cell" data-empty="true"></span><span class="analytics-cal-cell" data-empty="true"></span>
+                        <span class="analytics-cal-cell" data-level="4"></span><span class="analytics-cal-cell" data-level="1"></span><span class="analytics-cal-cell" data-level="2"></span><span class="analytics-cal-cell" data-empty="true"></span><span class="analytics-cal-cell" data-empty="true"></span><span class="analytics-cal-cell" data-empty="true"></span>
+                      </div>
+                    </div>
+                    <div class="analytics-heat-legend" aria-hidden="true">
+                      <span>Less</span><i data-level="0"></i><i data-level="1"></i><i data-level="2"></i><i data-level="3"></i><i data-level="4"></i><span>More</span>
+                    </div>
+                  </div>
+                  <div class="analytics-streaks">
+                    <div class="analytics-streak">
+                      <span class="analytics-streak-icon"><svg viewBox="0 0 24 24"></svg></span><strong>6</strong><span>day streak now</span>
+                    </div>
+                    <div class="analytics-streak">
+                      <span class="analytics-streak-icon"><svg viewBox="0 0 24 24"></svg></span><strong>11</strong><span>longest run</span>
+                    </div>
+                    <div class="analytics-streak">
+                      <span class="analytics-streak-icon"><svg viewBox="0 0 24 24"></svg></span><strong>12h 30m</strong><span>banked in total</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="analytics-split">
+                  <div>
+                    <header class="analytics-subheading"><h3>Your week</h3><p>Minutes by day of the week.</p></header>
+                    <div class="analytics-chart analytics-weekday-chart"></div>
+                  </div>
+                  <div>
+                    <header class="analytics-subheading"><h3>Session length</h3><p>You average 42m against a 45m plan.</p></header>
+                    <div class="analytics-chart analytics-length-chart"></div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="analytics-panel analytics-wide-panel" id="fx-analytics-subjects">
+                <header class="analytics-panel-heading">
+                  <div>
+                    <svg viewBox="0 0 24 24"></svg>
+                    <div><h2>Subject mix</h2><p>Where the time goes, course by course.</p></div>
+                  </div>
+                </header>
+                <div class="analytics-course-layout">
+                  <div>
+                    <div class="analytics-chart analytics-donut-chart">
+                      <div class="analytics-donut-label"><strong>12h 30m</strong><span>total</span></div>
+                    </div>
+                    <div class="analytics-legend">
+                      <div><i style="background: var(--subject-teal)"></i><span>Cardiovascular physiology</span><strong>6h</strong></div>
+                      <div><i style="background: var(--subject-coral)"></i><span>Neuroanatomy</span><strong>4h 30m</strong></div>
+                    </div>
+                  </div>
+                  <div class="analytics-course-detail">
+                    <div class="analytics-sort" role="group" aria-label="Sort courses">
+                      <button type="button" aria-pressed="true">Time</button><button type="button" aria-pressed="false">Sessions</button><button type="button" aria-pressed="false">Length</button><button type="button" aria-pressed="false">Tasks</button><button type="button" aria-pressed="false">Focus</button>
+                    </div>
+                    <!-- Two courses, because one card cannot show that [data-color] resolved to a
+                         different --subject-color per course rather than to nothing at all. -->
+                    <div class="analytics-course-grid">
+                      <article data-color="teal">
+                        <header><svg viewBox="0 0 24 24"></svg><h3>Cardiovascular physiology</h3></header>
+                        <dl>
+                          <div><dt>Time</dt><dd>6h</dd></div><div><dt>Sessions</dt><dd>9</dd></div>
+                          <div><dt>Avg length</dt><dd>40m</dd></div><div><dt>Tasks done</dt><dd>7</dd></div>
+                          <div><dt>Focus</dt><dd>7.8/10</dd></div><div><dt>Distr./hr</dt><dd>1.4</dd></div>
+                        </dl>
+                      </article>
+                      <article data-color="coral">
+                        <header><svg viewBox="0 0 24 24"></svg><h3>Neuroanatomy</h3></header>
+                        <dl>
+                          <div><dt>Time</dt><dd>4h 30m</dd></div><div><dt>Sessions</dt><dd>6</dd></div>
+                          <div><dt>Avg length</dt><dd>45m</dd></div><div><dt>Tasks done</dt><dd>4</dd></div>
+                          <div><dt>Focus</dt><dd>&mdash;</dd></div><div><dt>Distr./hr</dt><dd>2.1</dd></div>
+                        </dl>
+                      </article>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="analytics-panel analytics-wide-panel" id="fx-analytics-hours">
+                <header class="analytics-panel-heading">
+                  <div>
+                    <svg viewBox="0 0 24 24"></svg>
+                    <div><h2>When you focus best</h2><p>Minutes by day and hour.</p></div>
+                  </div>
+                </header>
+                <!-- Both grids, exactly as WeekHourHeatmap renders them: which one is visible is a
+                     CSS decision, so the fixture has to hold both for the swap to be measurable. -->
+                <div class="analytics-hourmap-wrap">
+                  <table class="analytics-hourmap" data-step="1">
+                    <caption class="sr-only">Study minutes by weekday and hour</caption>
+                    <thead>
+                      <tr><td></td><th scope="col"><span>00:00</span></th><th scope="col"><span data-hide="true">01:00</span></th><th scope="col"><span data-hide="true">02:00</span></th><th scope="col"><span>03:00</span></th><th scope="col"><span data-hide="true">04:00</span></th><th scope="col"><span data-hide="true">05:00</span></th><th scope="col"><span>06:00</span></th><th scope="col"><span data-hide="true">07:00</span></th><th scope="col"><span data-hide="true">08:00</span></th><th scope="col"><span>09:00</span></th><th scope="col"><span data-hide="true">10:00</span></th><th scope="col"><span data-hide="true">11:00</span></th><th scope="col"><span>12:00</span></th><th scope="col"><span data-hide="true">13:00</span></th><th scope="col"><span data-hide="true">14:00</span></th><th scope="col"><span>15:00</span></th><th scope="col"><span data-hide="true">16:00</span></th><th scope="col"><span data-hide="true">17:00</span></th><th scope="col"><span>18:00</span></th><th scope="col"><span data-hide="true">19:00</span></th><th scope="col"><span data-hide="true">20:00</span></th><th scope="col"><span>21:00</span></th><th scope="col"><span data-hide="true">22:00</span></th><th scope="col"><span data-hide="true">23:00</span></th></tr>
+                    </thead>
+                    <tbody>
+                      <tr><th scope="row">Sun</th><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="1"></td><td data-level="2"></td><td data-level="1"></td><td data-level="0"></td><td data-level="0"></td><td data-level="1"></td><td data-level="2"></td><td data-level="3"></td><td data-level="2"></td><td data-level="0"></td><td data-level="0"></td><td data-level="1"></td><td data-level="3"></td><td data-level="4"></td><td data-level="3"></td><td data-level="1"></td><td data-level="0"></td><td data-level="0"></td></tr>
+                      <tr><th scope="row">Mon</th><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="1"></td><td data-level="2"></td><td data-level="1"></td><td data-level="0"></td><td data-level="1"></td><td data-level="2"></td><td data-level="2"></td><td data-level="1"></td><td data-level="0"></td><td data-level="1"></td><td data-level="2"></td><td data-level="3"></td><td data-level="4"></td><td data-level="4"></td><td data-level="2"></td><td data-level="1"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td></tr>
+                      <tr><th scope="row">Tue</th><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="1"></td><td data-level="1"></td><td data-level="2"></td><td data-level="3"></td><td data-level="2"></td><td data-level="1"></td><td data-level="0"></td><td data-level="0"></td><td data-level="2"></td><td data-level="3"></td><td data-level="2"></td><td data-level="1"></td><td data-level="2"></td><td data-level="3"></td><td data-level="2"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td></tr>
+                      <tr><th scope="row">Wed</th><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="1"></td><td data-level="1"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="1"></td><td data-level="2"></td><td data-level="1"></td><td data-level="0"></td><td data-level="1"></td><td data-level="2"></td><td data-level="4"></td><td data-level="4"></td><td data-level="2"></td><td data-level="1"></td><td data-level="0"></td><td data-level="0"></td></tr>
+                      <tr><th scope="row">Thu</th><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="1"></td><td data-level="2"></td><td data-level="3"></td><td data-level="2"></td><td data-level="1"></td><td data-level="0"></td><td data-level="0"></td><td data-level="1"></td><td data-level="1"></td><td data-level="2"></td><td data-level="2"></td><td data-level="1"></td><td data-level="1"></td><td data-level="2"></td><td data-level="1"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td></tr>
+                      <tr><th scope="row">Fri</th><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="1"></td><td data-level="1"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="1"></td><td data-level="1"></td><td data-level="0"></td><td data-level="0"></td><td data-level="1"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td></tr>
+                      <tr><th scope="row">Sat</th><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="1"></td><td data-level="1"></td><td data-level="2"></td><td data-level="4"></td><td data-level="4"></td><td data-level="3"></td><td data-level="2"></td><td data-level="1"></td><td data-level="1"></td><td data-level="2"></td><td data-level="2"></td><td data-level="1"></td><td data-level="0"></td><td data-level="1"></td><td data-level="1"></td><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td></tr>
+                    </tbody>
+                  </table>
+                  <table class="analytics-hourmap" data-step="4">
+                    <caption class="sr-only">Study minutes by weekday and hour</caption>
+                    <thead>
+                      <tr><td></td><th scope="col"><span>00</span></th><th scope="col"><span>04</span></th><th scope="col"><span>08</span></th><th scope="col"><span>12</span></th><th scope="col"><span>16</span></th><th scope="col"><span>20</span></th></tr>
+                    </thead>
+                    <tbody>
+                      <tr><th scope="row">Sun</th><td data-level="0"></td><td data-level="1"></td><td data-level="2"></td><td data-level="3"></td><td data-level="2"></td><td data-level="4"></td></tr>
+                      <tr><th scope="row">Mon</th><td data-level="0"></td><td data-level="2"></td><td data-level="2"></td><td data-level="2"></td><td data-level="4"></td><td data-level="1"></td></tr>
+                      <tr><th scope="row">Tue</th><td data-level="0"></td><td data-level="1"></td><td data-level="3"></td><td data-level="2"></td><td data-level="3"></td><td data-level="2"></td></tr>
+                      <tr><th scope="row">Wed</th><td data-level="0"></td><td data-level="0"></td><td data-level="1"></td><td data-level="2"></td><td data-level="4"></td><td data-level="2"></td></tr>
+                      <tr><th scope="row">Thu</th><td data-level="0"></td><td data-level="1"></td><td data-level="3"></td><td data-level="1"></td><td data-level="2"></td><td data-level="1"></td></tr>
+                      <tr><th scope="row">Fri</th><td data-level="0"></td><td data-level="0"></td><td data-level="0"></td><td data-level="1"></td><td data-level="1"></td><td data-level="0"></td></tr>
+                      <tr><th scope="row">Sat</th><td data-level="0"></td><td data-level="1"></td><td data-level="4"></td><td data-level="2"></td><td data-level="2"></td><td data-level="1"></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section class="analytics-panel analytics-wide-panel" id="fx-analytics-quality">
+                <header class="analytics-panel-heading">
+                  <div>
+                    <svg viewBox="0 0 24 24"></svg>
+                    <div><h2>Focus quality</h2><p>Daily focus score against distraction counts.</p></div>
+                  </div>
+                </header>
+                <div class="analytics-split">
+                  <div>
+                    <header class="analytics-subheading"><h3>Focus vs distractions</h3><p>The line is the score, the bars are distractions.</p></header>
+                    <div class="analytics-chart analytics-focus-chart"></div>
+                  </div>
+                  <div>
+                    <header class="analytics-subheading"><h3>Plan accuracy by day</h3><p>The dashed line is 100% of that day's plan.</p></header>
+                    <div class="analytics-chart analytics-accuracy-chart"></div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="analytics-ai-panel" id="fx-analytics-ai">
+                <div class="analytics-ai-heading">
+                  <div>
+                    <span class="analytics-ai-icon"><svg viewBox="0 0 24 24"></svg></span>
+                    <div>
+                      <p class="eyebrow">AI &middot; pattern analysis</p>
+                      <h2>What your data is saying</h2>
+                      <p class="analytics-ai-sub">6 readings from the last 30 days.</p>
+                    </div>
+                  </div>
+                  <!-- The inverted fill: the only place a --secondary-foreground background is drawn
+                       on a --secondary card, so the contrast pair is measured off this one. -->
+                  <a class="secondary-button" href="#"
+                    ><svg viewBox="0 0 24 24"></svg>Deeper insights<svg viewBox="0 0 24 24"></svg
+                  ></a>
+                </div>
+                <div class="analytics-signal-grid">
+                  <article data-tone="blue"><svg viewBox="0 0 24 24"></svg><div><span>Focus window</span><strong>19:00</strong><p>The hour where you accumulated the most study time.</p></div></article>
+                  <article data-tone="blue"><svg viewBox="0 0 24 24"></svg><div><span>Best day</span><strong>Tue</strong><p>3h 10m across 4 sessions this range.</p></div></article>
+                  <article data-tone="green"><svg viewBox="0 0 24 24"></svg><div><span>Consistency</span><strong>63%</strong><p>19 active days in the selected range.</p></div></article>
+                  <article data-tone="amber"><svg viewBox="0 0 24 24"></svg><div><span>Typical session</span><strong>42m</strong><p>Against a 45m plan per session.</p></div></article>
+                  <article data-tone="green"><svg viewBox="0 0 24 24"></svg><div><span>7-day direction</span><strong>+12%</strong><p>Last week's study time compared with the week before.</p></div></article>
+                  <article data-tone="amber"><svg viewBox="0 0 24 24"></svg><div><span>Distraction density</span><strong>2.4 / hour</strong><p>Recorded distractions per study hour.</p></div></article>
+                </div>
+                <p class="analytics-ai-disclaimer">
+                  These are descriptive signals from your data, not a judgment of your performance.
+                </p>
+              </section>
             </div>
           </section>
 
@@ -224,7 +547,10 @@
                 <button type="button" class="quick-add-options-toggle" aria-expanded="false" aria-label="Task options">
                   <svg class="w-4 h-4" viewBox="0 0 24 24"></svg>
                 </button>
-                <button type="submit" class="btn btn-primary btn-sm quick-add-submit">
+                <!-- `disabled` because that is how this button spends most of its life: the
+                     component gates it on a non-empty title, so the empty row is its resting
+                     state and therefore the one worth measuring. -->
+                <button type="submit" class="btn btn-primary btn-sm quick-add-submit" disabled>
                   <span class="btn-icon-left"><svg class="w-4 h-4" viewBox="0 0 24 24"></svg></span>Add
                 </button>
                 <div class="quick-add-options">
@@ -239,8 +565,20 @@
 
               <div class="notebook-tasks-surface">
                 <div class="notebook-task-list">
-                  <!-- Collapsed: no subtasks panel, manage row hidden below the breakpoint. -->
-                  <article class="notebook-task-row sticky-task-note" data-priority="high" data-manage="off">
+                  <!-- Collapsed: no subtasks panel, manage row hidden below the breakpoint.
+                       --note-color is set inline exactly as the component sets it, because that
+                       inline declaration is the thing that broke: it names a token, and when the
+                       token did not exist the whole color-mix() went invalid and the note lost
+                       its paper. Two cards, two courses, so the probe can prove the two papers
+                       differ instead of merely being non-empty. -->
+                  <article
+                    class="notebook-task-row sticky-task-note"
+                    data-priority="high"
+                    data-manage="off"
+                    data-overdue="yes"
+                    style="--note-color: var(--subject-teal)"
+                  >
+                    <svg class="task-note-watermark" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4z" /></svg>
                     <div class="task-row-left">
                       <button class="drag-grip-btn" type="button" aria-label="Reorder">
                         <svg class="w-4 h-4" viewBox="0 0 24 24"></svg>
@@ -258,9 +596,13 @@
                         </button>
                         <span class="task-priority-pill priority-high">High</span>
                       </div>
+                      <span class="task-subtask-bar" aria-hidden="true"><span style="width: 40%"></span></span>
                       <div class="task-row-badges">
                         <span class="task-subject-tag" data-color="teal"
                           ><span class="subject-dot" data-color="teal"></span>Pharmacology</span
+                        >
+                        <span class="task-overdue-chip"
+                          ><svg class="w-3 h-3" viewBox="0 0 24 24"></svg>Overdue</span
                         >
                         <!-- The merged pill: worst case is a long localised date plus an estimate. -->
                         <span class="task-meta-pill"
@@ -284,8 +626,16 @@
                   </article>
 
                   <!-- Expanded, manage mode on, and :nth-child(3n + 2) so the tilt override is
-                       exercised too -- the base rule is not the only place transform is set. -->
-                  <article class="notebook-task-row sticky-task-note" data-priority="low" data-manage="on">
+                       exercised too -- the base rule is not the only place transform is set. A
+                       different course from the card above, and not overdue. -->
+                  <article
+                    class="notebook-task-row sticky-task-note"
+                    data-priority="low"
+                    data-manage="on"
+                    data-overdue="no"
+                    style="--note-color: var(--subject-violet)"
+                  >
+                    <svg class="task-note-watermark" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4z" /></svg>
                     <div class="task-row-left">
                       <button class="drag-grip-btn" type="button" aria-label="Reorder">
                         <svg class="w-4 h-4" viewBox="0 0 24 24"></svg>
@@ -304,6 +654,9 @@
                         <span class="task-priority-pill priority-low">Low</span>
                       </div>
                       <div class="task-row-badges">
+                        <span class="task-subject-tag" data-color="violet"
+                          ><span class="subject-dot" data-color="violet"></span>علم الأنسجة</span
+                        >
                         <span class="task-meta-pill"
                           ><svg class="w-3 h-3" viewBox="0 0 24 24"></svg><span class="font-mono font-bold">45m</span></span
                         >
@@ -328,6 +681,46 @@
                       </button>
                     </div>
                   </article>
+                </div>
+              </div>
+            </div>
+
+            <!-- All four triage levels side by side. The two cards above only cover high and
+                 low, and "the spine tells you how urgent this is" is only true if the four
+                 resolve to four different colours -- which they did not before this pass: the
+                 .priority-* classes were rendered and no rule anywhere matched them. -->
+            <div id="fx-triage">
+              <span class="task-priority-pill priority-low">Low</span>
+              <span class="task-priority-pill priority-medium">Medium</span>
+              <span class="task-priority-pill priority-high">High</span>
+              <span class="task-priority-pill priority-urgent">Urgent</span>
+            </div>
+
+            <!-- The pinboard's own empty view, inside the notebook frame it is designed to sit
+                 in. Longest of the five context variants, because the description is the part
+                 that has to wrap without pushing the actions off a 320px screen. -->
+            <div class="master-notebook-card">
+              <div class="notebook-tasks-surface">
+                <div class="notebook-empty-view">
+                  <div class="empty-scene" aria-hidden="true">
+                    <svg class="empty-scene-glyph" viewBox="0 0 24 24"><path d="M4 4h16v16H4z" /></svg>
+                    <span class="ecg-trace empty-scene-ecg">
+                      <svg viewBox="0 0 480 40" preserveAspectRatio="none">
+                        <path class="ecg-trace-line" d="M0 20 L120 20 L128 20 Q133 12 138 20 L143 20 L146 25 L150 4 L154 31 L157 20 L164 20 Q170 11 176 20 L180 20 L420 20 L480 20" />
+                      </svg>
+                    </span>
+                  </div>
+                  <h3 class="empty-title">Nothing filed under this course yet</h3>
+                  <p class="empty-description">
+                    Nothing on the board for Pharmacology. Add the first one, or clear the filter
+                    to see every course again.
+                  </p>
+                  <div class="empty-actions">
+                    <button class="btn btn-primary btn-sm" type="button">
+                      <span class="btn-icon-left"><svg class="w-4 h-4" viewBox="0 0 24 24"></svg></span>Add a task
+                    </button>
+                    <button class="btn btn-secondary btn-sm" type="button">Show all courses</button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -488,9 +881,26 @@
                     problem set
                   </p>
 
+                  <!-- Faithful to focus-workspace.tsx: Button renders leftIcon in a
+                       .btn-icon-left span, and a RUNNING focus timer shows three controls, the
+                       third an icon-only cancel. The earlier stripped-down pair (no icons, no
+                       cancel) measured ~28px narrower per button and a whole control shorter, so
+                       the row fitted here while "Complete session" spilled out of its own border
+                       in the app. -->
                   <div class="timer-action-buttons">
-                    <button type="button" class="btn btn-primary btn-lg">Pause</button>
-                    <button type="button" class="btn btn-secondary btn-lg">Complete session</button>
+                    <button type="button" class="btn btn-primary btn-lg">
+                      <span class="btn-icon-left" aria-hidden="true"
+                        ><svg class="w-5 h-5" viewBox="0 0 24 24"></svg></span
+                      >Pause
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-lg">
+                      <span class="btn-icon-left" aria-hidden="true"
+                        ><svg class="w-5 h-5" viewBox="0 0 24 24"></svg></span
+                      >Complete session
+                    </button>
+                    <button type="button" class="btn btn-danger btn-icon" aria-label="Cancel">
+                      <svg class="w-5 h-5" viewBox="0 0 24 24"></svg>
+                    </button>
                   </div>
 
                   <button type="button" class="doodle-distraction-btn mt-4">
@@ -536,6 +946,813 @@
                 </aside>
               </section>
             </div>
+          </section>
+          <!-- ============ 13. dashboard quick-add + "nothing due today" ============ -->
+          <!-- today-tasks-sticky.tsx in the state where both halves are on screen at once: the
+               inline form open (isAdding) and no tasks to list. Both are real together, and it is
+               the combination that has to fit 320px.
+
+               The empty state is the shared EmptyState with a drawn scene passed as its `icon`,
+               which is the interesting part: .ui-empty-icon is a hard 52px circle that clamps its
+               svg to 26px, so the scene only renders if the :has() override in components.css
+               actually wins. Rendered here exactly as the component emits it -- .ui-empty-icon
+               wrapper included -- rather than as the markup we wish it emitted. -->
+          <section id="fx-stickyadd">
+            <div class="today-tasks-sticky-card">
+              <div class="sticky-tape-top" aria-hidden="true"></div>
+              <div class="sticky-tasks-header">
+                <div class="flex items-center gap-2">
+                  <svg class="w-5 h-5" viewBox="0 0 24 24"></svg>
+                  <h2 class="sticky-tasks-title">Today's Tasks</h2>
+                  <span class="counter-pill font-mono">0</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <a href="#" class="sticky-view-all-link">View all<svg class="w-3.5 h-3.5" viewBox="0 0 24 24"></svg></a>
+                </div>
+              </div>
+
+              <form class="sticky-inline-add-form">
+                <div class="sticky-input-row">
+                  <input type="text" class="sticky-task-input" placeholder="Type today's task and press Enter..." />
+                  <div class="flex items-center gap-1.5 shrink-0">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24"></svg><span>Add</span>
+                    </button>
+                    <button type="button" class="sticky-cancel-btn" aria-label="Cancel">
+                      <svg class="w-4 h-4" viewBox="0 0 24 24"></svg>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Course and priority. The longest option label is the binding case: these are
+                     <select>s, so the widest <option> sets the intrinsic width, and a row that
+                     fits at 1440px can still force a horizontal scroll at 320px. -->
+                <div class="sticky-meta-row">
+                  <div class="sticky-field">
+                    <span class="sticky-course-swatch" data-color="violet" data-empty="no" aria-hidden="true"></span>
+                    <div class="ui-form-group">
+                      <select class="ui-select sticky-select" aria-label="Course">
+                        <option>Cardiovascular Pharmacology</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="sticky-field" data-priority="urgent">
+                    <span class="sticky-priority-spine" aria-hidden="true"></span>
+                    <div class="ui-form-group">
+                      <select class="ui-select sticky-select" aria-label="Priority">
+                        <option>Urgent</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </form>
+
+              <div class="sticky-tasks-list">
+                <!-- Two cards with different data-color, plus one with none. The app renders
+                     either the list or the empty state below, never both; they share a parent here
+                     so one fixture covers both, exactly as #fx-taskrow already does. Three cards
+                     because the tilt alternates on nth-child and a two-card sample cannot tell a
+                     working 2n rule from one that matched everything. The colour pair is the
+                     regression test for the bug that started all of this: two courses whose cards
+                     compute to the *same* background mean --subject-color resolved to nothing. -->
+                <div class="dashboard-task-card" data-color="violet">
+                  <button type="button" class="task-checkbox-btn" aria-label="Mark as completed">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24"></svg>
+                  </button>
+                  <a href="#" class="dashboard-task-content flex-1 flex items-center justify-between gap-3 text-inherit no-underline">
+                    <div class="flex flex-col gap-1 min-w-0">
+                      <strong class="dashboard-task-title truncate">Finish the cardiovascular pharmacology deck</strong>
+                      <span class="dashboard-task-subject">
+                        <span class="subject-dot shrink-0"></span>
+                        <span class="truncate">Cardiovascular Pharmacology</span>
+                      </span>
+                    </div>
+                    <span class="task-pill flex items-center gap-1 px-2 py-0.5 shrink-0">
+                      <svg class="w-3 h-3" viewBox="0 0 24 24"></svg>45 m
+                    </span>
+                  </a>
+                </div>
+                <div class="dashboard-task-card" data-color="teal">
+                  <button type="button" class="task-checkbox-btn" aria-label="Mark as completed">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24"></svg>
+                  </button>
+                  <a href="#" class="dashboard-task-content flex-1 flex items-center justify-between gap-3 text-inherit no-underline">
+                    <div class="flex flex-col gap-1 min-w-0">
+                      <strong class="dashboard-task-title truncate">Histology slides</strong>
+                      <span class="dashboard-task-subject">
+                        <span class="subject-dot shrink-0"></span>
+                        <span class="truncate">Histology</span>
+                      </span>
+                    </div>
+                  </a>
+                </div>
+                <!-- No data-color: the "no course" path, where color-mix() has to fall back to
+                     --surface rather than invalidate the whole background declaration. -->
+                <div class="dashboard-task-card">
+                  <button type="button" class="task-checkbox-btn" aria-label="Mark as completed">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24"></svg>
+                  </button>
+                  <a href="#" class="dashboard-task-content flex-1 flex items-center justify-between gap-3 text-inherit no-underline">
+                    <div class="flex flex-col gap-1 min-w-0">
+                      <strong class="dashboard-task-title truncate">Book the lab session</strong>
+                    </div>
+                    <span class="task-pill flex items-center gap-1 px-2 py-0.5 shrink-0">
+                      <svg class="w-3 h-3" viewBox="0 0 24 24"></svg>10 m
+                    </span>
+                  </a>
+                </div>
+
+                <div class="ui-empty-state sticky-empty-state">
+                  <div class="ui-empty-icon">
+                    <span class="empty-scene" aria-hidden="true">
+                      <svg class="empty-scene-glyph" viewBox="0 0 24 24"><path d="M4 4h16v16H4z" /></svg>
+                      <span class="ecg-trace empty-scene-ecg">
+                        <svg viewBox="0 0 480 40" preserveAspectRatio="none">
+                          <path class="ecg-trace-line" d="M0 20 L120 20 L128 20 Q133 12 138 20 L143 20 L146 25 L150 4 L154 31 L157 20 L164 20 Q170 11 176 20 L180 20 L420 20 L480 20" />
+                        </svg>
+                      </span>
+                      <span class="empty-stamp">All clear</span>
+                    </span>
+                  </div>
+                  <h3 class="ui-empty-title">Nothing due today</h3>
+                  <p class="ui-empty-description">
+                    Your day is completely clear. Add something for today, or spend the time on a
+                    focus session or planning tomorrow.
+                  </p>
+                  <button class="btn btn-primary btn-sm" type="button">Add a task for today</button>
+                  <div class="empty-actions">
+                    <a class="btn btn-secondary btn-sm" href="#">
+                      <span class="btn-icon-left"><svg class="w-4 h-4" viewBox="0 0 24 24"></svg></span>Start a focus session
+                    </a>
+                    <a class="btn btn-ghost btn-sm" href="#">
+                      <span class="btn-icon-left"><svg class="w-4 h-4" viewBox="0 0 24 24"></svg></span>Plan tomorrow
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ============ 9b. plan forum board + calendar attachment ============ -->
+          <!-- Three day notes rather than a token one: `.plan-day-grid` is an auto-fill grid and
+               the tilt alternates on :nth-child, so a single note would exercise neither. The
+               contents are deliberately uneven -- one full day, one empty, one with the add form
+               open -- because those are three different heights in the same grid row, and a note
+               that grew its own scrollbar or spilled its swatch would only show in the crowded
+               one. The long note title is there to prove `overflow-wrap: anywhere` holds at 320px,
+               where the grid is one column and the note is the full content width. -->
+          <section id="fx-planboard">
+            <div class="plan-board">
+              <header class="plan-board-head">
+                <a class="plan-board-back" href="#"><svg viewBox="0 0 24 24"></svg>All plans</a>
+                <div class="plan-board-title">
+                  <h1>Anatomy final revision</h1>
+                  <p class="plan-board-period">
+                    <span class="plan-visibility-pill" data-visibility="CLASS">
+                      <svg viewBox="0 0 24 24"></svg>Shared with my year
+                    </span>
+                    <span>18 Aug – 31 Aug 2026</span>
+                    <span>· 14 days</span>
+                    <span>· 23 tasks</span>
+                  </p>
+                  <p class="plan-board-note">Whole syllabus, weakest chapters first.</p>
+                </div>
+                <div class="plan-board-actions">
+                  <a class="plan-board-btn" href="#"><svg viewBox="0 0 24 24"></svg>Apply on calendar</a>
+                  <button type="button" class="plan-board-btn"><svg viewBox="0 0 24 24"></svg>Share with my year</button>
+                  <button type="button" class="plan-board-btn"><svg viewBox="0 0 24 24"></svg>Edit plan</button>
+                  <button type="button" class="plan-board-btn danger"><svg viewBox="0 0 24 24"></svg>Delete plan</button>
+                </div>
+              </header>
+              <p class="plan-readonly-banner">Mariam Fathy wrote this plan. You are reading it.</p>
+
+              <div class="plan-day-grid">
+                <article class="plan-day-note" data-today="yes">
+                  <span class="sticky-tape-top" aria-hidden="true"></span>
+                  <svg class="plan-note-watermark" viewBox="0 0 24 24"></svg>
+                  <header class="plan-day-head">
+                    <span class="plan-day-weekday">Wednesday</span>
+                    <time class="plan-day-date">19 Aug</time>
+                    <span class="plan-day-today">Today</span>
+                  </header>
+                  <ul class="plan-note-tasks">
+                    <li class="plan-note-task" data-color="teal">
+                      <span class="plan-note-swatch" aria-hidden="true"></span>
+                      <span class="plan-note-text"><strong>Read chapter 4 and redraw the brachial plexus</strong><em>Anatomy</em></span>
+                      <button type="button" class="plan-note-remove"><svg viewBox="0 0 24 24"></svg></button>
+                    </li>
+                    <li class="plan-note-task" data-color="coral">
+                      <span class="plan-note-swatch" aria-hidden="true"></span>
+                      <span class="plan-note-text"><strong>Past paper 2023</strong><em>Physiology</em></span>
+                      <button type="button" class="plan-note-remove"><svg viewBox="0 0 24 24"></svg></button>
+                    </li>
+                    <li class="plan-note-task" data-color="violet">
+                      <span class="plan-note-swatch" aria-hidden="true"></span>
+                      <span class="plan-note-text"><strong>Rewritepharmacokineticsflashcardsfromscratch</strong><em>Pharmacology</em></span>
+                      <button type="button" class="plan-note-remove"><svg viewBox="0 0 24 24"></svg></button>
+                    </li>
+                    <li class="plan-note-task" data-color="amber">
+                      <span class="plan-note-swatch" aria-hidden="true"></span>
+                      <span class="plan-note-text"><strong>Lab checklist</strong><em>Histology</em></span>
+                      <button type="button" class="plan-note-remove"><svg viewBox="0 0 24 24"></svg></button>
+                    </li>
+                  </ul>
+                  <button type="button" class="plan-note-add-btn"><svg viewBox="0 0 24 24"></svg>Add task</button>
+                </article>
+
+                <article class="plan-day-note" data-today="no">
+                  <span class="sticky-tape-top" aria-hidden="true"></span>
+                  <svg class="plan-note-watermark" viewBox="0 0 24 24"></svg>
+                  <header class="plan-day-head">
+                    <span class="plan-day-weekday">Thursday</span>
+                    <time class="plan-day-date">20 Aug</time>
+                  </header>
+                  <ul class="plan-note-tasks">
+                    <li class="plan-note-blank">Nothing on this note yet.</li>
+                  </ul>
+                  <button type="button" class="plan-note-add-btn"><svg viewBox="0 0 24 24"></svg>Add task</button>
+                </article>
+
+                <article class="plan-day-note" data-today="no">
+                  <span class="sticky-tape-top" aria-hidden="true"></span>
+                  <svg class="plan-note-watermark" viewBox="0 0 24 24"></svg>
+                  <header class="plan-day-head">
+                    <span class="plan-day-weekday">Friday</span>
+                    <time class="plan-day-date">21 Aug</time>
+                  </header>
+                  <ul class="plan-note-tasks">
+                    <li class="plan-note-blank">Nothing on this note yet.</li>
+                  </ul>
+                  <form class="plan-note-form">
+                    <label><span>Task</span><input placeholder="Read chapter 4" /></label>
+                    <label><span>Subject</span><input placeholder="Type or pick a course" list="fx-plan-subjects" /></label>
+                    <div class="plan-note-form-actions">
+                      <button type="submit"><svg viewBox="0 0 24 24"></svg>Pin it</button>
+                      <button type="button">Cancel</button>
+                    </div>
+                  </form>
+                </article>
+              </div>
+              <datalist id="fx-plan-subjects"><option value="Anatomy"></option></datalist>
+            </div>
+
+            <!-- The forum shelf: one card and one empty shelf, since `.plan-shelf-grid` and
+                 `.plan-shelf-empty` are separate branches of the same component. -->
+            <div class="plan-forum-layout">
+              <form class="plan-new-pad">
+                <span class="sticky-tape-top" aria-hidden="true"></span>
+                <header class="plan-new-head">
+                  <h2>Start a plan</h2>
+                  <p>Name it, pick the stretch of days it covers, and the notes appear.</p>
+                </header>
+                <label class="plan-field"><span>What is this plan for?</span><input placeholder="Anatomy final" /></label>
+                <div class="plan-period-row">
+                  <label class="plan-field"><span>From</span><input type="date" /></label>
+                  <label class="plan-field"><span>To</span><input type="date" /></label>
+                  <p class="plan-span-readout" data-invalid="no">14 days · 14 notes</p>
+                </div>
+                <button class="plan-create-btn" type="submit"><svg viewBox="0 0 24 24"></svg>Make the notes</button>
+              </form>
+              <section class="plan-shelf">
+                <header class="plan-shelf-head">
+                  <h2>Shared with year 3</h2>
+                  <span class="plan-shelf-count">1</span>
+                </header>
+                <div class="plan-shelf-grid">
+                  <article class="plan-card" data-color="sky">
+                    <span class="sticky-tape-top" aria-hidden="true"></span>
+                    <svg class="plan-card-watermark" viewBox="0 0 24 24"></svg>
+                    <header class="plan-card-head">
+                      <h3><a href="#">Pharmacology midterm sprint</a></h3>
+                      <span class="plan-visibility-pill" data-visibility="CLASS"><svg viewBox="0 0 24 24"></svg>Shared</span>
+                    </header>
+                    <p class="plan-card-note">Two weeks, autonomics first.</p>
+                    <dl class="plan-card-meta">
+                      <div><dt>From</dt><dd>2026-08-19</dd></div>
+                      <div><dt>To</dt><dd>2026-09-01</dd></div>
+                      <div><dt>14 days</dt><dd>23 tasks</dd></div>
+                    </dl>
+                    <p class="plan-card-author">by <strong>Mariam Fathy</strong> · 6 saved</p>
+                    <div class="plan-card-actions">
+                      <a class="plan-card-btn" href="#"><svg viewBox="0 0 24 24"></svg>Open</a>
+                      <a class="plan-card-btn" href="#"><svg viewBox="0 0 24 24"></svg>On calendar</a>
+                      <button type="button" class="plan-card-btn" data-active="yes"><svg viewBox="0 0 24 24"></svg>Saved</button>
+                    </div>
+                  </article>
+                </div>
+              </section>
+              <section class="plan-shelf">
+                <header class="plan-shelf-head">
+                  <h2>Saved from my year</h2>
+                  <span class="plan-shelf-count">0</span>
+                </header>
+                <div class="plan-shelf-empty">
+                  <span class="ecg-trace" aria-hidden="true">
+                    <svg viewBox="0 0 480 40" preserveAspectRatio="none">
+                      <path class="ecg-trace-line" d="M0 20 L420 20 L426 20 Q431 12 436 20 L440 20 L480 20" />
+                    </svg>
+                  </span>
+                  <p>Nothing saved yet. Open a classmate's plan and bookmark it.</p>
+                </div>
+              </section>
+              <p class="plan-forum-footnote"><svg viewBox="0 0 24 24"></svg>Sharing means everyone in year 3.</p>
+            </div>
+
+            <!-- The calendar attachment. The source bar wraps a tablist, a select and a sentence
+                 in one flex row, which is the piece most likely to burst at 320px; the copy box
+                 is shown in both of its states because only one of them holds a button. -->
+            <div class="calendar-workspace" data-source="plan">
+              <div class="calendar-source-bar">
+                <div class="calendar-source-tabs" role="tablist" aria-label="Source">
+                  <button role="tab" aria-selected="false"><svg viewBox="0 0 24 24"></svg>My sessions</button>
+                  <button role="tab" aria-selected="true"><svg viewBox="0 0 24 24"></svg>Plan</button>
+                </div>
+                <label class="calendar-source-picker">
+                  <span class="sr-only">Choose a plan</span>
+                  <select>
+                    <option>Pharmacology midterm sprint — Mariam Fathy</option>
+                  </select>
+                </label>
+                <p class="calendar-source-note">
+                  Showing plan notes only — nothing is written to your tasks. <a href="#">Open the plan</a>
+                </p>
+              </div>
+              <div class="day-drawer">
+                <div class="day-drawer-header">
+                  <h3>Wednesday, 19 August</h3>
+                  <button type="button" aria-label="Close">✕</button>
+                </div>
+                <div class="day-drawer-events">
+                  <a class="calendar-event plan" href="#"><span class="event-time">09:00</span><span>Read chapter 4</span></a>
+                  <a class="calendar-event plan" href="#"><span class="event-time">09:00</span><span>Past paper 2023</span></a>
+                </div>
+                <div class="calendar-copy-box">
+                  <p class="calendar-copy-count">2 notes on this day</p>
+                  <button type="button">Copy to tasks</button>
+                </div>
+                <div class="calendar-copy-box">
+                  <p class="calendar-copy-count">2 notes on this day</p>
+                  <p class="calendar-copy-done"><svg viewBox="0 0 24 24"></svg>2 tasks added · 1 already there</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ============ 9b. AI Exam Plan ============ -->
+          <!-- The wizard's two widest steps and the proposal board, in one section. The board is
+               deliberately the forum's own note markup with the exam-specific badges added, which
+               is the thing worth measuring: a `.plan-day-head` that already carries a weekday, a
+               date and a Today pill now has to fit a load chip too, and a `.plan-note-task` that
+               already carries a swatch and two lines of text now has to fit a checkbox as well.
+               Four notes, one of each state: a crowded mixed day, a questions-only day, a rest
+               day, and the exam day. The topic rows are `light` and `heavy` so both spine
+               overrides are exercised, and one long unbroken topic title is there because the
+               composer's inputs sit in a three-column grid that stacks at 768px. -->
+          <section id="fx-examboard">
+            <div class="exam-plan-share">
+              <button type="button" class="primary-button"><svg viewBox="0 0 24 24"></svg>Publish to Plan Forum</button>
+              <a class="secondary-button" href="#"><svg viewBox="0 0 24 24"></svg>Open on the forum</a>
+              <a class="secondary-button" href="#"><svg viewBox="0 0 24 24"></svg>Apply on calendar</a>
+              <p class="muted-copy">The plan is on your own shelf. Sharing it with your year is a separate press on the forum.</p>
+            </div>
+
+            <div class="exam-view-tabs" role="tablist" aria-label="View">
+              <button type="button" role="tab" aria-selected="true"><svg viewBox="0 0 24 24"></svg>Board</button>
+              <button type="button" role="tab" aria-selected="false"><svg viewBox="0 0 24 24"></svg>List</button>
+            </div>
+
+            <div class="exam-board">
+              <div class="plan-day-grid">
+                <article class="plan-day-note" data-today="yes">
+                  <span class="sticky-tape-top" aria-hidden="true"></span>
+                  <svg class="plan-note-watermark" viewBox="0 0 24 24"></svg>
+                  <header class="plan-day-head">
+                    <span class="plan-day-weekday">Wednesday</span>
+                    <time class="plan-day-date">19 Aug</time>
+                    <span class="plan-day-today">Today</span>
+                    <span class="exam-day-load">3h 15m</span>
+                  </header>
+                  <ul class="plan-note-tasks">
+                    <li class="plan-note-task" data-color="teal">
+                      <span class="plan-note-swatch" aria-hidden="true"></span>
+                      <label class="exam-note-check"><input type="checkbox" /><span class="sr-only">Select: Heart failure</span></label>
+                      <span class="plan-note-text"><strong>Heart failure — pathophysiology and drugs</strong><em><span class="exam-note-kind" data-kind="study">Study</span> · Internal Medicine<span class="exam-note-minutes">90m</span></em></span>
+                    </li>
+                    <li class="plan-note-task" data-color="violet">
+                      <span class="plan-note-swatch" aria-hidden="true"></span>
+                      <label class="exam-note-check"><input type="checkbox" checked /><span class="sr-only">Select: MCQs</span></label>
+                      <span class="plan-note-text"><strong>Solve40MCQsonarrhythmiasfromlastyearspaper</strong><em><span class="exam-note-kind" data-kind="questions">Questions</span> · Internal Medicine<span class="exam-note-minutes">45m</span></em></span>
+                    </li>
+                    <li class="plan-note-task" data-color="amber">
+                      <span class="plan-note-swatch" aria-hidden="true"></span>
+                      <svg class="exam-note-done" viewBox="0 0 24 24" aria-label="Task created"></svg>
+                      <span class="plan-note-text"><strong>Recap yesterday's ECG tracings</strong><em><span class="exam-note-kind" data-kind="review">Review</span> · Cardiology<span class="exam-note-minutes">1h</span></em></span>
+                    </li>
+                  </ul>
+                </article>
+
+                <article class="plan-day-note" data-today="no" data-kind="questions">
+                  <span class="sticky-tape-top" aria-hidden="true"></span>
+                  <svg class="plan-note-watermark" viewBox="0 0 24 24"></svg>
+                  <header class="plan-day-head">
+                    <span class="plan-day-weekday">Thursday</span>
+                    <time class="plan-day-date">20 Aug</time>
+                    <span class="exam-day-load">2h 30m</span>
+                  </header>
+                  <ul class="plan-note-tasks">
+                    <li class="plan-note-task" data-color="coral">
+                      <span class="plan-note-swatch" aria-hidden="true"></span>
+                      <label class="exam-note-check"><input type="checkbox" /><span class="sr-only">Select: Past paper 2023</span></label>
+                      <span class="plan-note-text"><strong>Past paper 2023, whole paper under time</strong><em><span class="exam-note-kind" data-kind="questions">Questions</span> · Internal Medicine<span class="exam-note-minutes">2h 30m</span></em></span>
+                    </li>
+                  </ul>
+                </article>
+
+                <article class="plan-day-note" data-today="no">
+                  <span class="sticky-tape-top" aria-hidden="true"></span>
+                  <svg class="plan-note-watermark" viewBox="0 0 24 24"></svg>
+                  <header class="plan-day-head">
+                    <span class="plan-day-weekday">Friday</span>
+                    <time class="plan-day-date">21 Aug</time>
+                  </header>
+                  <ul class="plan-note-tasks">
+                    <li class="plan-note-blank">Rest</li>
+                  </ul>
+                </article>
+
+                <article class="plan-day-note" data-today="no" data-exam="yes">
+                  <span class="sticky-tape-top" aria-hidden="true"></span>
+                  <svg class="plan-note-watermark" viewBox="0 0 24 24"></svg>
+                  <header class="plan-day-head">
+                    <span class="plan-day-weekday">Saturday</span>
+                    <time class="plan-day-date">22 Aug</time>
+                  </header>
+                  <p class="exam-note-exam-day"><svg viewBox="0 0 24 24"></svg>Exam day</p>
+                  <ul class="plan-note-tasks">
+                    <li class="plan-note-blank">Good luck</li>
+                  </ul>
+                </article>
+              </div>
+            </div>
+
+            <!-- The wizard and the recent-plans shelf, in the two-column layout the real page uses,
+                 because the shelf is the narrow column: a plan title long enough to fill 0.6fr of
+                 an 860px viewport is what pushed its date onto the same line as the title. -->
+            <div class="exam-plan-create-layout">
+            <section class="exam-plan-form-panel">
+              <!-- All four steps at once: they are separate branches in the component, but the
+                   widths they have to survive are identical, and the scanner and composer sit in
+                   this panel on the real page so the widths here are the real ones. -->
+              <div class="wizard-container">
+                <div class="wizard-steps">
+                  <div class="wizard-step done">1</div>
+                  <div class="wizard-step-line"></div>
+                  <div class="wizard-step active">2</div>
+                  <div class="wizard-step-line"></div>
+                  <div class="wizard-step">3</div>
+                  <div class="wizard-step-line"></div>
+                  <div class="wizard-step">4</div>
+                </div>
+                <!-- Step 1: two `.ui-label`s that *wrap* their input, which is how every field in
+                     this wizard is written and the reason the caption used to sit on the same line
+                     as the box with nothing between them. -->
+                <div class="wizard-step-content">
+                  <label class="ui-label">
+                    Exam or course title
+                    <input class="ui-input" value="Final Internal Medicine Exam" />
+                  </label>
+                  <label class="ui-label">
+                    Exam date (Cairo time)
+                    <input class="ui-input" type="date" value="2026-08-22" />
+                  </label>
+                  <p class="muted-copy">3 days from today until the exam.</p>
+                  <div class="wizard-step-actions">
+                    <button type="button" class="btn btn-primary btn-md">Next</button>
+                  </div>
+                </div>
+
+                <div class="wizard-step-content">
+                  <p class="wizard-step-hint"><svg viewBox="0 0 24 24"></svg>Write your topics, or photograph the book's index and let us read it.</p>
+
+                  <div class="exam-upload">
+                    <div class="exam-upload-row">
+                      <label class="exam-upload-btn">
+                        <svg viewBox="0 0 24 24"></svg>
+                        <span>Add another page</span>
+                        <input type="file" accept="image/*" class="sr-only" />
+                      </label>
+                      <div class="exam-upload-thumb">
+                        <img alt="The scanned page" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" />
+                        <button type="button" class="exam-upload-thumb-clear" aria-label="Remove the photo"><svg viewBox="0 0 24 24"></svg></button>
+                      </div>
+                    </div>
+                    <p class="exam-upload-note">One page at a time. The photo is never stored — only the topics it gives us.</p>
+                  </div>
+
+                  <div class="exam-topic-composer">
+                    <div class="exam-topic-toolbar">
+                      <p class="exam-topic-readout">12 topics · 3 heavy · 2 shaky</p>
+                      <div class="exam-topic-toolbar-actions">
+                        <button type="button" class="btn btn-ghost btn-sm"><span class="btn-icon-left"><svg viewBox="0 0 24 24"></svg></span>Paste a list</button>
+                        <button type="button" class="btn btn-secondary btn-sm"><span class="btn-icon-left"><svg viewBox="0 0 24 24"></svg></span>Topic</button>
+                      </div>
+                    </div>
+                    <div class="exam-topic-paste">
+                      <label class="ui-label">Paste chapters or topics, one per line<textarea class="ui-textarea" rows="3"></textarea></label>
+                      <div class="exam-topic-paste-actions">
+                        <button type="button" class="btn btn-primary btn-sm"><span class="btn-icon-left"><svg viewBox="0 0 24 24"></svg></span>Turn into rows</button>
+                        <button type="button" class="btn btn-ghost btn-sm">Cancel</button>
+                      </div>
+                    </div>
+                    <ul class="exam-topic-list">
+                      <li class="exam-topic-card" data-weight="heavy">
+                        <div class="exam-topic-main">
+                          <input class="ui-input exam-topic-title" value="Cardiomyopathiesandpericardialdisease" aria-label="Topic 1" />
+                          <button type="button" class="exam-topic-remove" aria-label="Remove topic 1"><svg viewBox="0 0 24 24"></svg></button>
+                        </div>
+                        <div class="exam-topic-fields">
+                          <input class="ui-input" value="Chapter 3 — Cardiology" aria-label="Chapter" />
+                          <select class="ui-input" aria-label="Topic size"><option>Heavy</option></select>
+                          <select class="ui-input" aria-label="How you feel about it"><option>Shaky</option></select>
+                        </div>
+                      </li>
+                      <li class="exam-topic-card" data-weight="light">
+                        <div class="exam-topic-main">
+                          <input class="ui-input exam-topic-title" value="Arrhythmias" aria-label="Topic 2" />
+                          <button type="button" class="exam-topic-remove" aria-label="Remove topic 2"><svg viewBox="0 0 24 24"></svg></button>
+                        </div>
+                        <div class="exam-topic-fields">
+                          <input class="ui-input" value="" aria-label="Chapter" />
+                          <select class="ui-input" aria-label="Topic size"><option>Light</option></select>
+                          <select class="ui-input" aria-label="How you feel about it"><option>Solid</option></select>
+                        </div>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div class="wizard-step-actions">
+                    <button type="button" class="btn btn-ghost btn-md">Back</button>
+                    <button type="button" class="btn btn-primary btn-md">Next</button>
+                  </div>
+                </div>
+
+                <!-- Step 3 and step 4, rendered together: they are separate branches in the
+                     component, but the widths they have to survive are identical. -->
+                <div class="wizard-step-content">
+                  <p class="wizard-step-hint"><svg viewBox="0 0 24 24"></svg>How do you want to solve questions?</p>
+                  <div class="exam-strategy-grid" role="radiogroup" aria-label="Question rhythm">
+                    <label class="exam-strategy-card" data-selected="yes">
+                      <input type="radio" name="fx-strategy" class="sr-only" checked />
+                      <strong>Dedicated question days</strong>
+                      <span>Whole days with no new material, for question banks and past papers.</span>
+                    </label>
+                    <label class="exam-strategy-card">
+                      <input type="radio" name="fx-strategy" class="sr-only" />
+                      <strong>Questions every day</strong>
+                      <span>Every study day ends with questions on what it covered.</span>
+                    </label>
+                  </div>
+
+                  <label class="ui-label exam-capacity-label">
+                    Study time per day
+                    <span class="exam-capacity-readout">3h</span>
+                    <input type="range" min="30" max="600" step="15" value="180" class="exam-capacity-range" />
+                  </label>
+
+                  <fieldset class="exam-rest-days">
+                    <legend>Rest days (optional)</legend>
+                    <div class="exam-rest-day-row">
+                      <label class="exam-rest-day"><input type="checkbox" class="sr-only" />Sun</label>
+                      <label class="exam-rest-day"><input type="checkbox" class="sr-only" />Mon</label>
+                      <label class="exam-rest-day"><input type="checkbox" class="sr-only" />Tue</label>
+                      <label class="exam-rest-day"><input type="checkbox" class="sr-only" />Wed</label>
+                      <label class="exam-rest-day"><input type="checkbox" class="sr-only" />Thu</label>
+                      <label class="exam-rest-day" data-selected="yes"><input type="checkbox" class="sr-only" checked />Fri</label>
+                      <label class="exam-rest-day"><input type="checkbox" class="sr-only" />Sat</label>
+                    </div>
+                    <p class="muted-copy">Nothing gets scheduled on these days unless there is no room left.</p>
+                  </fieldset>
+
+                  <div class="exam-review-card">
+                    <h3><svg viewBox="0 0 24 24"></svg>Before we generate</h3>
+                    <dl class="exam-review-list">
+                      <div><dt>Course</dt><dd>Final Internal Medicine Exam</dd></div>
+                      <div><dt>Exam</dt><dd>Saturday, 22 August 2026</dd></div>
+                      <div><dt>Topics</dt><dd>12 topics</dd></div>
+                      <div><dt>Questions</dt><dd>Dedicated days</dd></div>
+                      <div><dt>Daily</dt><dd>3h</dd></div>
+                      <div><dt>Rest</dt><dd>Friday</dd></div>
+                    </dl>
+                  </div>
+
+                  <div class="wizard-step-actions">
+                    <button type="button" class="btn btn-ghost btn-md">Back</button>
+                    <button type="button" class="btn btn-primary btn-md"><span class="btn-icon-left"><svg viewBox="0 0 24 24"></svg></span>Generate plan proposal</button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <aside class="exam-plan-recent-panel">
+              <div class="section-heading">
+                <h2>Recent plans</h2>
+              </div>
+              <div class="exam-plan-list">
+                <a class="exam-plan-card" href="#">
+                  <div>
+                    <strong>family medicine exam</strong>
+                    <time datetime="2026-09-01">1 Sept 2026</time>
+                  </div>
+                  <svg viewBox="0 0 24 24"></svg>
+                </a>
+                <a class="exam-plan-card" href="#">
+                  <div>
+                    <strong>Finalyearinternalmedicineandcardiologyrevisionexam</strong>
+                    <time datetime="2026-10-14">14 Oct 2026</time>
+                  </div>
+                  <svg viewBox="0 0 24 24"></svg>
+                </a>
+              </div>
+            </aside>
+            </div>
+          </section>
+
+          <!-- ============ 9c. the AI Exam Plan proposal page ============ -->
+          <!-- /exam-plans/<id>, which `fx-examboard` above does not reach: it covers the board and
+               the wizard, and every class below belongs to the page that frames them. Worth its own
+               section because nothing here is a shared primitive -- the label/field pairs are styled
+               by a page-scoped rule rather than `.ui-input`, so Tailwind's preflight (which zeroes an
+               input's border and background) is what these fields fall back to if that rule ever
+               stops matching. Both states of the feedback slot cannot coexist in one fixture, so the
+               visible one is here and the hidden one is asserted separately. The plan title and the
+               model name are deliberately unbreakable strings: the attribution strip is a wrap-based
+               flex row and the meta card's fields sit in a two-column grid. -->
+          <section class="exam-plan-detail-shell" id="fx-examdetail">
+            <header class="exam-plan-detail-header">
+              <div class="page-header-text">
+                <a class="wordmark" href="#">Alex Study</a>
+                <p class="eyebrow">AI Exam Plan · editable proposal</p>
+                <h1>family medicine exam</h1>
+              </div>
+              <nav class="page-header" aria-label="Plan navigation">
+                <a href="#">New plan</a>
+                <a href="#">Tasks</a>
+                <a href="#">Insights</a>
+              </nav>
+            </header>
+
+            <section class="exam-plan-share" aria-label="Plan sharing">
+              <button type="button" class="primary-button"><svg viewBox="0 0 24 24"></svg>Update on the forum</button>
+              <a class="secondary-button" href="#"><svg viewBox="0 0 24 24"></svg>Open on the forum</a>
+              <a class="secondary-button" href="#"><svg viewBox="0 0 24 24"></svg>Apply on calendar</a>
+              <p class="muted-copy">The plan is on your own shelf. Sharing it with your year is a separate press on the forum.</p>
+            </section>
+
+            <section class="exam-plan-attribution" aria-label="AI attribution">
+              <span class="ai-label">AI</span>
+              <div class="exam-plan-fact">
+                <strong>Proposal ready</strong>
+                <span>openai/gpt-oss-120b · exam-plan-v2</span>
+              </div>
+              <div class="exam-plan-fact">
+                <strong>3 / 14</strong>
+                <span>items converted to tasks</span>
+              </div>
+              <div class="exam-plan-fact">
+                <strong>30 days</strong>
+                <span>syllabus-context retention</span>
+              </div>
+            </section>
+
+            <form class="exam-plan-editor">
+              <section class="exam-plan-meta" aria-labelledby="fx-plan-overview-title">
+                <div class="section-heading">
+                  <h2 id="fx-plan-overview-title">Overview</h2>
+                  <button type="submit" class="secondary-button">Save changes</button>
+                </div>
+                <div class="form-grid">
+                  <label>
+                    Plan title
+                    <input value="family medicine exam" />
+                  </label>
+                  <label>
+                    Exam date
+                    <input type="date" value="2026-09-01" disabled />
+                  </label>
+                </div>
+                <label>
+                  Proposal summary
+                  <textarea rows="4">Fourteen days to the exam, three hours a day, with Friday off and the last two days kept for past papers.</textarea>
+                </label>
+              </section>
+
+              <section class="exam-plan-items" aria-labelledby="fx-plan-items-title">
+                <div class="section-heading">
+                  <div>
+                    <p class="eyebrow">Selective review</p>
+                    <h2 id="fx-plan-items-title">Plan items</h2>
+                  </div>
+                  <button type="button" class="secondary-button">Add item</button>
+                </div>
+
+                <div class="exam-view-tabs" role="tablist" aria-label="View">
+                  <button type="button" role="tab" aria-selected="false"><svg viewBox="0 0 24 24"></svg>Board</button>
+                  <button type="button" role="tab" aria-selected="true"><svg viewBox="0 0 24 24"></svg>List</button>
+                </div>
+
+                <!-- The List tab: one editable row, which is the densest thing on the page --
+                     two two-column grids, a select, a textarea and a checkbox line. -->
+                <div class="exam-plan-item-list">
+                  <article class="exam-plan-item" data-selected="true" data-accepted="false">
+                    <div class="exam-plan-item-heading">
+                      <label class="plan-item-select">
+                        <input type="checkbox" checked />
+                        <span>Item 1</span>
+                      </label>
+                      <button type="button" class="text-button">Remove</button>
+                    </div>
+                    <label>
+                      Title
+                      <input value="Heart failure — pathophysiology, staging and the drugs that change mortality" />
+                    </label>
+                    <div class="form-grid">
+                      <label>
+                        Subject
+                        <select><option>Internal Medicine</option></select>
+                      </label>
+                      <label>
+                        Planned date
+                        <input type="date" value="2026-08-19" />
+                      </label>
+                    </div>
+                    <div class="form-grid">
+                      <label>
+                        Estimated minutes
+                        <input type="number" value="90" />
+                      </label>
+                      <label>
+                        Item kind
+                        <select><option>Study</option></select>
+                      </label>
+                    </div>
+                    <label>
+                      Notes
+                      <textarea rows="3">Guidelines first, then the drug table.</textarea>
+                    </label>
+                    <a class="created-task-link" href="#">Open created task</a>
+                  </article>
+
+                  <article class="exam-plan-item" data-selected="false" data-accepted="true">
+                    <div class="exam-plan-item-heading">
+                      <label class="plan-item-select">
+                        <input type="checkbox" disabled />
+                        <span>Task created</span>
+                      </label>
+                    </div>
+                    <label>
+                      Title
+                      <input value="Solve40MCQsonarrhythmiasfromlastyearspaper" disabled />
+                    </label>
+                    <label>
+                      Notes
+                      <textarea rows="3" disabled></textarea>
+                    </label>
+                  </article>
+                </div>
+              </section>
+            </form>
+
+            <section class="exam-plan-conversion" aria-labelledby="fx-conversion-title">
+              <div>
+                <p class="eyebrow">Separate confirmation</p>
+                <h2 id="fx-conversion-title">Convert selected items</h2>
+                <p>2 of 11 available items selected.</p>
+              </div>
+              <div class="task-conversion-confirmation" role="region">
+                <strong>2 owned tasks will be created.</strong>
+                <label>
+                  <input type="checkbox" checked />
+                  <span>I reviewed the items and confirm creating the selected tasks.</span>
+                </label>
+                <div class="form-actions">
+                  <button type="button" class="primary-button">Create tasks</button>
+                  <button type="button" class="secondary-button">Back</button>
+                </div>
+              </div>
+            </section>
+
+            <div class="exam-plan-feedback" data-visible="yes">
+              <p class="form-error" role="alert"></p>
+              <p class="success-copy" role="status">3 tasks created.</p>
+            </div>
+
+            <section class="exam-plan-reject-zone">
+              <div>
+                <h2>Reject remaining proposal</h2>
+                <p>Tasks already created from this plan will not be deleted.</p>
+              </div>
+              <button type="button" class="text-button danger">Reject remaining</button>
+            </section>
           </section>
         </main>
       </div>
@@ -594,7 +1811,8 @@
           <div class="sidebar-group">
             <span class="sidebar-group-title">Planning</span>
             <a href="#"><svg viewBox="0 0 24 24"></svg><span>Calendar</span></a>
-            <a href="#"><svg viewBox="0 0 24 24"></svg><span>Exam Plan</span></a>
+            <a href="#"><svg viewBox="0 0 24 24"></svg><span>Plan Forum</span></a>
+            <a href="#"><svg viewBox="0 0 24 24"></svg><span>AI Exam Plan</span></a>
             <a href="#"><svg viewBox="0 0 24 24"></svg><span>Goals</span></a>
             <div class="sidebar-rule"></div>
           </div>

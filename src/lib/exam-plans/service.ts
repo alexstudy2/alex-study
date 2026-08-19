@@ -9,6 +9,7 @@ import { hashAIInput, makeAIJobKey, runTrackedAIJob } from "@/lib/ai/jobs";
 import { AI_PROMPT_VERSION, AI_RETENTION_DAYS } from "@/lib/ai/policy";
 import { generateExamPlanProposal } from "./ai";
 import {
+  MAX_PLAN_ITEMS,
   cairoDateKey,
   deriveExamPlanStatus,
   examWindowError,
@@ -27,6 +28,10 @@ export const examPlanSelect = {
   locale: true,
   model: true,
   promptVersion: true,
+  questionStrategy: true,
+  dailyCapacityMinutes: true,
+  /** Non-null once the proposal has been published to the Plan Forum. Drives the header buttons. */
+  studyPlanId: true,
   contextPurgeAt: true,
   contextPurgedAt: true,
   acceptedAt: true,
@@ -39,6 +44,7 @@ export const examPlanSelect = {
       id: true,
       title: true,
       notes: true,
+      kind: true,
       plannedDate: true,
       estimatedMinutes: true,
       sortOrder: true,
@@ -103,6 +109,12 @@ export async function generateExamPlan(
     title: input.title,
     examAt: examAt.toISOString(),
     syllabusText: input.syllabusText,
+    /* In the hash, not just the metadata: the same topics with the other question strategy are a
+       different plan, and without these three the 15-minute re-use cache below would hand back the
+       plan the student just decided against. */
+    questionStrategy: input.questionStrategy,
+    dailyCapacityMinutes: input.dailyCapacityMinutes,
+    restDays: input.restDays,
     locale,
     subjects: subjects.map((subject) => subject.normalizedName),
   });
@@ -126,6 +138,9 @@ export async function generateExamPlan(
     metadata: {
       examAt: examAt.toISOString(),
       syllabusCharacters: input.syllabusText.length,
+      topicCount: input.topics.length,
+      questionStrategy: input.questionStrategy,
+      dailyCapacityMinutes: input.dailyCapacityMinutes,
       subjectCount: subjects.length,
     },
     now,
@@ -135,6 +150,9 @@ export async function generateExamPlan(
           title: input.title,
           examAt,
           syllabusText: input.syllabusText,
+          questionStrategy: input.questionStrategy,
+          dailyCapacityMinutes: input.dailyCapacityMinutes,
+          restDays: input.restDays,
           locale,
           subjects,
           now,
@@ -153,6 +171,8 @@ export async function generateExamPlan(
           overview: proposal.overview,
           examAt,
           syllabusText: input.syllabusText,
+          questionStrategy: input.questionStrategy,
+          dailyCapacityMinutes: input.dailyCapacityMinutes,
           status: "PROPOSED",
           locale: locale === "ar" ? "AR" : "EN",
           model: GROQ_MODEL,
@@ -162,6 +182,7 @@ export async function generateExamPlan(
             create: proposal.items.map((item, sortOrder) => ({
               title: item.title,
               notes: item.notes,
+              kind: item.kind,
               subjectId: item.subjectName
                 ? (subjectsByName.get(normalizedName(item.subjectName)) ?? null)
                 : null,
@@ -244,7 +265,8 @@ export async function updateExamPlan(
     });
   const newItems = input.items?.filter((item) => !item.id).length ?? 0;
   const resultingCount = existing.items.length - removeIds.length + newItems;
-  if (resultingCount < 1 || resultingCount > 60) throw new ExamPlanError("invalid_item_count", 400);
+  if (resultingCount < 1 || resultingCount > MAX_PLAN_ITEMS)
+    throw new ExamPlanError("invalid_item_count", 400);
 
   await prisma.$transaction(async (tx) => {
     if (removeIds.length)
@@ -260,6 +282,7 @@ export async function updateExamPlan(
       const data = {
         title: item.title,
         notes: item.notes || null,
+        kind: item.kind,
         subjectId: item.subjectId,
         plannedDate: plannedDateToUtc(item.plannedDate),
         estimatedMinutes: item.estimatedMinutes,

@@ -27,7 +27,16 @@ async function checkAIAllowance(userId: string, type: string, now: Date, exclude
       _sum: { units: true },
     }),
     prisma.aIJob.count({ where: { userId, createdAt: day, ...jobWhere } }),
-    prisma.aIJob.count({ where: { userId, type, createdAt: day, ...jobWhere } }),
+    /**
+     * `status: { not: "FAILED" }` on purpose: the per-type ceiling is meant to count the work a
+     * student got out of the day, and a job that ended in `invalid_ai_response` produced nothing to
+     * keep -- charging them for it is charging them for our bad luck. Runaway failures are still
+     * bounded, by the `userJobs` count above (which does include them) and by the hourly
+     * `generationRateLimit` on the route.
+     */
+    prisma.aIJob.count({
+      where: { userId, type, createdAt: day, status: { not: "FAILED" }, ...jobWhere },
+    }),
   ]);
   return assessAIAllowance({
     globalTokens: globalUsage._sum.units ?? 0,
@@ -43,7 +52,12 @@ function errorCode(reason: unknown) {
     if (
       reason.message === "ai_unavailable" ||
       reason.message === "empty_ai_response" ||
-      reason.message === "invalid_ai_response"
+      reason.message === "invalid_ai_response" ||
+      /* The reply parsed but broke the brief -- an overloaded day, or question practice that was
+         asked for and never appeared. Recorded under its own code so a prompt that keeps producing
+         unusable plans is visible in the job log instead of hiding behind a parse failure. */
+      reason.message === "invalid_ai_plan" ||
+      reason.message === "vision_unavailable"
     )
       return reason.message;
   }
@@ -52,7 +66,10 @@ function errorCode(reason: unknown) {
 
 function isRetryable(code: string) {
   return (
-    code === "empty_ai_response" || code === "invalid_ai_response" || code === "ai_request_failed"
+    code === "empty_ai_response" ||
+    code === "invalid_ai_response" ||
+    code === "invalid_ai_plan" ||
+    code === "ai_request_failed"
   );
 }
 
@@ -63,6 +80,8 @@ type RunTrackedAIJobInput<T> = {
   jobKey: string;
   inputHash: string;
   maxAttempts?: number;
+  /** Defaults to `GROQ_MODEL`; the vision calls must be billed under their own model name. */
+  model?: string;
   metadata?: Prisma.InputJsonValue;
   now?: Date;
   run: (helpers: { jobId: string; recordUsage: (usage?: AIUsage) => Promise<void> }) => Promise<T>;
@@ -86,12 +105,13 @@ export async function runTrackedAIJob<T>(
   if (allowance) return { ok: false, error: allowance, status: 429 };
 
   const maxAttempts = input.maxAttempts ?? 2;
+  const model = input.model ?? GROQ_MODEL;
   const job = await prisma.aIJob.upsert({
     where: { jobKey: input.jobKey },
     update: {
       maxAttempts,
       metadata: input.metadata,
-      model: GROQ_MODEL,
+      model,
       promptVersion: AI_PROMPT_VERSION,
     },
     create: {
@@ -100,7 +120,7 @@ export async function runTrackedAIJob<T>(
       type: input.type,
       inputHash: input.inputHash,
       maxAttempts,
-      model: GROQ_MODEL,
+      model,
       promptVersion: AI_PROMPT_VERSION,
       metadata: input.metadata,
     },
@@ -136,7 +156,7 @@ export async function runTrackedAIJob<T>(
               aiJobId: job.id,
               service: "groq",
               operation: input.operation,
-              model: GROQ_MODEL,
+              model,
               units: usage?.total_tokens ?? 1,
               inputUnits: usage?.prompt_tokens,
               outputUnits: usage?.completion_tokens,

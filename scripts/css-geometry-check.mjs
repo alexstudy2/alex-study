@@ -38,15 +38,40 @@ for (const probe of [".min-h-6", "--primary:", "--mobile-nav-total:", ".calendar
 const SECTIONS = [
   ["fx-calendar", "/calendar month grid", [".month-grid", ".calendar-day", ".calendar-day > div"]],
   ["fx-week", "/calendar week grid", [".week-grid", ".week-day", ".week-day-events"]],
-  ["fx-tabs", "/tasks header + chips", [".notebook-top-header", ".notebook-filter-tabs", ".header-branding", ".header-actions", ".subjects-ribbon", ".subjects-scroll"]],
+  ["fx-tabs", "/tasks header + chips", [".notebook-top-header", ".notebook-filter-tabs", ".header-branding", ".header-actions", ".task-vitals-strip", ".task-vitals", ".task-vital", ".subjects-ribbon", ".subjects-scroll"]],
   ["fx-pill", "page-header nav pill", [".page-header-container", ".page-header-main", ".page-header-text", ".page-header-actions", ".page-header"]],
   ["fx-orbit", "score-orbit", [".score-orbit"]],
   ["fx-lobbyform", "/lobbies/create form", [".lobby-form", ".lobby-form label", ".form-grid"]],
-  ["fx-analytics", "/analytics workspace", [".analytics-workspace", ".analytics-sidebar", ".analytics-main"]],
+  // The two heatmaps and the calendar are deliberately absent from this list: both live inside an
+  // `overflow-x: auto` wrapper and are *meant* to be wider than it, so their bounding rects would
+  // be reported as spills. The wrappers are listed instead, which is where a real clip would show.
+  ["fx-analytics", "/analytics workspace", [".analytics-workspace", ".analytics-sidebar", ".analytics-main", ".analytics-toolbar", ".analytics-toolbar-controls", ".analytics-summary", ".analytics-panel", ".analytics-panel-heading", ".analytics-consistency", ".analytics-calendar-wrap", ".analytics-heat-legend", ".analytics-streaks", ".analytics-streak", ".analytics-hourmap-wrap", ".analytics-split", ".analytics-course-layout", ".analytics-course-detail", ".analytics-sort", ".analytics-course-grid", ".analytics-course-grid article", ".analytics-legend", ".analytics-ai-panel", ".analytics-ai-heading", ".analytics-signal-grid", ".analytics-signal-grid article"]],
   ["fx-lobbystudio", "/lobbies/:id studio", [".lobby-studio-grid", ".lobby-primary-column"]],
-  ["fx-taskrow", "tasks notebook card", [".master-notebook-card", ".notebook-quick-add-line", ".notebook-tasks-surface", ".notebook-task-list", ".notebook-task-row", ".task-row-left", ".task-row-body", ".task-row-title-bar", ".task-row-badges", ".task-meta-pill"]],
+  ["fx-taskrow", "tasks notebook card", [".master-notebook-card", ".notebook-quick-add-line", ".notebook-tasks-surface", ".notebook-task-list", ".notebook-task-row", ".task-row-left", ".task-row-body", ".task-row-title-bar", ".task-row-badges", ".task-meta-pill", ".notebook-empty-view", ".empty-description", ".empty-actions"]],
+  // `.empty-scene` is deliberately not in this list: the "All clear" stamp is absolutely
+  // positioned off its corner on purpose, which reads as an overflow to the scan below. Its
+  // geometry is checked directly in the sticky probe instead, against the card it sits in.
+  ["fx-stickyadd", "dashboard quick-add + empty scene", [".today-tasks-sticky-card", ".sticky-tasks-header", ".sticky-inline-add-form", ".sticky-input-row", ".sticky-meta-row", ".sticky-field", ".sticky-tasks-list", ".ui-empty-state", ".ui-empty-description", ".empty-actions"]],
   ["fx-timer", "/focus timer card", [".focus-main-grid", ".doodle-timer-card", ".timer-chart-head", ".timer-mode-segmented-tabs", ".timer-mode-tab", ".timer-status-row", ".timer-dial", ".timer-dial-inner", ".giant-timer-digits", ".timer-ecg", ".timer-vitals", ".timer-action-buttons", ".doodle-distraction-btn", ".focus-sidebar-card"]],
   ["fx-sidebar", "desktop sidebar", [".app-sidebar", ".sidebar-nav", ".sidebar-group", ".app-sidebar-footer", ".study-mood-sidebar-btn"]],
+  // `.plan-note-watermark` and `.plan-card-watermark` are absolutely positioned off their note's
+  // corner on purpose -- the same reason `.empty-scene` is absent above -- so the notes are listed
+  // and the watermarks are not. `.plan-day-grid` and `.plan-shelf-grid` are auto-fill grids and the
+  // whole point of listing them is that they fall to one column rather than forcing 16rem tracks.
+  ["fx-planboard", "/plan-forum board + forum + calendar switch", [".plan-board", ".plan-board-head", ".plan-board-period", ".plan-board-actions", ".plan-readonly-banner", ".plan-day-grid", ".plan-day-note", ".plan-day-head", ".plan-note-tasks", ".plan-note-task", ".plan-note-text", ".plan-note-add-btn", ".plan-note-form", ".plan-note-form-actions", ".plan-forum-layout", ".plan-new-pad", ".plan-period-row", ".plan-shelf", ".plan-shelf-head", ".plan-shelf-grid", ".plan-card", ".plan-card-head", ".plan-card-meta", ".plan-card-actions", ".plan-shelf-empty", ".plan-forum-footnote", ".calendar-source-bar", ".calendar-source-tabs", ".calendar-copy-box"]],
+  // The board's notes are the forum's, so `.plan-day-*` is listed again here rather than trusted
+  // from above: what is new is the load chip in the head and the checkbox in the row, and both
+  // land inside those two boxes. `.exam-upload-thumb-clear` is absent for the same reason the
+  // watermarks are -- it is positioned onto the thumbnail's corner on purpose.
+  ["fx-examboard", "AI Exam Plan wizard + proposal board", [".exam-plan-share", ".exam-view-tabs", ".exam-board", ".plan-day-grid", ".plan-day-note", ".plan-day-head", ".plan-note-tasks", ".plan-note-task", ".plan-note-text", ".wizard-container", ".wizard-steps", ".wizard-step-content", ".wizard-step-actions", ".exam-upload", ".exam-upload-row", ".exam-upload-thumb", ".exam-topic-composer", ".exam-topic-toolbar", ".exam-topic-toolbar-actions", ".exam-topic-paste", ".exam-topic-paste-actions", ".exam-topic-list", ".exam-topic-card", ".exam-topic-main", ".exam-topic-fields", ".exam-strategy-grid", ".exam-strategy-card", ".exam-rest-days", ".exam-rest-day-row", ".exam-review-card", ".exam-review-list", ".exam-plan-create-layout", ".exam-plan-form-panel", ".exam-plan-recent-panel", ".exam-plan-list", ".exam-plan-card", ".exam-plan-card > div", ".exam-capacity-label", ".exam-capacity-range"]],
+  // The page that frames the two above, which nothing in `fx-examboard` reaches. The controls
+  // themselves are deliberately not listed: a text input reports a `scrollWidth` wider than its
+  // client box whenever its *value* overflows, which this fixture's unbreakable strings guarantee,
+  // and that is internal scrolling rather than a layout spill. Every one of them is `width: 100%`
+  // inside a grid label, so a real blowout shows on the label or the `.form-grid` around it, and the
+  // things a rectangle cannot see -- the border, and the gap between caption and control -- are
+  // measured by the `out.detail` probe below instead.
+  ["fx-examdetail", "/exam-plans/:id proposal page", [".exam-plan-detail-shell", ".exam-plan-detail-header", ".page-header-text", ".exam-plan-share", ".exam-plan-attribution", ".exam-plan-fact", ".exam-plan-editor", ".exam-plan-meta", ".exam-plan-meta .form-grid", ".exam-plan-meta label", ".exam-plan-items", ".exam-plan-item-list", ".exam-plan-item", ".exam-plan-item-heading", ".exam-plan-item .form-grid", ".exam-plan-item label", ".plan-item-select", ".exam-plan-conversion", ".task-conversion-confirmation", ".exam-plan-feedback", ".exam-plan-reject-zone"]],
 ];
 
 const TAP = [
@@ -57,9 +82,23 @@ const TAP = [
   ".task-action-icon-btn",
   ".quick-add-options-toggle",
   ".notebook-manage-toggle",
+  ".sticky-select",
+  ".sticky-cancel-btn",
+  ".empty-actions .btn",
   ".subject-chip",
   ".timer-mode-tab",
+  ".analytics-toolbar select",
+  ".analytics-sort button",
   ".calendar-event",
+  ".plan-note-add-btn",
+  ".plan-note-remove",
+  ".calendar-copy-box button",
+  ".calendar-source-tabs button",
+  ".exam-view-tabs button",
+  ".exam-note-check",
+  ".exam-topic-remove",
+  ".exam-upload-btn",
+  ".text-button",
   'input[type="checkbox"]',
   'input[type="radio"]',
   ".page-header-main a",
@@ -88,6 +127,13 @@ const RUNS = [
   ...["notebook", "cosmic", "sakura", "aurora", "sunset"].map((m) => [m, "ltr"]),
   ["notebook", "rtl"],
 ];
+
+/* One run only ever sees one mood, so "the chart ink is a different colour in cosmic" is not a
+   within-run assertion -- it is a comparison between two runs. Filled during the sweep and checked
+   after it, because that comparison is the direct regression test for the fault this pass removed:
+   six hardcoded hexes painting #263D5B ink onto the #182234 card of the one dark mood. A palette
+   that is mood-blind again would still pass every other check in this file. */
+const CHART_INK = {};
 
 for (const [mood, dir] of RUNS) {
   for (const [w, h, mobile] of [
@@ -129,7 +175,7 @@ for (const [mood, dir] of RUNS) {
     const res = await page.evaluate(
       ({ SECTIONS, TAP, DECO_SELECTORS }) => {
         const vw = document.documentElement.clientWidth;
-        const out = { vw, doc: document.documentElement.scrollWidth - vw, clipped: [], tiny: [], viaLabel: [] };
+        const out = { vw, doc: document.documentElement.scrollWidth - vw, clipped: [], tiny: [], spill: [], viaLabel: [] };
         for (const [id, label, sels] of SECTIONS) {
           const root = document.getElementById(id);
           if (!root) continue;
@@ -170,6 +216,46 @@ for (const [mood, dir] of RUNS) {
               }
             }
             out.tiny.push({ sel, w: +r.width.toFixed(1), h: +r.height.toFixed(1) });
+          }
+        }
+
+        // ---- label spilling out of its own button ----
+        // Every .btn is `white-space: nowrap`, so a button narrower than its label does not clip
+        // or wrap -- the text simply paints outside the border, centred, hanging off both sides.
+        // The section sweep above cannot see it: the row that holds the buttons is
+        // `flex-wrap: wrap` and reports no overflow of its own, and a centred spill of a few dozen
+        // px stays inside the viewport, so both existing tests pass while the control is visibly
+        // broken. Measured against the padding box, because padding-inline is the gap the design
+        // asks for between the border and the text -- a label touching the border is already wrong.
+        // Document-wide rather than timer-only: nowrap is on .btn, so this is every button's bug.
+        for (const el of document.querySelectorAll(".btn")) {
+          const st = getComputedStyle(el);
+          if (st.display === "none" || el.clientWidth === 0) continue;
+          const inner = el.clientWidth - parseFloat(st.paddingInlineStart) - parseFloat(st.paddingInlineEnd);
+          let content = 0;
+          for (const child of el.childNodes) {
+            if (child.nodeType === 3) {
+              if (!child.textContent.trim()) continue;
+              const range = document.createRange();
+              range.selectNodeContents(child);
+              content += range.getBoundingClientRect().width;
+            } else if (child.nodeType === 1) {
+              content += child.getBoundingClientRect().width;
+            }
+          }
+          const gap = parseFloat(st.columnGap) || 0;
+          const parts = [...el.childNodes].filter(
+            (c) => (c.nodeType === 3 && c.textContent.trim()) || c.nodeType === 1,
+          ).length;
+          content += Math.max(0, parts - 1) * gap;
+          const over = Math.round(content - inner);
+          if (over > 1) {
+            out.spill.push({
+              text: (el.textContent || el.getAttribute("aria-label") || "").trim().slice(0, 28),
+              cls: el.className.replace(/\s+/g, "."),
+              over,
+              inner: Math.round(inner),
+            });
           }
         }
 
@@ -268,6 +354,7 @@ for (const [mood, dir] of RUNS) {
           const qInput = qline.querySelector(".quick-add-input");
           const qSubmit = qline.querySelector(".quick-add-submit");
           const qOpts = qline.querySelector(".quick-add-options");
+          const triage = [...document.querySelectorAll("#fx-triage .task-priority-pill")];
           out.task = {
             // rotate() lands in the matrix, so a tilt shows up as b/c being non-zero.
             tilted: cards.some((c) => {
@@ -293,6 +380,145 @@ for (const [mood, dir] of RUNS) {
             // line up), and an input shrunk to a few pixels so everything trivially fits.
             submitH: Math.round(qSubmit.getBoundingClientRect().height),
             inputW: Math.round(qInput.getBoundingClientRect().width),
+
+            // ---- the two systems that used to render as nothing at all ----
+            // `--note-color` named tokens (--amber, --teal) that were never defined, so it was
+            // guaranteed-invalid, so `background: color-mix(... var(--note-color) ...)` was
+            // invalid at computed-value time and fell all the way back to transparent: every
+            // note had no paper and the tape strip was an empty outline. And `.priority-*` was
+            // rendered on every pill with no rule anywhere matching it, so all four levels drew
+            // identically. Neither failure is visible in a stylesheet read, and neither is
+            // visible to anyone who never saw the page work -- so both are measured. Two
+            // courses must give two non-transparent papers, four levels four different fills.
+            papers: cards.map((c) => getComputedStyle(c).backgroundColor),
+            tags: [...notebook.querySelectorAll(".task-subject-tag")].map(
+              (t) => getComputedStyle(t).backgroundColor,
+            ),
+            spines: cards.map((c) => getComputedStyle(c, "::after").backgroundColor),
+            pills: triage.map((p) => getComputedStyle(p).backgroundColor),
+            // Overdue moves the border ink and nothing else; one card of each state.
+            ink: [collapsed, expandedCard].map((c) => getComputedStyle(c).borderTopColor),
+            // A watermark scaled to nothing is indistinguishable from no drawing at all, and it
+            // is behind the text where that is easy not to notice.
+            markW: Math.round(collapsed.querySelector(".task-note-watermark").getBoundingClientRect().width),
+            barW: Math.round(collapsed.querySelector(".task-subtask-bar").getBoundingClientRect().width),
+          };
+        }
+
+        // ---- tasks page vitals strip ----
+        // Four readouts and a trace. The strip is the one new thing on the page that is pure
+        // width -- four labelled numbers in a row do not fit a phone -- so what is checked is
+        // that it regrouped rather than overflowed, and that the four boxes still line up.
+        const vitals = document.querySelector(".task-vitals-strip");
+        const vItems = vitals ? [...vitals.querySelectorAll(".task-vital")] : [];
+        if (vitals && vItems.length === 4) {
+          const vecg = vitals.querySelector(".task-vitals-ecg");
+          const rects = vItems.map((i) => i.getBoundingClientRect());
+          out.vitals = {
+            // A label that wraps to two lines shows up from here as four different heights.
+            sameH: rects.every((r) => Math.abs(r.height - rects[0].height) < 1),
+            rows: new Set(rects.map((r) => Math.round(r.top))).size,
+            ecgShown: getComputedStyle(vecg).display !== "none",
+            hidden: Math.round(vitals.scrollWidth - vitals.clientWidth),
+          };
+        }
+
+        // ---- dashboard quick-add + "nothing due today" ----
+        const sticky = document.getElementById("fx-stickyadd");
+        const scene = sticky?.querySelector(".empty-scene");
+        if (sticky && scene) {
+          const box = sticky.querySelector(".ui-empty-state").getBoundingClientRect();
+          const stamp = scene.querySelector(".empty-stamp").getBoundingClientRect();
+          const fields = [...sticky.querySelectorAll(".sticky-field")];
+          const sels = [...sticky.querySelectorAll(".sticky-select")];
+          const actions = [...sticky.querySelectorAll(".empty-actions .btn")];
+          out.sticky = {
+            // The whole point of the :has() override. The shared EmptyState clamps
+            // `.ui-empty-icon svg` to 26px inside a 52px circle, which is right for the single
+            // lucide glyph it was built for and would crush a drawn scene to a coin. Anything
+            // wider than 26 proves the override won.
+            glyphW: Math.round(scene.querySelector(".empty-scene-glyph").getBoundingClientRect().width),
+            sceneW: Math.round(scene.getBoundingClientRect().width),
+            // The stamp hangs off the scene's corner on purpose. Off the card is a clip.
+            stampSpill: Math.round(Math.max(box.left - stamp.left, stamp.right - box.right)),
+            selH: Math.min(...sels.map((s) => Math.round(s.getBoundingClientRect().height))),
+            rows: new Set(fields.map((f) => Math.round(f.getBoundingClientRect().top))).size,
+            actionH: Math.min(...actions.map((a) => Math.round(a.getBoundingClientRect().height))),
+            // Both cues are fed by the same [data-color] / [data-priority] rules as the cards,
+            // so a transparent one here means the shared resolution broke for everyone.
+            swatch: getComputedStyle(sticky.querySelector(".sticky-course-swatch")).backgroundColor,
+            spine: getComputedStyle(sticky.querySelector(".sticky-priority-spine")).backgroundColor,
+          };
+        }
+
+        // ---- hand-drawn chrome ----
+        /* Everything here is the difference between "drawn" and "a default form", and not one of
+           them is a size, which is why none of it was covered: an irregular radius, the lettered
+           family actually landing, the native <select> caret being replaced, a disabled button
+           that reads as waiting rather than broken, the second pen line inside the big frame, and
+           the dashboard rows carrying the same course colour the /tasks board does.
+
+           Radii are read corner by corner. A two-axis border-radius serialises per corner as
+           "12px 6px", so a hand-drawn shape gives four different strings while a pill gives four
+           identical "9999px" ones -- which is exactly what a later override quietly reinstated on
+           the course chips once already. */
+        const chip = document.querySelector(".subjects-ribbon .subject-chip:not(.active)");
+        const qsel = document.querySelector(".quick-add-select");
+        const qin2 = document.querySelector(".quick-add-input");
+        const qsub = document.querySelector(".quick-add-submit");
+        const bigCard = document.querySelector(".master-notebook-card");
+        const dcards = [...document.querySelectorAll("#fx-stickyadd .dashboard-task-card")];
+        if (chip && qsel && qin2 && qsub && bigCard && dcards.length === 3) {
+          const corners = (s) => [
+            s.borderTopLeftRadius,
+            s.borderTopRightRadius,
+            s.borderBottomRightRadius,
+            s.borderBottomLeftRadius,
+          ];
+          const cs = getComputedStyle(chip);
+          const ss = getComputedStyle(qsel);
+          const subs = getComputedStyle(qsub);
+          // All three big frames on the page share one ::after rule, and each supplies its own
+          // `position: relative` -- so a frame can lose the line on its own, which is exactly
+          // what a probe on one of them would miss.
+          const FRAMES = [".notebook-top-header", ".subjects-ribbon", ".master-notebook-card"];
+          out.doodle = {
+            chipCorners: corners(cs),
+            chipFont: cs.fontFamily,
+            inputFont: getComputedStyle(qin2).fontFamily,
+            selFont: ss.fontFamily,
+            selAppearance: ss.appearance,
+            selCaret: ss.backgroundImage,
+            // background-position has no logical form, so the caret is the one thing on this row
+            // that needs a second rule to reach the correct edge in Arabic.
+            selCaretPos: ss.backgroundPositionX,
+            // The submit is disabled whenever the field is empty, which is most of the time;
+            // `.btn:disabled`'s blanket 0.55 opacity is what made the resting row look broken.
+            subOpacity: +subs.opacity,
+            subBorder: subs.borderTopStyle,
+            ringsMissing: FRAMES.filter((sel) => {
+              const el = document.querySelector(sel);
+              if (!el) return true;
+              const r = getComputedStyle(el, "::after");
+              // The line is only where it is meant to be if the frame gave it a containing
+              // block; without `position: relative` it escapes to the nearest ancestor that has
+              // one and draws a ring around something else entirely.
+              return (
+                r.borderTopStyle !== "dashed" ||
+                !(parseFloat(r.borderTopWidth) > 0) ||
+                getComputedStyle(el).position === "static"
+              );
+            }),
+            cardPapers: dcards.map((c) => getComputedStyle(c).backgroundColor),
+            cardSpines: dcards.map((c) => getComputedStyle(c, "::before").backgroundColor),
+            cardCorners: corners(getComputedStyle(dcards[0])),
+            cardTilted: dcards.filter((c) => {
+              const m = new DOMMatrixReadOnly(getComputedStyle(c).transform);
+              return Math.abs(m.b) > 0.001 || Math.abs(m.c) > 0.001;
+            }).length,
+            cardTitleFont: getComputedStyle(dcards[0].querySelector(".dashboard-task-title")).fontFamily,
+            // A spine wider than the padding it is meant to sit in would print under the text.
+            cardPadStart: Math.round(parseFloat(getComputedStyle(dcards[0]).paddingInlineStart)),
           };
         }
 
@@ -398,6 +624,185 @@ for (const [mood, dir] of RUNS) {
           };
         }
 
+        // ---- /analytics re-skin ----
+        // The page's charts are themed entirely through custom properties, including inside SVG
+        // presentation attributes, and every panel's decoration lives in a `background-image` that a
+        // stray `background:` shorthand would silently erase. Neither is visible in a stylesheet
+        // read, and both had already failed once here: six hardcoded hexes painted #263D5B ink onto
+        // the #182234 card of the cosmic mood, and the panels' own `background:` was the reason they
+        // could not just be appended to the shared corner-mark list.
+        const anaRoot = document.getElementById("fx-analytics");
+        const anaPanel = anaRoot?.querySelector(".analytics-panel");
+        const anaAi = anaRoot?.querySelector(".analytics-ai-panel");
+        const anaSel = anaRoot?.querySelector(".analytics-toolbar select");
+        const anaLine = anaRoot?.querySelector(".fx-chart-line");
+        const anaTip = anaRoot?.querySelector(".analytics-tooltip");
+        const anaHeat = anaRoot?.querySelector('.analytics-cal-cell[data-level="4"]');
+        if (anaRoot && anaPanel && anaAi && anaSel && anaLine && anaTip && anaHeat) {
+          /* A token resolved the way the stylesheet would resolve it, through a throwaway element
+             rather than by parsing tokens.css: `color` is the one property whose computed value is
+             always an absolute rgb(), so this turns "--primary-strong" into the exact string the
+             chart's stroke has to match. Comparing the two is what proves a var() in an SVG
+             presentation attribute substitutes at all -- if it silently did not, both the stroke and
+             this probe would still be *some* colour and only the equality test would catch it. */
+          const token = (name) => {
+            const probe = document.createElement("div");
+            probe.style.color = `var(${name})`;
+            document.body.appendChild(probe);
+            const value = getComputedStyle(probe).color;
+            probe.remove();
+            return value;
+          };
+          const ps = getComputedStyle(anaPanel);
+          const as = getComputedStyle(anaAi);
+          const ss = getComputedStyle(anaSel);
+          const stops = [...anaRoot.querySelectorAll(".analytics-fill-top, .analytics-fill-bottom")];
+          const hour1 = anaRoot.querySelector('.analytics-hourmap[data-step="1"]');
+          const hour4 = anaRoot.querySelector('.analytics-hourmap[data-step="4"]');
+          const cta = anaRoot.querySelector(".analytics-ai-heading .secondary-button");
+          // Both wide frames carry the shared "the pen went round twice" ::after, and each has to
+          // declare its own `position: relative` -- so either can lose the line on its own.
+          const FRAMES = [".analytics-wide-panel", ".analytics-ai-panel"];
+          out.analytics = {
+            panelBorder: +parseFloat(ps.borderTopWidth).toFixed(2),
+            panelMarks: ps.backgroundImage,
+            aiBorder: +parseFloat(as.borderTopWidth).toFixed(2),
+            aiMarks: as.backgroundImage,
+            selAppearance: ss.appearance,
+            selCaret: ss.backgroundImage,
+            selCaretPos: ss.backgroundPositionX,
+            selH: Math.round(anaSel.getBoundingClientRect().height),
+            lineStroke: getComputedStyle(anaLine).stroke,
+            lineToken: token("--primary-strong"),
+            stopInks: stops.map((s) => getComputedStyle(s).stopColor),
+            stopToken: token("--primary"),
+            step1Shown: hour1 ? getComputedStyle(hour1).display !== "none" : null,
+            step4Shown: hour4 ? getComputedStyle(hour4).display !== "none" : null,
+            // Accumulated across the mood runs and compared afterwards: one run only ever sees one
+            // mood, so "the tooltip is a different colour in cosmic" is not a within-run assertion.
+            tipInk: getComputedStyle(anaTip).borderTopColor,
+            heatInk: getComputedStyle(anaHeat).backgroundColor,
+            // --subject-color reaches these through [data-color] and is used inside a color-mix()
+            // with a fallback, which is three chances to resolve to nothing.
+            courseInks: [...anaRoot.querySelectorAll(".analytics-course-grid article")].map((el) => {
+              const cs = getComputedStyle(el);
+              return [cs.borderTopColor, cs.backgroundColor];
+            }),
+            swatchInks: [...anaRoot.querySelectorAll(".analytics-legend i")].map(
+              (el) => getComputedStyle(el).backgroundColor,
+            ),
+            deltaInks: ["up", "down", "flat"].map((d) => {
+              const el = anaRoot.querySelector(`.analytics-delta[data-direction="${d}"]`);
+              return el ? getComputedStyle(el).color : "transparent";
+            }),
+            // One ink per signal card, from --success/--warning/--primary mixed toward the panel's
+            // own foreground. Three tones in the fixture, so three colours, or the tone system is
+            // painting six identical cards.
+            toneInks: [...anaRoot.querySelectorAll(".analytics-signal-grid article > svg")].map(
+              (el) => getComputedStyle(el).color,
+            ),
+            // The CTA is the only inverted fill in the app: --secondary-foreground on a --secondary
+            // card. Those two are a contrast pair by definition, so this is really a check that the
+            // base .secondary-button's own `background: var(--surface)` did not win.
+            ctaFill: cta ? getComputedStyle(cta).backgroundColor : "transparent",
+            aiFill: as.backgroundColor,
+            ringsMissing: FRAMES.filter((sel) => {
+              const el = anaRoot.querySelector(sel);
+              if (!el) return true;
+              const r = getComputedStyle(el, "::after");
+              return (
+                r.borderTopStyle !== "dashed" ||
+                !(parseFloat(r.borderTopWidth) > 0) ||
+                getComputedStyle(el).position === "static"
+              );
+            }),
+          };
+        }
+
+        // ---- /exam-plans/:id fields ----
+        /* The one failure on this page that no rectangle in the section sweep can see. Every field
+           here is a `<label>` wrapping its control, and the rule that stacks the pair and draws the
+           control's box is page-scoped -- there is no `.ui-input` on any of them. If that rule ever
+           stops matching, what the fields fall back to is Tailwind's preflight: `border-width: 0`
+           and a transparent background, which renders a field as its caption and its value running
+           together in one line of body text ("Plan titlefamily medicine exam") inside a box that is
+           still exactly the right size. So the caption/control gap and the border are measured
+           directly. The textarea is measured too: unstyled, it sits at its default 20-column width
+           in the middle of a 54rem card, which is a width the sweep reads as a comfortable fit. */
+        const detail = document.getElementById("fx-examdetail");
+        if (detail) {
+          const fields = [
+            ...detail.querySelectorAll(
+              ".exam-plan-meta label, .exam-plan-item label:not(.plan-item-select)",
+            ),
+          ];
+          const controls = [...detail.querySelectorAll(".exam-plan-meta, .exam-plan-item")].flatMap(
+            (card) => [...card.querySelectorAll('input:not([type="checkbox"]), select, textarea')],
+          );
+          const navLinks = [...detail.querySelectorAll(".exam-plan-detail-header .page-header a")];
+          const facts = [...detail.querySelectorAll(".exam-plan-fact")];
+          const feedback = detail.querySelector(".exam-plan-feedback");
+          // The hidden state cannot coexist with the visible one in the fixture, so it is built
+          // here: what matters is that an empty slot leaves the flow entirely, because the shell is
+          // a grid and a zero-height grid item still collects a gap on each side of itself.
+          const emptyFeedback = feedback.cloneNode(true);
+          emptyFeedback.dataset.visible = "no";
+          feedback.after(emptyFeedback);
+          const emptyPos = getComputedStyle(emptyFeedback).position;
+          emptyFeedback.remove();
+          out.detail = {
+            fields: fields.length,
+            controls: controls.length,
+            // Caption above control, with real space between them. A wrapped label whose rule
+            // never matched reports a gap of 0 here -- or a negative one, since an inline input
+            // sits on the caption's own baseline.
+            glued: fields.flatMap((label) => {
+              const control = label.querySelector("input, select, textarea");
+              const text = [...label.childNodes].find(
+                (n) => n.nodeType === 3 && n.textContent.trim(),
+              );
+              if (!control || !text) return [];
+              const range = document.createRange();
+              range.selectNodeContents(text);
+              const gap = control.getBoundingClientRect().top - range.getBoundingClientRect().bottom;
+              return gap >= 2 ? [] : [{ text: text.textContent.trim().slice(0, 24), gap: Math.round(gap) }];
+            }),
+            borderless: controls
+              .filter((el) => parseFloat(getComputedStyle(el).borderTopWidth) < 1)
+              .map((el) => el.tagName.toLowerCase()),
+            // Against its own label, not the viewport: the label is the column the field was given.
+            narrow: [...detail.querySelectorAll("textarea")]
+              .map((ta) => {
+                const own = ta.getBoundingClientRect().width;
+                const box = ta.closest("label").getBoundingClientRect().width;
+                return { own: Math.round(own), box: Math.round(box) };
+              })
+              .filter((m) => m.own < m.box * 0.9),
+            // The strip is a wrap-based flex row: three facts across a desktop, one per row on a
+            // phone. Anything in between means a fact was squeezed rather than moved.
+            factRows: new Set(facts.map((f) => Math.round(f.getBoundingClientRect().top))).size,
+            // "New planTasksInsights" -- three anchors with no gap read as one word. The pill's
+            // own padding is what separates the first link from the border, so both are measured.
+            navGap: navLinks.length < 2
+              ? -1
+              : Math.round(
+                  Math.min(
+                    ...navLinks.slice(1).map((a, i) => {
+                      const prev = navLinks[i].getBoundingClientRect();
+                      const here = a.getBoundingClientRect();
+                      return Math.max(here.left - prev.right, prev.left - here.right);
+                    }),
+                  ),
+                ),
+            navFramed:
+              parseFloat(getComputedStyle(detail.querySelector(".page-header")).borderTopWidth) >= 1,
+            emptyFeedbackInFlow: emptyPos === "static" || emptyPos === "relative",
+            rejectFramed:
+              getComputedStyle(detail.querySelector(".exam-plan-reject-zone")).borderTopStyle ===
+              "dashed",
+          };
+        }
+
         return out;
       },
       { SECTIONS, TAP, DECO_SELECTORS },
@@ -443,6 +848,115 @@ for (const [mood, dir] of RUNS) {
       if (res.task.manageOff === "none") taskBad.push("desktop hid the manage row");
       if (res.task.optsHidden) taskBad.push("desktop hid the quick-add selects");
     }
+
+    /* Colour, not width, so these sit outside the branch above -- they have to hold at every
+       viewport and in every mood. `dead` covers both serialisations a fully transparent
+       computed colour can take, since "transparent" is exactly what the broken color-mix()
+       used to produce and the whole point of these three checks is to catch that class of
+       silent failure rather than this one instance of it. */
+    const norm = (c) => c.replace(/\s/g, "");
+    const dead = (c) => c === "transparent" || /(,|\/)\s*0\)$/.test(c);
+    const distinct = (list) => new Set(list.map(norm)).size;
+    if (res.task.papers.some(dead))
+      taskBad.push(`a sticky note has no paper colour at all (${res.task.papers.join(" / ")})`);
+    if (distinct(res.task.papers) < 2)
+      taskBad.push(`both courses painted the same paper (${res.task.papers[0]})`);
+    if (distinct(res.task.tags) < 2) taskBad.push("both course tags painted the same fill");
+    if (res.task.spines.some(dead)) taskBad.push("a triage spine has no colour");
+    if (distinct(res.task.spines) < 2) taskBad.push("high and low drew the same triage spine");
+    if (res.task.pills.length !== 4)
+      taskBad.push(`expected four priority pills in the fixture, found ${res.task.pills.length}`);
+    else if (distinct(res.task.pills) < 4)
+      taskBad.push(`the four priority levels resolve to ${distinct(res.task.pills)} colours`);
+    if (distinct(res.task.ink) < 2)
+      taskBad.push("an overdue card is inked the same as an on-time one");
+    if (res.task.markW < 40) taskBad.push(`the doodle watermark is only ${res.task.markW}px wide`);
+    if (res.task.barW < 20) taskBad.push(`the subtask progress bar is only ${res.task.barW}px wide`);
+
+    if (!res.vitals) throw new Error("vitals strip probe found nothing -- fixture drifted");
+    if (res.vitals.hidden > 1) taskBad.push(`the vitals strip hides ${res.vitals.hidden}px of itself`);
+    if (!res.vitals.sameH) taskBad.push("the four vitals are different heights -- a label wrapped");
+    const vRows = w <= 768 ? 2 : 1;
+    if (res.vitals.rows !== vRows)
+      taskBad.push(`vitals laid out on ${res.vitals.rows} rows, expected ${vRows} at ${w}px`);
+    // Texture below 480px, information above it.
+    if (res.vitals.ecgShown !== w > 480)
+      taskBad.push(`the vitals trace is ${res.vitals.ecgShown ? "shown" : "hidden"} at ${w}px`);
+
+    if (!res.sticky) throw new Error("dashboard quick-add probe found nothing -- fixture drifted");
+    const stickyBad = [];
+    if (res.sticky.glyphW <= 26)
+      stickyBad.push(`the drawn scene was crushed to ${res.sticky.glyphW}px by .ui-empty-icon`);
+    if (res.sticky.sceneW < 120) stickyBad.push(`the empty scene is only ${res.sticky.sceneW}px wide`);
+    if (res.sticky.stampSpill > 0)
+      stickyBad.push(`the "All clear" stamp hangs ${res.sticky.stampSpill}px outside the card`);
+    if (dead(res.sticky.swatch)) stickyBad.push("the course swatch has no colour");
+    if (dead(res.sticky.spine)) stickyBad.push("the priority spine has no colour");
+    const sRows = w <= 768 ? 2 : 1;
+    if (res.sticky.rows !== sRows)
+      stickyBad.push(`course and priority on ${res.sticky.rows} rows, expected ${sRows} at ${w}px`);
+    if (w <= 768) {
+      if (res.sticky.selH < 44)
+        stickyBad.push(`quick-add select is ${res.sticky.selH}px tall, under the 44px floor`);
+      if (res.sticky.actionH < 44)
+        stickyBad.push(`empty-state action is ${res.sticky.actionH}px tall, under the 44px floor`);
+    } else if (res.sticky.selH < 24) {
+      stickyBad.push(`quick-add select is only ${res.sticky.selH}px tall`);
+    }
+    if (!res.doodle) throw new Error("hand-drawn chrome probe found nothing -- fixture drifted");
+    const doodleBad = [];
+    const LETTERED = "Delius Swash Caps";
+    // Four different corner strings is the definition being asserted; three is the tolerance for
+    // a shape that happens to repeat one pair, and one means somebody wrote a single radius.
+    const wobbly = (c) => new Set(c).size >= 3 && !c.some((v) => v.includes("9999px"));
+    if (!wobbly(res.doodle.chipCorners))
+      doodleBad.push(`course chip is not hand-drawn: corners ${res.doodle.chipCorners.join(" | ")}`);
+    if (!wobbly(res.doodle.cardCorners))
+      doodleBad.push(`dashboard task card is not hand-drawn: corners ${res.doodle.cardCorners.join(" | ")}`);
+    /* The family check is about the cascade, not the rasteriser: the faces are not installed
+       offline, so what this can prove is that --font-label resolved and reached the element
+       rather than being dropped to the inherited value -- which is precisely what happened for
+       the whole life of this fixture before it started declaring the next/font variables. */
+    for (const [what, fam] of [
+      ["course chip", res.doodle.chipFont],
+      ["quick-add input", res.doodle.inputFont],
+      ["quick-add select", res.doodle.selFont],
+      ["dashboard task title", res.doodle.cardTitleFont],
+    ]) {
+      if (!fam.includes(LETTERED)) doodleBad.push(`${what} is not hand-lettered (${fam})`);
+    }
+    if (res.doodle.selAppearance !== "none")
+      doodleBad.push(`the native select chrome is still on (appearance: ${res.doodle.selAppearance})`);
+    if (res.doodle.selCaret === "none") doodleBad.push("the drawn select caret is missing");
+    /* backgroundPositionX resolves the keyword away -- `right 0.6rem` computes to
+       `calc(100% - 9.6px)` and `left 0.6rem` to a bare `9.6px` -- so which edge the caret is
+       anchored to is readable from whether the offset is measured off the far edge, not from a
+       keyword that is no longer in the value. LTR draws it trailing (far edge), RTL leading. */
+    const caretFromFarEdge = res.doodle.selCaretPos.includes("100%");
+    if (caretFromFarEdge !== (dir === "ltr"))
+      doodleBad.push(
+        `the select caret sits at ${res.doodle.selCaretPos} at dir=${dir}, i.e. on the ${
+          caretFromFarEdge ? "right" : "left"
+        } instead of the ${dir === "rtl" ? "left" : "right"}`,
+      );
+    if (res.doodle.subOpacity < 0.9)
+      doodleBad.push(`the disabled submit is faded to ${res.doodle.subOpacity} -- reads as broken, not as waiting`);
+    if (res.doodle.subBorder !== "dashed")
+      doodleBad.push(`the disabled submit is drawn ${res.doodle.subBorder}, not dashed`);
+    if (res.doodle.ringsMissing.length)
+      doodleBad.push(`no inner pen line on ${res.doodle.ringsMissing.join(", ")}`);
+    if (res.doodle.cardPapers.some(dead))
+      doodleBad.push(`a dashboard task card has no paper at all (${res.doodle.cardPapers.join(" / ")})`);
+    if (distinct(res.doodle.cardPapers) < 3)
+      doodleBad.push(`three courses painted ${distinct(res.doodle.cardPapers)} papers on the dashboard`);
+    if (res.doodle.cardSpines.some(dead)) doodleBad.push("a dashboard card spine has no colour");
+    if (distinct(res.doodle.cardSpines) < 3)
+      doodleBad.push(`three courses drew ${distinct(res.doodle.cardSpines)} spines on the dashboard`);
+    if (res.doodle.cardTilted !== 3)
+      doodleBad.push(`${res.doodle.cardTilted}/3 dashboard cards carry the alternating tilt`);
+    if (res.doodle.cardPadStart < 20)
+      doodleBad.push(`dashboard card leaves ${res.doodle.cardPadStart}px before the text, too tight for the 5px spine`);
+
     if (!res.timer) throw new Error("focus timer probe found nothing -- fixture drifted");
     const timerBad = [];
     if (!res.timer.tabsOneRow) timerBad.push("the three mode tabs are not on one row");
@@ -486,30 +1000,142 @@ for (const [mood, dir] of RUNS) {
       if (a.shown && a.spill > 1) timerBad.push(`art panel ${i + 1} spills ${a.spill}px past the viewport`);
       if (a.shown && a.w < 200) timerBad.push(`art panel ${i + 1} is only ${a.w}px wide -- the drawings are meant to be big`);
     }
+    if (!res.analytics) throw new Error("analytics probe found nothing -- fixture drifted");
+    const analyticsBad = [];
+    const ana = res.analytics;
+    // Above the breakpoint only: `.analytics-panel`, `.analytics-wide-panel` and
+    // `.analytics-ai-panel` are all three in the mobile comfort block, which thins the border by
+    // 0.5px at <=768px -- and decoBad above already asserts that thinning from the other side.
+    //
+    // 2, not 2.5, because Chromium floors border-width to whole CSS pixels in the used value: the
+    // 2.5px the family declares is reported as 2px and the comfort block's 1.5px as 1px. The
+    // stylesheet is right; this is the number that is measurable. Same reason decoBad's ceiling is
+    // 1.5 rather than 1.
+    if (w > 768) {
+      if (ana.panelBorder < 2) analyticsBad.push(`panel border is ${ana.panelBorder}px, not the 2.5px every other card carries`);
+      if (ana.aiBorder < 2) analyticsBad.push(`AI panel border is ${ana.aiBorder}px, not 2.5px`);
+    }
+    /* The corner marks are a `background-image`, at every width, which is the whole reason these
+       panels had to move from the `background:` shorthand to `background-color:` before they could
+       join the card family. A shorthand added back anywhere -- base rule, mood override, media
+       query -- silently resets this to `none` and nothing else in the file would notice. */
+    if (ana.panelMarks === "none") analyticsBad.push("panel lost its corner marks (background-image: none)");
+    if (ana.aiMarks === "none") analyticsBad.push("AI panel lost its inverted corner marks");
+    if (ana.selAppearance !== "none")
+      analyticsBad.push(`the range select still wears OS chrome (appearance: ${ana.selAppearance})`);
+    if (ana.selCaret === "none") analyticsBad.push("the drawn caret is missing from the toolbar select");
+    const anaCaretFar = ana.selCaretPos.includes("100%");
+    if (anaCaretFar !== (dir === "ltr"))
+      analyticsBad.push(`toolbar caret sits at ${ana.selCaretPos} at dir=${dir}, i.e. on the leading edge`);
+    // 2.75rem in the base rule, so this holds at every width rather than only on coarse pointers.
+    if (ana.selH < 44) analyticsBad.push(`toolbar select is ${ana.selH}px tall, under the 44px floor`);
+    /* The load-bearing claim of the whole re-skin: a var() inside an SVG presentation attribute
+       substitutes, so recharts can be themed from tokens instead of hex literals. Equality against
+       the same token resolved through a real element is what proves it -- a `stroke` that failed to
+       substitute would fall back to black, which is a colour, so "is it painted" proves nothing. */
+    if (norm(ana.lineStroke) !== norm(ana.lineToken))
+      analyticsBad.push(`var() did not substitute in an SVG stroke: got ${ana.lineStroke}, --primary-strong is ${ana.lineToken}`);
+    if (ana.stopInks.length !== 2)
+      analyticsBad.push(`expected two gradient stops in the fixture, found ${ana.stopInks.length}`);
+    for (const ink of ana.stopInks) {
+      // stop-color is the one property that never relies on the attribute path -- the stops take
+      // their colour from a class -- so this is the check that the class actually reached them.
+      if (dead(ink) || norm(ink) !== norm(ana.stopToken))
+        analyticsBad.push(`a gradient stop is ${ink}, not --primary (${ana.stopToken})`);
+    }
+    // 24 columns are unreadable on a phone, so below 480px the day x hour map buckets to 4 hours.
+    // Both halves asserted: "always the coarse one" would pass a no-overflow test just as well.
+    const wantStep4 = w <= 480;
+    if (ana.step4Shown !== wantStep4 || ana.step1Shown === wantStep4)
+      analyticsBad.push(
+        `at ${w}px the hour map is showing the ${ana.step1Shown ? "hourly" : "4-hour"} grid, expected the ${wantStep4 ? "4-hour" : "hourly"} one`,
+      );
+    if (dead(ana.tipInk)) analyticsBad.push("the tooltip has no border colour");
+    if (dead(ana.heatInk)) analyticsBad.push("the busiest heat cell has no fill");
+    if (ana.courseInks.flat().some(dead))
+      analyticsBad.push(`a course card has no ink at all (${ana.courseInks.flat().join(" / ")})`);
+    // --subject-color reaches these through [data-color] and is consumed inside a color-mix() that
+    // carries its own fallback: three places it can resolve to nothing and still render a card.
+    if (distinct(ana.courseInks.map((pair) => pair[0])) < 2)
+      analyticsBad.push("both course cards drew the same border -- --subject-color did not reach them");
+    if (distinct(ana.courseInks.map((pair) => pair[1])) < 2)
+      analyticsBad.push("both course cards are washed the same colour");
+    if (ana.swatchInks.some(dead)) analyticsBad.push("a donut legend swatch has no colour");
+    if (distinct(ana.swatchInks) < 2) analyticsBad.push("both legend swatches painted the same course colour");
+    if (ana.deltaInks.some(dead)) analyticsBad.push("a period delta chip has no ink");
+    // up vs down/flat, not three distinct: down and flat deliberately share --muted, because a
+    // quiet week is not painted red on this page.
+    if (distinct(ana.deltaInks) < 2) analyticsBad.push("an upward delta is inked the same as a downward one");
+    if (ana.toneInks.length !== 6)
+      analyticsBad.push(`expected six signal cards in the fixture, found ${ana.toneInks.length}`);
+    if (ana.toneInks.some(dead)) analyticsBad.push("a signal card icon has no ink");
+    if (distinct(ana.toneInks) < 3)
+      analyticsBad.push(`the three signal tones resolve to ${distinct(ana.toneInks)} colours -- --signal-ink is not switching`);
+    if (dead(ana.ctaFill) || norm(ana.ctaFill) === norm(ana.aiFill))
+      analyticsBad.push(`the "Deeper insights" fill is ${ana.ctaFill} on a ${ana.aiFill} slab -- the base button's --surface won`);
+    if (ana.ringsMissing.length) analyticsBad.push(`no second pen line on ${ana.ringsMissing.join(", ")}`);
+    // Keyed by mood, so the RTL run overwrites its own LTR twin rather than a different palette.
+    CHART_INK[mood] = { tip: ana.tipInk, heat: ana.heatInk, cta: ana.ctaFill, signal: ana.toneInks[0] };
+
+    if (!res.detail) throw new Error("proposal-page probe found nothing -- fixture drifted");
+    const detailBad = [];
+    const det = res.detail;
+    // The fixture is fixed, so a drop in either count means a selector stopped matching -- which is
+    // the exact failure the rest of this block is written to catch, arriving silently.
+    if (det.fields !== 11) detailBad.push(`matched ${det.fields} labelled fields, expected 11`);
+    if (det.controls !== 11) detailBad.push(`matched ${det.controls} controls, expected 11`);
+    for (const g of det.glued)
+      detailBad.push(`"${g.text}" sits ${g.gap}px from its control -- the label did not stack`);
+    if (det.borderless.length)
+      detailBad.push(`${det.borderless.length} field(s) have no border at all (${det.borderless.join(", ")})`);
+    for (const n of det.narrow)
+      detailBad.push(`a textarea is ${n.own}px wide inside a ${n.box}px field -- it kept its default column count`);
+    // Three across from 769px, one per row below it. Two rows means one fact was squeezed instead.
+    const wantFactRows = w <= 768 ? 3 : 1;
+    if (det.factRows !== wantFactRows)
+      detailBad.push(`the AI strip is on ${det.factRows} row(s) at ${w}px, expected ${wantFactRows}`);
+    if (det.navGap < 1) detailBad.push(`the header nav links are ${det.navGap}px apart -- they read as one word`);
+    if (!det.navFramed) detailBad.push("the header nav is not rendering as a bordered pill");
+    if (det.emptyFeedbackInFlow)
+      detailBad.push("an empty feedback slot is still in the shell's grid, so it still collects a gap");
+    if (!det.rejectFramed) detailBad.push("the reject zone has no dashed frame");
+
     const bad =
       res.doc > 1 ||
       res.clipped.length ||
       res.tiny.length ||
+      res.spill.length ||
       navBad ||
       decoBad.length ||
       hdrBad.length ||
       taskBad.length ||
-      timerBad.length;
+      stickyBad.length ||
+      doodleBad.length ||
+      timerBad.length ||
+      analyticsBad.length ||
+      detailBad.length;
     if (bad) fail++;
     console.log(
-      `\n[${tag}] doc=+${res.doc} clipped=${res.clipped.length} tiny=${res.tiny.length}` +
+      `\n[${tag}] doc=+${res.doc} clipped=${res.clipped.length} tiny=${res.tiny.length} spill=${res.spill.length}` +
         (res.nav ? ` nav=${res.nav.shown ? `${res.nav.navH}px` : "hidden"} padB=${res.nav.padB}` : "") +
         ` hdr=h1:${res.hdr.h1}px/${res.hdr.xs ? "xs" : res.hdr.base ? "base" : "?"}` +
         ` task=${res.task.tilted ? "tilt" : "flat"}/${res.task.tape ? "tape" : "notape"}/minH${res.task.minH}` +
+        ` vitals=${res.vitals.rows}row/${res.vitals.ecgShown ? "ecg" : "noecg"}` +
+        ` sticky=${res.sticky.rows}row/glyph${res.sticky.glyphW}px/sel${res.sticky.selH}px` +
+        ` doodle=${new Set(res.doodle.chipCorners).size}corner/${res.doodle.selAppearance}/tilt${res.doodle.cardTilted}` +
         ` timer=pill${res.timer.indOffset}px/plate${res.timer.plateR}<=${res.timer.tickInnerR}<${res.timer.tickOuterR}<=${res.timer.ringInnerR}/digits${res.timer.digitsW}` +
         ` fs=${res.timer.fs.plateR}<=${res.timer.fs.ringInnerR}/digits${res.timer.fs.digitsW}` +
-        ` art=${res.timer.fs.art.map((a) => (a.shown ? `${a.w}px` : "off")).join("+")}`,
+        ` art=${res.timer.fs.art.map((a) => (a.shown ? `${a.w}px` : "off")).join("+")}` +
+        ` ana=${ana.panelBorder}px/${ana.panelMarks === "none" ? "nomarks" : "marks"}/sel${ana.selH}px/${ana.step1Shown ? "24h" : "4h"}/${distinct(ana.toneInks)}tone` +
+        ` plan=${det.fields}field/${det.factRows}factrow/nav${det.navGap}px`,
     );
     for (const c of res.clipped)
       console.log(
         `    ${c.spill !== undefined ? `SPILL +${c.spill}px w=${c.w}` : `CLIP ${c.clientW}<-${c.scrollW} (hidden ${c.hidden})`}  ${c.sel}   [${c.label}]`,
       );
     for (const t of res.tiny) console.log(`    TINY  ${t.sel} ${t.w}x${t.h}`);
+    for (const s of res.spill)
+      console.log(`    SPILL "${s.text}" overflows its button by ${s.over}px (${s.inner}px inside .${s.cls})`);
     if (res.nav?.overlap > 0) console.log(`    NAV-OVERLAP  bar covers last ${res.nav.overlap}px of the page`);
     if (res.nav?.wasted > 0) console.log(`    NAV-WASTED   ${res.nav.wasted}px dead strip with no bar rendered`);
     for (const d of decoBad)
@@ -518,11 +1144,53 @@ for (const [mood, dir] of RUNS) {
       );
     for (const m of hdrBad) console.log(`    HDR   ${m}`);
     for (const m of taskBad) console.log(`    TASK  ${m}`);
+    for (const m of stickyBad) console.log(`    STICKY ${m}`);
+    for (const m of doodleBad) console.log(`    DOODLE ${m}`);
     for (const m of timerBad) console.log(`    TIMER ${m}`);
+    for (const m of analyticsBad) console.log(`    ANALYTICS ${m}`);
+    for (const m of detailBad) console.log(`    PLAN  ${m}`);
     for (const t of res.viaLabel)
       console.log(`    ok(label) ${t.sel} ${t.w}x${t.h} -> clickable label ${t.lw}x${t.lh}`);
     await ctx.close();
   }
+}
+
+/* ================= chart ink follows the mood =================
+ * The one assertion in this file that spans runs. cosmic is the single dark mood -- `--surface` is
+ * #182234 there against a pale sheet in the other four -- so every value the charts and the AI slab
+ * paint with has to come out different in cosmic than in notebook. Four samples, one per mechanism,
+ * because they fail independently: the tooltip is a plain CSS border, the heat cell is a
+ * `color-mix()` of --primary at a data-level alpha, the CTA is the inverted --secondary-foreground
+ * fill, and the signal ink is a mix toward the slab's own foreground.
+ *
+ * A single-mood check cannot catch this. Hardcoded hexes look right in whichever mood they were
+ * eyeballed in, which is exactly how #263D5B ink ended up on a #182234 card for the whole life of
+ * this page -- every within-run test passed, in all five moods, the entire time. */
+const inkBad = [];
+const litMoods = Object.keys(CHART_INK);
+if (litMoods.length !== 5)
+  inkBad.push(`only ${litMoods.length} of 5 moods recorded chart ink (${litMoods.join(", ")})`);
+if (CHART_INK.notebook && CHART_INK.cosmic) {
+  for (const [what, key] of [
+    ["tooltip border", "tip"],
+    ["heat cell fill", "heat"],
+    ['"Deeper insights" fill', "cta"],
+    ["signal card ink", "signal"],
+  ]) {
+    const light = CHART_INK.notebook[key];
+    const dark = CHART_INK.cosmic[key];
+    if (light.replace(/\s/g, "") === dark.replace(/\s/g, ""))
+      inkBad.push(`${what} is ${light} in both notebook and cosmic -- it is not reading a token`);
+  }
+}
+if (inkBad.length) {
+  fail++;
+  console.log("\n[chart ink across moods]");
+  for (const m of inkBad) console.log(`    INK   ${m}`);
+} else if (CHART_INK.cosmic) {
+  console.log(
+    `\n[chart ink across moods] tooltip ${CHART_INK.notebook.tip} -> ${CHART_INK.cosmic.tip}, heat ${CHART_INK.notebook.heat} -> ${CHART_INK.cosmic.heat}`,
+  );
 }
 
 /* ================= desktop sidebar vertical fill =================
@@ -701,8 +1369,8 @@ for (const [w, h, dir] of SIDEBAR_RUNS) {
   const [rh, rmt, rmb] = (sb.rules[0] ?? "").split("/").map(Number);
   if (sb.rules.length && !(rh === 2 && rmt === 8 && rmb === 8))
     sbBad.push(`divider is ${rh}px tall with ${rmt}/${rmb}px margins, expected 2px and 8/8`);
-  // 12 nav items in four groups, plus Notifications and Settings in the footer.
-  if (sb.links !== 14) sbBad.push(`expected 14 sidebar links, found ${sb.links} -- fixture drifted`);
+  // 13 nav items in four groups, plus Notifications and Settings in the footer.
+  if (sb.links !== 15) sbBad.push(`expected 15 sidebar links, found ${sb.links} -- fixture drifted`);
   if (sb.activeDrift > 1) sbBad.push(`active page moves the stack by ${sb.activeDrift}px: ${sb.activeWorst}`);
   if (sbBad.length) fail++;
   console.log(

@@ -107,7 +107,7 @@ export function InsightList({
           </button>
           <Link className="secondary-button" href="/exam-plans/new">
             <ChevronRight className="insight-button-icon" aria-hidden="true" />
-            {ar ? "إنشاء خطة امتحان" : "Create exam plan"}
+            {ar ? "إنشاء خطة امتحان AI" : "Create an AI exam plan"}
           </Link>
         </div>
       </div>

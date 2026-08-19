@@ -11,7 +11,7 @@ export default async function ExamPlanPage({ params }: { params: Promise<{ planI
     getExamPlan(user.id, planId),
     prisma.subject.findMany({
       where: { userId: user.id, archivedAt: null },
-      select: { id: true, name: true },
+      select: { id: true, name: true, colorToken: true },
       orderBy: { name: "asc" },
     }),
   ]);

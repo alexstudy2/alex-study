@@ -233,6 +233,42 @@
   transition: all var(--transition-fast);
 }
 
+/* A quiet inline action -- "Remove", "Refresh", "Reject remaining" -- for places where a full button
+   would outrank the thing it acts on. Four call sites across the exam plan and the two challenge
+   screens had no rule at all, so it rendered as an unclickable-looking run of body text. */
+.text-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.35rem 0.2rem;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 800;
+  color: var(--secondary);
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-underline-offset: 4px;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.text-button:hover:not(:disabled) {
+  color: var(--primary-strong);
+  text-decoration-style: solid;
+}
+
+.text-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  text-decoration-line: none;
+}
+
+.text-button.danger {
+  color: var(--danger-strong);
+}
+
 /* Spinner inside button */
 .btn-spinner {
   width: 1rem;
@@ -628,22 +664,95 @@
   border: 1.5px solid var(--secondary);
 }
 
-/* Dashboard Task Items */
+/* Dashboard Task Items -- the /tasks pinboard's "paper = course, spine = course colour" idea
+   compressed into one row, so the two pages read as the same system rather than as a designed
+   board and a list of grey strips.
+
+   The color-mix fallback is `var(--surface)`, not `transparent`: a task with no course has no
+   --subject-color, and mixing an *unresolvable* var() inside color-mix() invalidates the whole
+   declaration and drops the background to transparent -- the exact bug that left every sticky
+   note unpainted (see the course-colour block above). Mixing surface into surface is a no-op,
+   which is what "no course" should look like. */
 .dashboard-task-card {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-md);
-  border: 1.5px solid var(--secondary);
-  background: var(--surface);
-  box-shadow: var(--shadow-doodle-xs);
+  padding-block: var(--space-3);
+  /* Extra inline-start room for the spine, which overlaps the padding box. */
+  padding-inline: calc(var(--space-4) + 5px) var(--space-4);
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-doodle-btn);
+  background: color-mix(in srgb, var(--subject-color, var(--surface)) 14%, var(--surface));
+  box-shadow: var(--shadow-doodle);
+  /* Clips the spine to the wobbly corners; nothing inside is meant to escape the card. */
+  overflow: hidden;
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
+/* The course spine. 14% tint is legible as paper but too faint to name a course from across a
+   dashboard, so the same colour is also spent at full strength on one hard edge. */
+.dashboard-task-card::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 5px;
+  background: var(--subject-color, var(--primary));
+}
+
 .dashboard-task-card:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: var(--shadow-doodle-sm);
+  box-shadow: var(--shadow-doodle-md);
+}
+
+/* Alternating tilt, a third of a degree either way -- enough to break the machine-straight stack
+   without making the list look broken. Scoped through the list so the cards stay flat wherever
+   else this class turns up.
+
+   The hover transform has to be listed here, at (0,3,0) and after the tilts, for the same reason
+   the course chips' does: a (0,2,0) `.dashboard-task-card:hover { transform }` declared above
+   loses to `.sticky-tasks-list > .dashboard-task-card:nth-child(2n)` and the lift silently never
+   happens. rotate(0) is part of the payload -- transform is one property, so omitting it would
+   reset the tilt to none rather than leave it in place. */
+.sticky-tasks-list > .dashboard-task-card:nth-child(2n) { transform: rotate(0.4deg); }
+.sticky-tasks-list > .dashboard-task-card:nth-child(2n + 1) { transform: rotate(-0.35deg); }
+.sticky-tasks-list > .dashboard-task-card:hover { transform: translate(-1px, -1px) rotate(0deg); }
+
+.dashboard-task-title {
+  font-family: var(--font-label);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+/* Unlayered, like everything in this file, so these beat the Tailwind utilities still on the
+   element: `@import "tailwindcss"` puts them in `@layer utilities`, and unlayered declarations
+   outrank every layered one whatever the source order. The colliding utilities are dropped from
+   the JSX anyway -- a class that provably does nothing is worse than no class. */
+.dashboard-task-subject {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  /* Lets the truncating name inside actually shrink; an inline-flex box is min-content-sized
+     by default and would push the row wider instead. */
+  min-width: 0;
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* Minutes-estimate tag. The class was already on the element and had no rule anywhere, so it was
+   rendering as a Tailwind `rounded-full` mono capsule -- a perfect pill in monospace, beside
+   hand-lettered everything. */
+.task-pill {
+  border-radius: 8px 4px 7px 5px / 5px 7px 4px 8px;
+  border: 1.5px solid var(--secondary);
+  background: var(--surface-sunken);
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--foreground);
 }
 
 .task-checkbox-btn {
@@ -762,6 +871,7 @@
 
 /* 1. Header Bar: Title, Doodle Tabs, Actions */
 .notebook-top-header {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -772,6 +882,39 @@
   border: 2px solid var(--secondary);
   border-radius: var(--radius-doodle-card);
   box-shadow: var(--shadow-doodle);
+}
+
+/* ================= The pen went round twice =================
+   A second, fainter line just inside the border of each of the tasks page's three big frames.
+   This is what makes a large frame read as drawn at all: an irregular border-radius is
+   perceptible on a 40px chip and invisible on a 1000px card, so at that size the hand has to
+   show in the stroke instead -- two lines that are not quite parallel, which no single border of
+   any radius can imitate.
+
+   One rule for all three rather than three copies, which is what it was on the way here. Each of
+   them declares its own `position: relative`, deliberately at the rule that owns the element:
+   an `::after` whose containing block is set from a different rule further down the file is a
+   thing that gets silently broken by the next person to reorder a selector list.
+
+   Inset with a tighter radius than the frames carry, not an outline: an inset line's corners
+   genuinely are tighter than the ones outside it, and `outline` cannot follow a two-axis radius.
+   Positioned, so this paints above the child rows -- which matters on the notebook card, whose
+   quick-add row and footer bar both lay an opaque background over the frame; a ring drawn behind
+   them would only be visible across the middle third. pointer-events: none, because it crosses
+   an input and three buttons. */
+.notebook-top-header::after,
+.subjects-ribbon::after,
+.master-notebook-card::after,
+/* The two full-width analytics frames, for the same reason: at 1000px their irregular radius is
+   imperceptible, so the hand has to show in a second stroke instead. */
+.analytics-wide-panel::after,
+.analytics-ai-panel::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1.5px dashed color-mix(in srgb, var(--secondary) 30%, transparent);
+  border-radius: 14px 9px 16px 7px / 7px 16px 9px 14px;
+  pointer-events: none;
 }
 
 .header-branding {
@@ -869,35 +1012,46 @@
   align-items: center;
   gap: var(--space-2);
   padding: 0.35rem 0.85rem;
-  border-radius: var(--radius-full);
-  font-size: var(--text-xs);
+  border-radius: var(--radius-doodle-chip);
+  font-family: var(--font-label);
+  font-size: var(--text-sm);
   font-weight: 700;
   background: var(--surface);
-  border: 1.5px solid var(--secondary);
-  box-shadow: var(--shadow-doodle-xs);
+  border: 2px solid var(--secondary);
+  box-shadow: var(--shadow-doodle);
   color: var(--foreground);
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast);
 }
 
+/* transform lives in the scoped hover rule beside the tilts further down, not here: the
+   `.subjects-scroll > *:nth-child()` tilts have the same specificity as this selector and come
+   later, so a transform declared here would simply be dropped on the floor. */
 .subject-chip:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: var(--shadow-doodle);
+  box-shadow: var(--shadow-doodle-md);
 }
 
 .subject-chip.active {
   background: var(--primary);
   color: var(--primary-foreground);
   border-color: var(--secondary);
+  box-shadow: var(--shadow-doodle-md);
+}
+
+/* Inactive only. `.subject-chip.active` has the same specificity as a `[data-color]` variant
+   would, so an unqualified tint here would win on source order and repaint the selected chip's
+   border away from --secondary. */
+.subject-chip:not(.active)[data-color] {
+  border-color: color-mix(in srgb, var(--subject-color, var(--secondary)) 45%, var(--secondary));
 }
 
 .subject-color-indicator {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  border: 1px solid var(--secondary);
-  background: var(--primary);
+  border: 1.5px solid var(--secondary);
+  background: var(--subject-color, var(--primary));
 }
 
 .chip-count {
@@ -907,10 +1061,12 @@
   padding: 0 5px;
   min-width: 18px;
   height: 18px;
-  border-radius: 999px;
-  font-size: 10px;
+  /* Not a circle: a hand-drawn tally box. Same reason the chips lost --radius-full. */
+  border-radius: 8px 4px 7px 5px/5px 7px 4px 8px;
+  border: 1.5px solid color-mix(in srgb, currentColor 40%, transparent);
+  font-size: var(--text-xs);
   font-weight: 800;
-  font-family: var(--font-mono);
+  font-family: var(--font-label);
   background: color-mix(in srgb, var(--foreground) 15%, transparent);
   color: inherit;
 }
@@ -920,11 +1076,12 @@
   align-items: center;
   gap: var(--space-1);
   padding: 0.35rem 0.85rem;
-  border-radius: var(--radius-full);
-  font-size: var(--text-xs);
+  border-radius: var(--radius-doodle-chip);
+  font-family: var(--font-label);
+  font-size: var(--text-sm);
   font-weight: 700;
   background: transparent;
-  border: 1.5px dashed var(--secondary);
+  border: 2px dashed var(--secondary);
   color: var(--muted);
   cursor: pointer;
   white-space: nowrap;
@@ -1065,6 +1222,37 @@
   text-decoration: underline;
 }
 
+/* ================= Course colour and triage level =================
+   Two axes -- paper tint = which course, coloured spine = how urgent -- and both resolve here.
+   `data-color` was already being rendered on four different elements and `data-priority` on
+   every note, and until now not one selector in this file matched either: every course drew the
+   same grey dot and all four priorities drew the same outlined pill. Resolving each attribute
+   once into a custom property lets the consumers below read a variable instead of repeating a
+   seven- or four-way fan-out, and inheritance does the rest -- setting --subject-color on the
+   tag is what colours the dot inside it.
+
+   Unscoped selectors on purpose. Both attributes exist for exactly this and nothing else, and a
+   value that resolved to nothing in one of the places they appear would be worse than a broad
+   selector here: an unresolvable var() inside color-mix() invalidates the whole declaration,
+   which is precisely how the sticky notes came to have no paper colour at all. */
+[data-color="teal"] { --subject-color: var(--subject-teal); }
+[data-color="coral"] { --subject-color: var(--subject-coral); }
+[data-color="amber"] { --subject-color: var(--subject-amber); }
+[data-color="violet"] { --subject-color: var(--subject-violet); }
+[data-color="sky"] { --subject-color: var(--subject-sky); }
+[data-color="rose"] { --subject-color: var(--subject-rose); }
+[data-color="slate"] { --subject-color: var(--subject-slate); }
+
+/* The pill carries the class and the note carries the attribute, so both are listed: the pill
+   then still reads correctly anywhere it is used outside a note. */
+[data-priority="low"], .task-priority-pill.priority-low { --triage-color: var(--muted); }
+[data-priority="medium"], .task-priority-pill.priority-medium { --triage-color: var(--primary); }
+[data-priority="high"], .task-priority-pill.priority-high { --triage-color: var(--warning); }
+[data-priority="urgent"], .task-priority-pill.priority-urgent { --triage-color: var(--danger); }
+
+/* Every consumer below keeps a fallback in its var(). A colorToken written by an older build,
+   or a priority this file has not heard of, then lands on a real colour instead of taking its
+   whole declaration down. */
 .task-priority-pill {
   display: inline-flex;
   align-items: center;
@@ -1072,7 +1260,18 @@
   border-radius: var(--radius-full);
   font-size: 10px;
   font-weight: 800;
-  border: 1px solid var(--secondary);
+  border: 1px solid color-mix(in srgb, var(--triage-color, var(--secondary)) 55%, var(--secondary));
+  background: color-mix(in srgb, var(--triage-color, var(--secondary)) 15%, var(--surface));
+  color: var(--foreground);
+}
+
+/* Urgent is the one level that has to be legible from across the board, so it goes solid -- and
+   it takes the paired --danger-foreground rather than another mix, because that pair is the
+   only thing in the palette guaranteed to hold its contrast in all five moods. */
+.task-priority-pill.priority-urgent {
+  background: var(--danger);
+  border-color: var(--secondary);
+  color: var(--danger-foreground);
 }
 
 .task-row-badges {
@@ -1090,8 +1289,8 @@
   border-radius: var(--radius-full);
   font-size: 11px;
   font-weight: 700;
-  background: var(--surface-sunken);
-  border: 1px solid var(--secondary);
+  background: color-mix(in srgb, var(--subject-color, var(--primary)) 14%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--subject-color, var(--primary)) 50%, var(--secondary));
   color: var(--foreground);
 }
 
@@ -1099,7 +1298,42 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--primary);
+  background: var(--subject-color, var(--primary));
+}
+
+/* Progress at a glance, next to the count that spells it out. Deliberately thin and unlabelled:
+   the toggle beside it already announces "2/5" to a screen reader, so this is the redundant
+   visual half of the same fact and is hidden from the tree in the component. */
+.task-subtask-bar {
+  display: block;
+  height: 5px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--secondary) 35%, transparent);
+  background: color-mix(in srgb, var(--surface) 65%, transparent);
+  overflow: hidden;
+}
+
+.task-subtask-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--success);
+  transition: width var(--transition-base);
+}
+
+/* Dashed, because everything urgent on this page is already solid and a fifth solid colour in
+   the badge row would flatten the hierarchy rather than add to it. */
+.task-overdue-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 800;
+  border: 1.5px dashed var(--danger);
+  background: var(--danger-subtle);
+  color: var(--danger-strong);
 }
 
 .task-meta-pill {
@@ -1185,6 +1419,104 @@
   color: var(--danger, #DC2626);
 }
 
+/* ================= Shared ECG trace =================
+   The rendered path comes from src/components/ui/medical-doodles.tsx, which is also where the
+   focus timer's trace comes from. This is the still version: no sweep animation, because
+   everywhere it is used -- a vitals strip, an empty state -- it is a static readout, and an
+   endlessly scrolling line next to four numbers is decoration that costs a reduced-motion
+   exception. `.timer-ecg` (further down) is the animated sibling and keeps its own rules.
+
+   `preserveAspectRatio="none"` on the svg lets one 480x40 viewBox stretch to any width, which is
+   what makes non-scaling-stroke load-bearing rather than cosmetic: without it the trace would be
+   drawn with a horizontally squashed pen. */
+.ecg-trace {
+  display: block;
+  overflow: hidden;
+  opacity: 0.85;
+}
+
+.ecg-trace svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.ecg-trace-line,
+.ecg-trace svg * {
+  fill: none;
+  stroke: var(--ecg-color, var(--success-strong));
+  stroke-width: 2px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* ================= Empty / loading scenes =================
+   Shared by the pinboard's own empty view and by the dashboard's "nothing due today", so the two
+   pages read as one system. A drawn glyph over a trace instead of an icon in a circle: the
+   flatline is the part that says "nothing recorded here" without a word, and the beat at the end
+   of it says waiting rather than broken. */
+.empty-scene {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  width: 100%;
+  max-width: 13rem;
+  margin-bottom: var(--space-3);
+  color: var(--secondary);
+}
+
+/* Scoped to .empty-scene for specificity, not for tidiness: the shared EmptyState clamps
+   `.ui-empty-icon svg` to 26px, and a bare `.empty-scene-glyph` would lose to it. */
+.empty-scene .empty-scene-glyph {
+  width: 3.25rem;
+  height: 3.25rem;
+  opacity: 0.7;
+}
+
+.empty-scene-glyph,
+.empty-scene-glyph * {
+  stroke-width: 1.6px;
+  vector-effect: non-scaling-stroke;
+}
+
+.empty-scene-ecg {
+  width: 100%;
+  height: 1.4rem;
+  /* Muted, not --success-strong. A green trace in an empty state reads as a result. */
+  --ecg-color: color-mix(in srgb, var(--muted) 80%, transparent);
+  opacity: 0.9;
+}
+
+/* A rubber stamp on the corner of the chart. Rotated and dashed so it belongs to the doodle
+   vocabulary rather than looking like a status badge that failed to load. */
+.empty-stamp {
+  position: absolute;
+  inset-block-start: -0.4rem;
+  inset-inline-end: -0.5rem;
+  padding: 2px 8px;
+  border: 2px dashed var(--success);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--success) 14%, var(--surface));
+  color: var(--success-strong);
+  font-family: var(--font-heading);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  transform: rotate(-7deg);
+}
+
+.empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
 /* Empty View */
 .notebook-empty-view {
   flex: 1;
@@ -1194,19 +1526,6 @@
   justify-content: center;
   text-align: center;
   padding: var(--space-12) var(--space-6);
-}
-
-.empty-icon-circle {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  border: 2px solid var(--secondary);
-  background: var(--primary-subtle);
-  box-shadow: var(--shadow-doodle-xs);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: var(--space-3);
 }
 
 .empty-title {
@@ -1232,12 +1551,6 @@
   justify-content: center;
   padding: var(--space-12) var(--space-4);
   color: var(--muted);
-}
-
-.state-text {
-  font-size: var(--text-sm);
-  font-weight: 700;
-  margin-top: var(--space-2);
 }
 
 /* 4. Notebook Footer Bar */
@@ -1367,13 +1680,90 @@
 @media (max-width: 900px) { .lobby-studio-grid { grid-template-columns: minmax(0, 1fr); } .lobby-members-panel { position: static; } }
 @media (max-width: 600px) { .lobby-timer-setup { grid-template-columns: 1fr 1fr; } .lobby-duration-presets { grid-column: 1 / -1; } .lobby-my-task-form, .lobby-chat-card form { grid-template-columns: 1fr; } .lobby-message-list article { max-width: 100%; } }
 
-/* Tasks pinboard: tactile sticky notes with subject-aware accents.
-   Sole owner of the notebook shell -- see the breadcrumb at "3. The Master Study Notebook
-   Card" above for why the earlier copies of these selectors are gone. */
-.master-notebook-card {
+/* ================= Tasks page: vitals strip =================
+   The whole board in four numbers, sitting above the course filter that would otherwise hide
+   three of them. A chart strip rather than four stat cards: <dl> pairs at two type sizes with a
+   coloured rule down the inline-start edge, which is the same "label over value" pattern the
+   focus timer already uses, so the two pages read as one instrument.
+
+   No text-transform or letter-spacing on the labels -- half of these render in Arabic, where
+   uppercase is a no-op and added letter-spacing breaks the cursive joins. */
+.task-vitals-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-doodle-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-doodle-xs);
+}
+
+.task-vitals {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  margin: 0;
+}
+
+.task-vital {
   display: flex;
   flex-direction: column;
-  border: 2px solid var(--secondary);
+  gap: 1px;
+  min-width: 0;
+  padding-inline-start: var(--space-3);
+  border-inline-start: 3px solid var(--vital-color, var(--line));
+}
+
+.task-vital dt {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.task-vital dd {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--foreground);
+}
+
+.task-vital[data-tone="open"] { --vital-color: var(--primary); }
+.task-vital[data-tone="today"] { --vital-color: var(--warning); }
+.task-vital[data-tone="overdue"] { --vital-color: var(--danger); }
+.task-vital[data-tone="done"] { --vital-color: var(--success); }
+
+/* Nothing overdue is good news, and painting a red rule beside a zero is how a dashboard trains
+   people to stop reading it. The alarm colour is spent only when the number is non-zero. */
+.task-vital[data-tone="overdue"][data-zero="yes"] { --vital-color: var(--line); }
+.task-vital[data-tone="overdue"][data-zero="no"] dd { color: var(--danger-strong); }
+
+.task-vitals-ecg {
+  flex: 0 1 9rem;
+  height: 1.6rem;
+}
+
+/* Tasks pinboard: tactile sticky notes with subject-aware accents.
+   Sole owner of the notebook shell -- see the breadcrumb in section 3 (The Master Study Notebook
+   Card) above for why the earlier copies of these selectors are gone.
+
+   Parentheses, not quotes, around that section name on purpose: a quoted phrase wrapped across a
+   newline inside a comment is invisible until something eats the opening `/*`, and then the
+   tokenizer reports "Unterminated string" at globals.css:1:1 instead of naming this line. */
+/* The second pen line is the shared rule beside .notebook-top-header; `position: relative` for it
+   is declared above rather than there. */
+.master-notebook-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  /* 2.5px, not 2px: every other card in the app is drawn at 2.5px (see the shared card block
+     further down this file). This one being a half-pixel thinner is small enough that nobody
+     names it and large enough that the page's biggest frame looked like the one thing here that
+     was not hand-drawn. */
+  border: 2.5px solid var(--secondary);
   border-radius: var(--radius-doodle-card);
   background:
     linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 100% 2rem,
@@ -1398,27 +1788,34 @@
   justify-content: center;
   width: 2.5rem;
   min-height: 2.75rem;
-  border: 1.5px solid var(--secondary);
-  border-radius: var(--radius-md);
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-doodle-btn);
   background: var(--primary-subtle);
+  box-shadow: var(--shadow-doodle-xs);
 }
 
 .quick-add-input {
   flex: 1;
   min-width: 200px;
   min-height: 2.75rem;
-  padding: 0.5rem 0.75rem;
+  padding: 0.5rem 0.85rem;
   border: 2px solid var(--secondary);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-doodle-btn);
   background: var(--surface);
-  box-shadow: var(--shadow-doodle-xs);
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
+  box-shadow: var(--shadow-doodle);
+  font-family: var(--font-label);
+  font-size: var(--text-base);
   color: var(--foreground);
   outline: none;
 }
 
-.quick-add-input:focus { border-color: var(--primary-strong); }
+/* The prompt is an aside in someone's own hand, so it leans; the real value does not. */
+.quick-add-input::placeholder {
+  font-style: italic;
+  color: color-mix(in srgb, var(--muted) 85%, transparent);
+}
+
+.quick-add-input:focus { border-color: var(--primary-strong); box-shadow: var(--shadow-doodle-md); }
 
 .quick-add-options {
   display: flex;
@@ -1429,16 +1826,46 @@
 
 .quick-add-select {
   min-height: 2.75rem;
-  padding: 0.35rem 0.65rem;
+  /* Asymmetric inline padding leaves room for the drawn chevron. Logical, so RTL swaps the
+     roomy side for free -- one declaration, not a physical `padding` plus an override. */
+  padding-block: 0.35rem;
+  padding-inline: 0.65rem 2rem;
   border: 2px solid var(--secondary);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-doodle-btn);
   background: var(--surface);
-  box-shadow: var(--shadow-doodle-xs);
+  box-shadow: var(--shadow-doodle);
   color: var(--foreground);
-  font-size: var(--text-xs);
+  font-family: var(--font-label);
+  font-size: var(--text-sm);
   font-weight: 700;
   cursor: pointer;
   outline: none;
+  /* The native chevron is the one piece of chrome on this row no stylesheet can reach, and a
+     crisp OS triangle beside hand-drawn everything is exactly what read as unfinished.
+     `appearance: none` retires it; --doodle-caret (tokens.css) draws two pen strokes in its
+     place and carries its own cosmic-mood override. */
+  appearance: none;
+  background-image: var(--doodle-caret);
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  background-size: 0.7rem auto;
+}
+
+/* background-position has no logical form, so this is the one thing the flip has to say twice. */
+[dir="rtl"] .quick-add-select { background-position: left 0.6rem center; }
+
+.quick-add-select:focus { border-color: var(--primary-strong); }
+
+/* A greyed-out primary button reads as broken rather than as waiting -- which is what the empty
+   quick-add row looked like before anyone had typed. Held at full opacity and redrawn as an
+   outline instead: same shape, dashed, clearly not yet armed. Scoped through the row (0,3,1) to
+   outrank `.btn:disabled` (0,2,0), whose blanket 0.55 opacity is right everywhere else. */
+.notebook-quick-add-line .quick-add-submit:disabled {
+  opacity: 1;
+  border-style: dashed;
+  background: var(--surface-sunken);
+  color: var(--muted);
+  box-shadow: none;
 }
 
 /* Both of these are mobile affordances; above the breakpoint the controls they gate are
@@ -1494,6 +1921,66 @@
   transform: translateX(-50%) rotate(-2deg);
 }
 
+/* The triage spine: how urgent, readable before any text is. ::after because ::before is already
+   the tape -- and because the two want opposite things on a phone, where the tape is switched
+   off (it only means anything against neighbouring notes) while the spine has to survive, being
+   the only place priority shows at all in a single column.
+
+   inset-inline-start, so it swaps to the right edge in Arabic along with the reading order. */
+.notebook-task-row.sticky-task-note::after {
+  content: "";
+  position: absolute;
+  inset-block: 0.5rem;
+  inset-inline-start: 0;
+  width: 5px;
+  border-radius: 999px;
+  background: var(--triage-color, var(--muted));
+  opacity: 0.9;
+}
+
+/* Chart-paper texture, and the reason a filled note reads as a record rather than as a coloured
+   rectangle. The glyph is picked from the course id in the component, so a course always draws
+   the same instrument and the board looks grouped even when it has been sorted by hand. */
+.task-note-watermark {
+  position: absolute;
+  inset-block-end: var(--space-2);
+  inset-inline-end: var(--space-2);
+  width: 5rem;
+  height: 5rem;
+  color: var(--secondary);
+  opacity: 0.09;
+  pointer-events: none;
+}
+
+.task-note-watermark,
+.task-note-watermark * {
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+}
+
+/* An absolutely positioned child paints above its static siblings whatever the source order, so
+   the three real children are lifted out of the watermark's way explicitly. z-index: -1 on the
+   watermark would be shorter and is the wrong tool: it only stays behind the content while the
+   note's own transform is creating a stacking context, and the mobile block below sets
+   `transform: none` -- at which point the watermark would drop behind the card's background and
+   vanish. */
+.sticky-task-note > .task-row-left,
+.sticky-task-note > .task-row-body,
+.sticky-task-note > .task-row-actions {
+  position: relative;
+  z-index: 1;
+}
+
+/* Late, and it should be obvious before the badge row is read. Only the ink moves: the paper
+   stays whatever colour the course is, because repainting it red would trade one axis of
+   information away to add another rather than adding one. Declared above the :hover and
+   .dragging rules on purpose -- those set box-shadow too, at the same specificity, and an
+   overdue card being dragged should still look like a card being dragged. */
+.notebook-task-row.sticky-task-note[data-overdue="yes"] {
+  border-color: var(--danger);
+  box-shadow: 4px 5px 0 color-mix(in srgb, var(--danger) 50%, var(--secondary));
+}
+
 /* Gated on a hovering pointer. A touch tap leaves :hover latched on the tapped element in
    every mobile browser, so without this the card the user last touched stays lifted and
    darkened while they scroll -- reading as a stuck selection rather than a hover. */
@@ -1521,12 +2008,36 @@
 .sticky-task-note .notebook-subtasks-box { background: color-mix(in srgb, var(--surface) 75%, transparent); border-color: var(--secondary); }
 
 .subjects-ribbon {
+  /* For the shared inner-line rule beside .notebook-top-header. */
+  position: relative;
   padding: var(--space-3);
   border: 2px dashed var(--secondary);
   border-radius: var(--radius-doodle-card);
   background: var(--surface);
 }
-.subject-chip, .subject-add-chip { min-height: 2.5rem; border-radius: var(--radius-md); }
+
+/* Only the min-height survives from the old override here: the border-radius it also set was
+   --radius-md, which flattened the wobbly chip radius declared above back into an ordinary
+   rounded rectangle -- the whole reason the row read as UI chrome rather than as something drawn.
+   Kept as a separate rule because the tap-target floor is a mobile concern, not a shape one. */
+.subject-chip, .subject-add-chip { min-height: 2.5rem; }
+
+/* Pinned by hand, not laid out: each chip sits a fraction of a degree off true, cycling on a
+   prime-length pattern so no two neighbours ever share a tilt. Cancelled on :hover above, which
+   is what makes the chip feel like it straightens up under the cursor. */
+.subjects-scroll > *:nth-child(3n + 1) { transform: rotate(-0.7deg); }
+.subjects-scroll > *:nth-child(3n + 2) { transform: rotate(0.5deg); }
+.subjects-scroll > *:nth-child(3n) { transform: rotate(-0.25deg); }
+/* Scoped past the tilts on both specificity (0,3,0 vs 0,2,0) and source order, so the chip
+   really does straighten and lift instead of keeping whichever tilt its position handed it. */
+.subjects-scroll > .subject-chip:hover,
+.subjects-scroll > .subject-add-chip:hover { transform: translate(-1px, -1px) rotate(0deg); }
+
+/* A tilted chip is still a scroll item, and rotation makes its box slightly taller and wider than
+   its layout size -- enough for the corners of the first and last chip to sit under the ribbon's
+   padding edge. Half a degree over a 2.5rem chip is under a pixel, so 1px of breathing room on
+   the cross axis is all it takes, and it costs nothing when the row is not scrolling. */
+.subjects-scroll { padding-block: 1px; }
 /* .subject-chip.active takes its colour from --primary-foreground where the rule is declared (above); a --secondary override used to sit here and won on source order, turning the label near-white on the light --primary of dark and cosmic. */
 .inline-new-course-popup {
   display: grid;
@@ -1658,6 +2169,11 @@
 
 .sticky-task-input {
   flex: 1;
+  /* Same trap as .quick-add-input on /tasks, and the same one line of fix. `flex: 1` sets the
+     basis to 0 but leaves `min-width: auto`, which for a bare text input resolves to its
+     intrinsic ~20-character width -- so the row could not shrink below about 350px and the whole
+     sticky card overflowed a 390px phone, taking the tape, the form and the list with it. */
+  min-width: 0;
   padding: var(--space-2) var(--space-3);
   border: 1.5px solid var(--secondary);
   border-radius: var(--radius-sm);
@@ -1695,7 +2211,69 @@
 .sticky-tasks-list {
   display: flex;
   flex-direction: column;
+  /* space-3, not space-2: the cards now carry a 2px hard shadow and a fractional tilt, and at 8px
+     apart a tilted card's low corner sat on the next card's shadow. */
+  gap: var(--space-3);
+}
+
+/* Second line of the quick-add: which course, and how urgent. Two fields on one row, each with
+   its colour cue to the inline-start of the control -- a filled dot for the course, a triage bar
+   for the priority -- so the effect of a choice is visible before the task exists. Both cues are
+   driven by the same [data-color] / [data-priority] rules the task cards use, which is the whole
+   point: the dot here is the paper colour there. */
+.sticky-meta-row {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.sticky-field {
+  display: flex;
+  align-items: center;
   gap: var(--space-2);
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* The shared Select renders wrapped in a .ui-form-group, which is a flex column at its own
+   intrinsic width -- without this the two fields stop splitting the row evenly. */
+.sticky-field .ui-form-group {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.sticky-select {
+  min-height: 2.5rem;
+  font-weight: 700;
+}
+
+.sticky-course-swatch {
+  flex: none;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  border: 2px solid var(--secondary);
+  background: var(--subject-color, transparent);
+  box-shadow: var(--shadow-doodle-xs);
+}
+
+/* Hollow and dashed until a course is chosen. An empty outline reads as "not set yet"; a grey
+   fill would read as a course whose colour is grey. */
+.sticky-course-swatch[data-empty="yes"] {
+  border-style: dashed;
+  border-color: var(--line);
+  background: transparent;
+  box-shadow: none;
+}
+
+/* The same bar that runs down the edge of a sticky note, at the size of a form field. */
+.sticky-priority-spine {
+  flex: none;
+  align-self: stretch;
+  width: 5px;
+  min-height: 1.75rem;
+  border-radius: 999px;
+  background: var(--triage-color, var(--muted));
 }
 
 /* Sticky Empty State */
@@ -1710,49 +2288,27 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
+  /* .ui-empty-state brings a doodle shadow. This one does not want it -- it is already sitting
+     inside a card that has one. */
+  box-shadow: none;
 }
 
 :root[data-mood="cosmic"] .sticky-empty-state {
   background: rgba(0, 0, 0, 0.2);
 }
 
-.sticky-empty-doodle {
-  margin-bottom: var(--space-1);
-}
-
-.sticky-empty-title {
-  font-size: var(--text-sm);
-  font-weight: 800;
-  color: var(--foreground);
-}
-
-.sticky-empty-text {
-  font-size: var(--text-xs);
-  color: var(--muted);
-  max-width: 280px;
-  margin: 0;
-}
-
-.sticky-empty-add-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-  padding: var(--space-2) var(--space-5);
-  border: 2px solid var(--secondary);
-  border-radius: var(--radius-doodle-btn);
-  background: var(--primary);
-  color: var(--primary-foreground);
-  font-weight: 800;
-  font-size: var(--text-xs);
-  cursor: pointer;
-  box-shadow: var(--shadow-doodle-sm);
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
-}
-
-.sticky-empty-add-btn:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: var(--shadow-doodle);
+/* .ui-empty-icon is a hard 52px circle -- correct for the single lucide glyph it was built for,
+   fatal for a drawn scene, which is a stacked glyph, trace and stamp that needs its own width.
+   Keyed on :has() rather than on .sticky-empty-state so any empty state that passes a scene gets
+   the frame dropped, and the shared component keeps its default for the ones that pass an icon. */
+.ui-empty-icon:has(.empty-scene) {
+  width: auto;
+  height: auto;
+  margin-bottom: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
 }
 
 .course-name-input, .course-color-select { min-height: 2.6rem; border: 2px solid var(--secondary); border-radius: var(--radius-md); background: var(--surface); color: var(--foreground); padding: 0.45rem 0.7rem; font: inherit; }
@@ -1839,6 +2395,45 @@
   .quick-add-submit { height: 2.75rem; }
 
   .inline-new-course-popup { grid-template-columns: 1fr; }
+
+  /* --- Vitals strip --- */
+  /* 2x2 instead of a single row. Four readouts across 360px leaves about 80px each, which is
+     enough for the number and not for the word above it, and a label that wraps to two lines
+     makes the four boxes different heights. */
+  .task-vitals-strip { padding: var(--space-3) var(--space-4); }
+  .task-vitals { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+  .task-vital dd { font-size: var(--text-lg); }
+
+  /* --- Sticky note --- */
+  /* Still there, still the same drawing, just quieter: at one card per row the title has the
+     full width and the watermark is directly behind it rather than off to the side. */
+  .task-note-watermark { width: 3.5rem; height: 3.5rem; opacity: 0.07; }
+
+  /* --- States --- */
+  /* space-12 top and bottom is a third of a phone screen spent on padding. */
+  .notebook-empty-view { padding: var(--space-8) var(--space-4); }
+
+  /* One action per row at full width. `min-height` rather than `height` because .btn-sm sets a
+     flat 32px and min-height clamps it -- 44px, whichever of the two is declared last. */
+  .empty-actions { width: 100%; flex-direction: column; }
+  .empty-actions > * { width: 100%; min-height: 2.75rem; }
+
+  /* --- Dashboard quick add --- */
+  /* Stacked rather than side by side. Two fields sharing 360px leaves each select about 128px,
+     which renders "Medium prio..." -- a worse trade than one more row in a form that is only
+     open while something is being typed. */
+  .sticky-meta-row { flex-direction: column; gap: var(--space-2); }
+  .sticky-select { min-height: 2.75rem; }
+
+  /* 2rem was under the 44px floor, and it is the only way out of a form that now has four
+     controls in it. */
+  .sticky-cancel-btn { width: 2.75rem; height: 2.75rem; }
+}
+
+/* Texture, not information: the trace says "these are vitals", and the four numbers beside it say
+   everything it says. Below 480px that width is worth more to the numbers. */
+@media (max-width: 480px) {
+  .task-vitals-ecg { display: none; }
 }
 
 /* The row is [pen 40][input][options 44][add 74] plus three 8px gaps and 2x16px of card
@@ -2107,6 +2702,7 @@
 }
 
 .celebration-card {
+  position: relative;
   background: var(--surface);
   border: 2px solid var(--secondary);
   border-radius: var(--radius-doodle-card);
@@ -2629,7 +3225,19 @@
 @media (max-width: 520px) {
   .doodle-timer-card { min-height: 31rem; padding: var(--space-5) var(--space-3); }
   .fullscreen-trigger-btn { position: static; margin-bottom: var(--space-3); }
-  .timer-action-buttons .btn-lg { flex: 1 1 9rem; min-width: 0; }
+  /* One control per row, not two side by side.
+     `flex: 1 1 9rem; min-width: 0` used to sit here, and it is why "Complete session" painted
+     60px outside its own border at 390px: the row wraps on flex *base* sizes, so both buttons
+     claimed a shared row at 9rem each, then `min-width: 0` stripped the content-width floor that
+     would have stopped the crush -- and .btn is `white-space: nowrap`, so the label had nowhere to
+     go but out. Raising the floor instead (`min-width: max-content`) only moves the damage: a
+     min-width violation is resolved after line breaking, so the row would overflow the card by the
+     same amount rather than re-wrapping.
+     A 100% basis settles it before any of that -- each button is wider than the remaining space on
+     any row, so it takes its own, and the longest label in either language has the full card width
+     to sit in. The icon-only cancel keeps its `auto` basis and lands on the last row, which also
+     puts the one destructive control out of mis-tap range of Complete. */
+  .timer-action-buttons .btn-lg { flex: 1 1 100%; }
 }
 
 /* The tabs no longer wrap -- they are three fixed columns and the labels shrink instead --
@@ -2639,6 +3247,378 @@
 @media (max-width: 360px) {
   .timer-mode-tab { padding-inline: 0.1rem; }
 }
+
+/* ==========================================================================================
+   Session setup: the assignment gate, per-session lengths, and the phone setup window
+   ------------------------------------------------------------------------------------------
+   A session must be pointed at a task -- or explicitly at nothing -- before it can start, and it
+   now carries its own focus and break lengths. That is a good deal more panel than the three
+   selects this card used to hold, so on a phone it stops being a panel at all: at the width where
+   the sidebar drops below the dial it becomes a full window in front of it, and the timer card
+   waits its turn. All of it hangs off [data-setup] on the workspace container, which means the
+   same markup is a sidebar above 860px and a window below it -- no second copy in the DOM, and no
+   pair of selects that disagree about which one you last touched.
+   ========================================================================================== */
+
+.focus-setup-hint {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+.focus-assign-options {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.focus-assign-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.7rem;
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-doodle-xs);
+  text-align: start;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+/* Clipped rather than `display: none` or a zero-sized box: the radio is what carries the
+   grouping, the arrow-key navigation and the checked state, and engines differ on whether a
+   collapsed input is still in the accessibility tree. */
+.focus-assign-option input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.focus-assign-option svg {
+  flex: none;
+  width: 1.1rem;
+  height: 1.1rem;
+  color: var(--muted-foreground);
+}
+
+.focus-assign-copy {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.focus-assign-copy strong {
+  font-family: var(--font-heading);
+  font-size: var(--text-sm);
+  color: var(--foreground);
+}
+
+.focus-assign-copy small {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.focus-assign-option[data-selected="true"] {
+  background: var(--primary-subtle);
+  box-shadow: var(--shadow-doodle-sm);
+}
+
+.focus-assign-option[data-selected="true"] svg { color: var(--primary-strong); }
+
+/* :focus-within on the label, not :focus-visible on the input -- the input is the clipped 1px
+   one, and a ring around that is a sliver behind the chip. */
+.focus-assign-option:focus-within {
+  outline: 2px dashed var(--primary);
+  outline-offset: 2px;
+}
+
+.focus-assign-option[data-disabled="true"] {
+  opacity: 0.55;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.focus-field-note {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--warning);
+}
+
+.focus-durations {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.focus-duration-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.focus-duration-name {
+  min-width: 0;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.focus-stepper {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-doodle-xs);
+  overflow: hidden;
+  /* Minus on the left and plus on the right in both directions, like every other figure in the
+     app -- and it keeps the internal dividers on the sides this rule expects. */
+  direction: ltr;
+}
+
+.focus-stepper-btn {
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.2rem;
+  border: 0;
+  background: var(--primary-subtle);
+  color: var(--secondary);
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+/* The plus, i.e. the one that needs a divider from the unit label beside it. The minus gets its
+   divider from the input's own start border. */
+.focus-stepper-btn:last-child { border-inline-start: 2px solid var(--secondary); }
+
+.focus-stepper-btn:hover:not(:disabled) {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.focus-stepper-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.focus-stepper-btn:focus-visible {
+  outline: 2px dashed var(--primary);
+  outline-offset: -3px;
+}
+
+.focus-stepper-btn svg { width: 0.9rem; height: 0.9rem; }
+
+.focus-stepper-input {
+  width: 2.7rem;
+  height: 2.2rem;
+  border: 0;
+  border-inline-start: 2px solid var(--secondary);
+  background: transparent;
+  color: var(--foreground);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 800;
+  text-align: center;
+  /* The native spinners would be a third and fourth way to change the same number, at 8px
+     apiece, next to two buttons built for the job. */
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.focus-stepper-input::-webkit-outer-spin-button,
+.focus-stepper-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.focus-stepper-input:focus-visible {
+  outline: 2px dashed var(--primary);
+  outline-offset: -3px;
+}
+
+.focus-stepper-input:disabled { opacity: 0.6; }
+
+.focus-stepper-unit {
+  padding-inline: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.timer-gate-hint {
+  max-width: 22rem;
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+/* Both of these are phone furniture: one leaves the setup window for the dial, the other goes
+   back. Above the breakpoint the panel and the dial are on screen together, so neither has
+   anywhere to take you. Declared after .btn (line 8) so this wins its `display` on source
+   order -- both selectors are a single class. */
+.focus-setup-continue,
+.focus-setup-reopen {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .focus-setup-continue { display: inline-flex; }
+
+  .focus-setup-reopen {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: var(--space-3);
+    padding: 0.4rem 0.75rem;
+    border: 2px solid var(--secondary);
+    border-radius: var(--radius-full);
+    background: var(--surface);
+    color: var(--secondary);
+    box-shadow: var(--shadow-doodle-xs);
+    font-family: var(--font-heading);
+    font-size: var(--text-xs);
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .focus-setup-reopen svg { width: 0.9rem; height: 0.9rem; }
+
+  .focus-setup-reopen:focus-visible {
+    outline: 2px dashed var(--primary);
+    outline-offset: 2px;
+  }
+
+  /* The window. Fixed rather than merely first in the flow, because "adjust first" has to mean
+     first -- in the flow the dial is one scroll away. It deliberately stops short of the bottom
+     nav's z-index (50): covering that would leave no way off this page. The bottom padding uses
+     the same token every other bottom-fixed thing in the app uses, which is 0px at widths where
+     the bar is not rendered, so this one calc is right at every size.
+
+     Every declaration here has to beat a plain `.focus-sidebar-card` rule somewhere below --
+     the pastel background, the sticky position, the card shadow -- which the container class
+     plus the attribute does on specificity alone, whatever the source order. */
+  .focus-workspace-container[data-setup="pending"] .focus-sidebar-card {
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding:
+      calc(env(safe-area-inset-top, 0px) + var(--space-5))
+      var(--space-4)
+      calc(var(--mobile-nav-total) + var(--space-6));
+  }
+
+  /* The tape tab hangs off the card's top edge by a negative margin. In a full-bleed window
+     there is no edge for it to hang off. */
+  .focus-workspace-container[data-setup="pending"] .focus-sidebar-card::before {
+    display: none;
+  }
+
+  /* Step one is the window, step two is the dial -- never both at once. */
+  .focus-workspace-container[data-setup="pending"] .doodle-timer-card {
+    display: none;
+  }
+
+  /* And once the window has been answered, the setup lives only behind its button. Left inline
+     underneath it would be the same panel twice: once as a window, once as a footer. */
+  .focus-workspace-container[data-setup="done"] .focus-sidebar-card {
+    display: none;
+  }
+
+  /* Thumb-sized controls in the window. 2.75rem is the same 44px floor the selects beside them
+     already use. */
+  .focus-stepper-btn { width: 2.6rem; height: 2.75rem; }
+  .focus-stepper-input { width: 3rem; height: 2.75rem; }
+
+  /* The window is taller than a phone on a small screen, and the button that leaves it must not
+     be the thing you have to scroll to find. The offset is the window's own bottom padding, not
+     zero: the bottom nav is fixed at a higher z-index, so a footer flush with the viewport would
+     slide under the bar -- and matching the padding exactly means the footer sits in the same
+     place while floating as it does once you reach the end, with no last-scroll jump.
+     `inherit` for the background because its only job is to stop scrolled content showing
+     through; if the card's colour changes, this follows it. */
+  .focus-workspace-container[data-setup="pending"] .focus-setup-footer {
+    position: sticky;
+    bottom: calc(var(--mobile-nav-total) + var(--space-6));
+    display: grid;
+    gap: var(--space-2);
+    margin-top: var(--space-1);
+    padding-top: var(--space-2);
+    background-color: inherit;
+    border-top: 2px dashed var(--line);
+  }
+}
+
+/* Just closes the summary card. The three buttons inside it all do something else on the way
+   out, and none of them reads as "dismiss this". */
+.celebration-close-btn {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  padding: 0;
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--secondary);
+  box-shadow: 2px 2px 0 var(--secondary);
+  cursor: pointer;
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+[dir="rtl"] .celebration-close-btn {
+  right: auto;
+  left: var(--space-3);
+}
+
+.celebration-close-btn:hover {
+  background: var(--danger-subtle);
+  color: var(--danger);
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--secondary);
+}
+
+.celebration-close-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 var(--secondary);
+}
+
+.celebration-close-btn:focus-visible {
+  outline: 2px dashed var(--primary);
+  outline-offset: 2px;
+}
+
+.celebration-close-btn svg { width: 1.05rem; height: 1.05rem; }
+
+/* Symmetric, so the centred title stays centred while clearing the button in the corner. */
+.celebration-card > h2 { padding-inline: 1.9rem; }
 
 /* ==========================================================================================
    Focus timer, medical instrument pass
@@ -3003,6 +3983,11 @@
 }
 
 /* ================= Remaining route surfaces - Doodle treatment ================= */
+/* `.exam-plan-detail-shell > *` was on this list and is deliberately off it now. It carded *every*
+   direct child of the AI Exam Plan page -- including the `<form>` that wraps two cards of its own,
+   which is where the double borders came from, and the always-mounted feedback slot, which is where
+   the empty box came from -- while the padding list below granted none of them padding. Each section
+   on that page now declares its own frame; see "The proposal page itself" further down. */
 .leaderboard-controls,
 .leaderboard-summary,
 .leaderboard-table-panel,
@@ -3010,7 +3995,6 @@
 .challenge-detail-shell > *,
 .challenge-result-shell > *,
 .challenge-composer,
-.exam-plan-detail-shell > *,
 .detail-metrics,
 .reflection-card,
 .distraction-log,
@@ -3245,7 +4229,14 @@
 .doodle-timer-card,
 .lobby-card,
 .friend-card,
-.notification-card {
+.notification-card,
+/* .analytics-panel joined this list rather than keeping its own near-copy of it. Note it had to
+   drop the `background:` shorthand at its own rule further down -- the shorthand resets
+   `background-image`, which is where the corner marks live, so a member of this family that
+   declares it wipes its own decoration from three thousand lines away. (.analytics-ai-panel is
+   deliberately NOT here: it sits on --secondary, so it needs the inverted marks and keeps its
+   own rule.) */
+.analytics-panel {
   position: relative;
   padding: var(--space-5);
   border: 2.5px solid var(--secondary);
@@ -3281,7 +4272,8 @@
 :root[data-mood="cosmic"] .doodle-timer-card,
 :root[data-mood="cosmic"] .lobby-card,
 :root[data-mood="cosmic"] .friend-card,
-:root[data-mood="cosmic"] .notification-card {
+:root[data-mood="cosmic"] .notification-card,
+:root[data-mood="cosmic"] .analytics-panel {
   border-color: #475569;
   background-image:
     url("data:image/svg+xml,%3Csvg width='32' height='32' viewBox='0 0 32 32' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M6 4 C16 4, 28 16, 28 26' stroke='%2338BDF8' stroke-width='2' stroke-linecap='round' stroke-dasharray='3 3'/%3E%3Ccircle cx='23' cy='9' r='2.5' fill='%23FBBF24'/%3E%3Cpath d='M12 4 L14 8' stroke='%2338BDF8' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E"),
@@ -3467,8 +4459,9 @@
 }
 
 .analytics-empty h2 { margin: 0; font-family: var(--font-heading); font-size: var(--text-lg); }
-.analytics-empty p { margin: 0 0 var(--space-3); color: var(--muted); }
+.analytics-empty p { margin: 0 0 var(--space-3); max-width: 34rem; color: var(--muted); line-height: 1.5; }
 .analytics-empty .primary-button { display: inline-flex; text-decoration: none; }
+.analytics-empty h2, .analytics-empty p { text-align: center; }
 
 /* ================= Analytics command center ================= */
 .analytics-workspace { display: grid; grid-template-columns: 13rem minmax(0, 1fr); gap: var(--space-5); align-items: start; }
@@ -3486,57 +4479,229 @@
 .analytics-sidebar-note span { color: color-mix(in srgb, var(--muted) 75%, var(--foreground)); line-height: 1.45; }
 .analytics-sidebar .secondary-button { justify-content: center; text-decoration: none; }
 .analytics-main { display: grid; gap: var(--space-4); min-width: 0; }
-.analytics-toolbar { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 2px dashed var(--secondary); border-radius: var(--radius-doodle-card); background: var(--primary-subtle); }
+.analytics-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 2px dashed var(--secondary); border-radius: var(--radius-doodle-card); background: var(--primary-subtle); }
 .analytics-toolbar .eyebrow { margin: 0; }
 .analytics-toolbar strong { font-family: var(--font-heading); }
-.analytics-toolbar select { min-height: 2.35rem; padding: 0.35rem 0.7rem; border: 2px solid var(--secondary); border-radius: var(--radius-md); background: var(--surface); color: var(--foreground); font: inherit; font-size: var(--text-xs); font-weight: 800; }
+.analytics-toolbar-controls { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); }
+/* Same drawn chevron as .quick-add-select: `appearance: none` retires the native triangle, which
+   was the one piece of OS chrome left on this page, and --doodle-caret carries its own cosmic
+   override. Asymmetric inline padding leaves the caret room, logically, so RTL swaps sides free. */
+.analytics-toolbar select { min-height: 2.75rem; max-width: 11rem; padding-block: 0.35rem; padding-inline: 0.65rem 2rem; border: 2px solid var(--secondary); border-radius: var(--radius-doodle-btn); background: var(--surface); box-shadow: var(--shadow-doodle-xs); color: var(--foreground); font-family: var(--font-label); font-size: var(--text-xs); font-weight: 800; cursor: pointer; appearance: none; background-image: var(--doodle-caret); background-repeat: no-repeat; background-position: right 0.6rem center; background-size: 0.7rem auto; }
+/* background-position has no logical form, so this is the one thing the flip has to say twice. */
+[dir="rtl"] .analytics-toolbar select { background-position: left 0.6rem center; }
+.analytics-toolbar select:focus-visible { border-color: var(--primary-strong); outline: none; }
 .analytics-toolbar label { font-weight: 700; font-size: var(--text-sm); }
 .analytics-updating { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--secondary); font-size: var(--text-xs); font-weight: 800; }
 .analytics-updating svg { width: 1rem; height: 1rem; }
 .analytics-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); border: 0; background: transparent; box-shadow: none; overflow: visible; }
-.analytics-summary article { display: grid; gap: 0.2rem; padding: var(--space-4); border: 2px solid var(--secondary); border-radius: var(--radius-doodle-card); background: var(--surface); box-shadow: var(--shadow-doodle-xs); }
-.analytics-metric-icon { display: grid; place-items: center; width: 2rem; height: 2rem; border: 1.5px solid var(--secondary); border-radius: 50%; background: var(--primary-subtle); color: var(--secondary); }
+/* `min-width: 0` for the same reason `.analytics-wide-panel` carries it: flooring the *track* at
+   `minmax(0, 1fr)` is only half the job, because a grid item's own automatic minimum is still
+   min-content -- so the widest unbreakable run in a card (the mono value, the nowrap delta chip)
+   was a floor the card could not go below, and at 320px it pushed 17px past the column it sits in.
+   It read as mood-dependent, which is the tell: min-content depends on the resolved font, and the
+   hand-lettered families are not installed on every machine. */
+.analytics-summary article { display: grid; gap: 0.2rem; min-width: 0; padding: var(--space-4); border: 2px solid var(--secondary); border-radius: var(--radius-doodle-card); background: var(--surface); box-shadow: var(--shadow-doodle-xs); }
+.analytics-metric-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: 0.15rem; }
+.analytics-metric-icon { display: grid; place-items: center; width: 2rem; height: 2rem; border: 1.5px solid var(--secondary); border-radius: 50%; background: var(--primary-subtle); color: var(--secondary); flex: 0 0 auto; }
 .analytics-metric-icon svg { width: 1rem; height: 1rem; }
 .analytics-summary span { color: var(--muted); font-size: var(--text-xs); font-weight: 800; }
 .analytics-summary strong { font-family: var(--font-mono); font-size: var(--text-xl); font-weight: 800; font-variant-numeric: tabular-nums; }
 .analytics-summary small { color: var(--muted); font-size: 0.7rem; }
-.analytics-panel { padding: var(--space-5); border: 2px solid var(--secondary); border-radius: var(--radius-doodle-card); background: var(--surface); box-shadow: var(--shadow-doodle); }
-.analytics-wide-panel { min-width: 0; }
+/* The change against the previous equal-length period. Green for up and grey for everything else,
+   never --danger: the page header promises "notice the pattern, not the pressure", and a red badge
+   on a quiet week is that pressure. The direction is written out in .sr-only text beside it, so it
+   is never carried by colour alone. */
+.analytics-delta { display: inline-flex; align-items: center; gap: 0.2rem; padding: 0.1rem 0.45rem; border: 1.5px solid currentColor; border-radius: var(--radius-doodle-chip); font-family: var(--font-mono); font-size: 0.68rem; font-weight: 800; white-space: nowrap; }
+.analytics-delta svg { width: 0.8rem; height: 0.8rem; }
+.analytics-delta[data-direction="up"] { color: var(--success-strong); }
+.analytics-delta[data-direction="down"], .analytics-delta[data-direction="flat"] { color: var(--muted); }
+/* `.analytics-summary span` above is the metric's label; the delta's own spans are not that, and it
+   takes (0,2,1) to say so. */
+.analytics-summary .analytics-delta span { color: inherit; font-size: inherit; font-weight: inherit; }
+/* .analytics-panel's frame, padding, corner marks and 2.5px border now come from the shared card
+   family near .ui-card -- see the note there about `background:` versus `background-color:`. */
+.analytics-wide-panel { position: relative; min-width: 0; }
 .analytics-panel-heading { margin-bottom: var(--space-3); }
 .analytics-panel-heading svg { width: 1.3rem; height: 1.3rem; color: var(--primary-strong); flex: 0 0 auto; }
 .analytics-panel-heading h2 { margin: 0; font-family: var(--font-heading); font-size: var(--text-lg); }
 .analytics-panel-heading p { margin: 0.2rem 0 0; color: var(--muted); font-size: var(--text-xs); }
+.analytics-subheading { margin-bottom: var(--space-2); }
+.analytics-subheading h3 { margin: 0; font-family: var(--font-heading); font-size: var(--text-sm); }
+.analytics-subheading p { margin: 0.15rem 0 0; color: var(--muted); font-size: 0.7rem; }
+/* Two charts under one heading, divided by a drawn rule rather than by whitespace. */
+.analytics-split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); margin-top: var(--space-4); padding-top: var(--space-4); border-top: 2px dashed var(--line); }
+.analytics-split > div { min-width: 0; }
 .analytics-chart { position: relative; width: 100%; }
 .analytics-trend-chart { height: 17rem; }
-.analytics-chart-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-4); }
 .analytics-donut-chart { height: 13rem; }
+.analytics-focus-chart, .analytics-accuracy-chart, .analytics-weekday-chart, .analytics-length-chart { height: 12.5rem; }
 .analytics-donut-label { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; pointer-events: none; }
 .analytics-donut-label strong { font-family: var(--font-mono); font-size: var(--text-lg); }
 .analytics-donut-label span { color: var(--muted); font-size: var(--text-xs); }
-.analytics-hour-chart { height: 13rem; }
 .analytics-legend { display: grid; gap: 0.4rem; margin-top: var(--space-2); }
 .analytics-legend div { display: grid; grid-template-columns: 0.7rem minmax(0, 1fr) auto; align-items: center; gap: 0.45rem; font-size: var(--text-xs); }
 .analytics-legend i { width: 0.7rem; height: 0.7rem; border: 1px solid var(--secondary); border-radius: 2px; }
 .analytics-legend span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .analytics-legend strong { font-family: var(--font-mono); }
-.analytics-ai-panel { padding: var(--space-5); border: 2px solid var(--secondary); border-radius: var(--radius-doodle-card); background: var(--secondary); color: var(--secondary-foreground); box-shadow: var(--shadow-doodle-md); }
+/* The gradient under the study-rhythm area. Set through a class rather than a stopColor attribute:
+   `stop-color` is the one place a var() in an SVG presentation attribute felt worth not betting on,
+   and a stylesheet is where the mood tokens live anyway. */
+.analytics-fill-top { stop-color: var(--primary); stop-opacity: 0.45; }
+.analytics-fill-bottom { stop-color: var(--primary); stop-opacity: 0.05; }
+/* Replaces recharts' `contentStyle`, which could not express a two-axis radius and had to name its
+   colours as literals -- so the tooltip was both the only ruler-drawn rectangle on the page and
+   invisible in the cosmic mood. */
+.analytics-tooltip { min-width: 8rem; padding: 0.45rem 0.6rem; border: 2px solid var(--secondary); border-radius: var(--radius-doodle-btn); background: var(--surface); box-shadow: var(--shadow-doodle-md); font-family: var(--font-label); font-size: 0.7rem; }
+.analytics-tooltip-label { margin: 0 0 0.3rem; color: var(--secondary); font-weight: 800; }
+.analytics-tooltip ul { display: grid; gap: 0.2rem; margin: 0; padding: 0; list-style: none; }
+.analytics-tooltip li { display: grid; grid-template-columns: 0.6rem minmax(0, 1fr) auto; align-items: center; gap: 0.35rem; }
+.analytics-tooltip i { width: 0.6rem; height: 0.6rem; border: 1px solid var(--secondary); border-radius: 2px; }
+.analytics-tooltip li span { overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
+.analytics-tooltip strong { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.analytics-tooltip-footer { margin: 0.3rem 0 0; padding-top: 0.25rem; border-top: 1.5px dashed var(--line); color: var(--muted); font-size: 0.65rem; }
+.recharts-tooltip-wrapper { outline: none; }
+/* One heat ramp, three consumers: calendar cells, hour-map cells and the legend key. Held in a
+   custom property on the cell so the ramp lives in one place -- adding a fourth consumer is one
+   `background-color: var(--heat)` and no new colour maths. Relative to --primary, so it re-tints
+   with the mood. */
+.analytics-main [data-level="0"] { --heat: transparent; }
+.analytics-main [data-level="1"] { --heat: color-mix(in srgb, var(--primary) 24%, var(--surface)); }
+.analytics-main [data-level="2"] { --heat: color-mix(in srgb, var(--primary) 46%, var(--surface)); }
+.analytics-main [data-level="3"] { --heat: color-mix(in srgb, var(--primary) 68%, var(--surface)); }
+.analytics-main [data-level="4"] { --heat: color-mix(in srgb, var(--primary-strong) 88%, var(--surface)); }
+.analytics-consistency { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-4); align-items: start; }
+.analytics-calendar-wrap { min-width: 0; overflow-x: auto; padding-bottom: 0.35rem; }
+.analytics-calendar { --cal-cell: 0.95rem; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.4rem; }
+.analytics-calendar-days { display: grid; grid-template-rows: repeat(7, var(--cal-cell)); gap: 3px; color: var(--muted); font-size: 0.58rem; font-weight: 800; }
+.analytics-calendar-days span { display: flex; align-items: center; }
+.analytics-calendar-grid { display: grid; grid-auto-rows: var(--cal-cell); gap: 3px; justify-content: start; }
+/* A tiny irregular radius on a 15px box is the one size where the doodle vocabulary actually reads,
+   so the cells get their own tighter version of it rather than --radius-doodle-chip. */
+.analytics-cal-cell { border: 1px solid color-mix(in srgb, var(--secondary) 32%, transparent); border-radius: 4px 2px 5px 2px / 2px 5px 2px 4px; background-color: var(--heat, transparent); }
+/* Dashed for a day with nothing on it, and nothing at all for the pad cells at either end of the
+   range -- an empty square inside the month and a square that is not in the month are different
+   facts, and drawing them the same way invents a fortnight of rest days. */
+.analytics-cal-cell[data-level="0"] { border-style: dashed; }
+.analytics-cal-cell[data-empty="true"] { border: 0; background: none; }
+.analytics-heat-legend { display: flex; align-items: center; gap: 0.25rem; margin-top: var(--space-2); color: var(--muted); font-size: 0.62rem; font-weight: 800; }
+.analytics-heat-legend i { width: 0.75rem; height: 0.75rem; border: 1px solid color-mix(in srgb, var(--secondary) 32%, transparent); border-radius: 3px; background-color: var(--heat, transparent); }
+.analytics-heat-legend i[data-level="0"] { border-style: dashed; }
+.analytics-streaks { display: grid; gap: var(--space-2); align-content: start; }
+.analytics-streak { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: var(--space-2); min-width: 9rem; padding: var(--space-2) var(--space-3); border: 2px dashed var(--secondary); border-radius: var(--radius-doodle-btn); background: var(--primary-subtle); }
+.analytics-streak-icon { grid-row: span 2; display: grid; place-items: center; width: 1.9rem; height: 1.9rem; border: 1.5px solid var(--secondary); border-radius: 50%; background: var(--surface); color: var(--primary-strong); }
+.analytics-streak-icon svg { width: 1rem; height: 1rem; }
+.analytics-streak strong { font-family: var(--font-mono); font-size: var(--text-lg); font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.analytics-streak > span:last-child { color: var(--muted); font-size: 0.65rem; font-weight: 800; }
+/* The 24-column map keeps a min-width and scrolls rather than squeezing; below 480px the whole
+   table is swapped for the 4-hour one, which fits. */
+.analytics-hourmap-wrap { min-width: 0; overflow-x: auto; padding-bottom: 0.35rem; }
+.analytics-hourmap { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 3px; }
+.analytics-hourmap[data-step="1"] { min-width: 32rem; }
+.analytics-hourmap[data-step="4"] { display: none; }
+.analytics-hourmap th { color: var(--muted); font-family: var(--font-label); font-size: 0.58rem; font-weight: 800; }
+.analytics-hourmap thead td { width: 2.3rem; }
+.analytics-hourmap thead th { padding: 0 0 0.15rem; text-align: center; }
+.analytics-hourmap tbody th { padding-inline-end: 0.3rem; text-align: end; white-space: nowrap; }
+.analytics-hourmap tbody td { height: 1.05rem; border: 1px solid color-mix(in srgb, var(--secondary) 30%, transparent); border-radius: 4px 2px 5px 2px / 2px 5px 2px 4px; background-color: var(--heat, transparent); }
+.analytics-hourmap tbody td[data-level="0"] { border-style: dashed; }
+/* Every third hour is labelled; the rest keep their cell width but hide the text, because 24
+   two-digit labels in the width of a panel overlap into a grey smear. */
+.analytics-hourmap span[data-hide="true"] { visibility: hidden; }
+.analytics-course-layout { display: grid; grid-template-columns: 15rem minmax(0, 1fr); gap: var(--space-4); align-items: start; }
+.analytics-course-detail { display: grid; gap: var(--space-3); min-width: 0; }
+.analytics-sort { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.analytics-sort button { min-height: 2.2rem; padding: 0.25rem 0.65rem; border: 1.5px solid var(--secondary); border-radius: var(--radius-doodle-chip); background: var(--surface); color: var(--muted); font-family: var(--font-label); font-size: 0.68rem; font-weight: 800; cursor: pointer; }
+.analytics-sort button[aria-pressed="true"] { background: var(--primary); color: var(--primary-foreground); box-shadow: var(--shadow-doodle-xs); }
+/* Cards rather than a table: seven numbers per course across an unknown number of courses is a
+   layout that has to reflow, and auto-fit does that at every width with no restacking rules and no
+   sticky first column. --subject-color comes from the [data-color] map, so a course carries the
+   same ink here as on the pinboard. */
+.analytics-course-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(12.5rem, 1fr)); gap: var(--space-3); }
+.analytics-course-grid article { padding: var(--space-3); border: 2px solid var(--subject-color, var(--secondary)); border-radius: var(--radius-doodle-card); background: color-mix(in srgb, var(--subject-color, var(--surface)) 12%, var(--surface)); box-shadow: var(--shadow-doodle-xs); }
+.analytics-course-grid header { display: flex; align-items: center; gap: 0.4rem; margin-bottom: var(--space-2); padding-bottom: var(--space-2); border-bottom: 1.5px dashed color-mix(in srgb, var(--secondary) 30%, transparent); }
+.analytics-course-grid header svg { width: 1.05rem; height: 1.05rem; flex: 0 0 auto; color: var(--subject-color, var(--primary-strong)); }
+.analytics-course-grid h3 { margin: 0; overflow: hidden; font-family: var(--font-heading); font-size: var(--text-sm); text-overflow: ellipsis; white-space: nowrap; }
+.analytics-course-grid dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.35rem var(--space-2); margin: 0; }
+.analytics-course-grid dt { color: var(--muted); font-size: 0.6rem; font-weight: 800; }
+.analytics-course-grid dd { margin: 0; font-family: var(--font-mono); font-size: var(--text-xs); font-weight: 800; font-variant-numeric: tabular-nums; }
+/* The AI panel is the one card in the family that sits on --secondary, so it carries the light
+   corner marks in the four light moods and the dark ones in cosmic -- the exact inverse of every
+   other card. Its second pen line has to be mixed from --secondary-foreground for the same reason:
+   30% of --secondary against its own --secondary background is invisible. */
+.analytics-ai-panel { position: relative; padding: var(--space-5); border: 2.5px solid var(--secondary); border-radius: var(--radius-doodle-card); background-color: var(--secondary); color: var(--secondary-foreground); box-shadow: var(--shadow-doodle-md); background-image: url("data:image/svg+xml,%3Csvg width='32' height='32' viewBox='0 0 32 32' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M6 4 C16 4, 28 16, 28 26' stroke='%2338BDF8' stroke-width='2' stroke-linecap='round' stroke-dasharray='3 3'/%3E%3Ccircle cx='23' cy='9' r='2.5' fill='%23FBBF24'/%3E%3Cpath d='M12 4 L14 8' stroke='%2338BDF8' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg width='32' height='32' viewBox='0 0 32 32' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 26 C4 16, 16 4, 26 4' stroke='%2338BDF8' stroke-width='2' stroke-linecap='round' stroke-dasharray='3 3'/%3E%3Cpath d='M8 22 L14 16' stroke='%23F472B6' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E"); background-position: top 5px right 5px, bottom 5px left 5px; background-repeat: no-repeat, no-repeat; background-size: 24px 24px, 24px 24px; }
+:root[data-mood="cosmic"] .analytics-ai-panel { background-image: url("data:image/svg+xml,%3Csvg width='32' height='32' viewBox='0 0 32 32' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M6 4 C16 4, 28 16, 28 26' stroke='%23263D5B' stroke-width='2' stroke-linecap='round' stroke-dasharray='3 3'/%3E%3Ccircle cx='23' cy='9' r='2.5' fill='%23F59E0B'/%3E%3Cpath d='M12 4 L14 8' stroke='%2349B6E5' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg width='32' height='32' viewBox='0 0 32 32' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 26 C4 16, 16 4, 26 4' stroke='%23263D5B' stroke-width='2' stroke-linecap='round' stroke-dasharray='3 3'/%3E%3Cpath d='M8 22 L14 16' stroke='%23EC4899' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E"); }
+.analytics-ai-panel::after { border-color: color-mix(in srgb, var(--secondary-foreground) 32%, transparent); }
 .analytics-ai-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-3); }
 .analytics-ai-heading .eyebrow { margin: 0; color: color-mix(in srgb, var(--primary) 50%, var(--secondary-foreground)); } /* --primary only contrasts with --surface, so mix toward the panel's own foreground */
 .analytics-ai-heading h2 { margin: 0.2rem 0 0; font-family: var(--font-heading); font-size: var(--text-lg); color: inherit; } /* base.css `h1..h6 { color: var(--foreground) }` outranks inheritance and rendered near-black on the dark panel */
-.analytics-ai-heading .secondary-button { border-color: currentColor; color: var(--secondary-foreground); background: transparent; box-shadow: 2px 2px 0 currentColor; text-decoration: none; }
-.analytics-ai-icon { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border: 2px solid currentColor; border-radius: 50%; color: color-mix(in srgb, var(--primary) 50%, var(--secondary-foreground)); }
-.analytics-signal-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); margin-top: var(--space-4); }
-.analytics-signal-grid article { align-items: flex-start; padding: var(--space-3); border: 1.5px dashed color-mix(in srgb, var(--secondary-foreground) 60%, transparent); border-radius: var(--radius-md); }
-.analytics-signal-grid article > svg { width: 1.1rem; height: 1.1rem; flex: 0 0 auto; color: color-mix(in srgb, var(--primary) 50%, var(--secondary-foreground)); }
-.analytics-signal-grid article[data-tone="green"] > svg { color: color-mix(in srgb, #22C55E 55%, var(--secondary-foreground)); }
-.analytics-signal-grid article[data-tone="amber"] > svg { color: color-mix(in srgb, #F59E0B 55%, var(--secondary-foreground)); }
+.analytics-ai-sub { margin: 0.25rem 0 0; color: color-mix(in srgb, var(--secondary-foreground) 76%, transparent); font-size: var(--text-xs); }
+/* The one action on the panel, so it reads as filled rather than as a ghost outline. The fill is
+   --secondary-foreground on a --secondary card: those two are a contrast pair by definition in every
+   mood, which is what makes this safe where `background: var(--primary)` would not be -- --primary is
+   a dark saturated ink in aurora and sunset and a pale pastel in notebook. The offset shadow is
+   mixed halfway between the fill and the slab so it stays visible against both. */
+.analytics-ai-heading .secondary-button { flex: 0 0 auto; border-color: var(--secondary-foreground); background: var(--secondary-foreground); color: var(--secondary); box-shadow: 3px 3px 0 color-mix(in srgb, var(--secondary-foreground) 45%, var(--secondary)); text-decoration: none; }
+.analytics-ai-heading .secondary-button svg { width: 1rem; height: 1rem; flex: 0 0 auto; }
+/* The base rule's hover repaints `background: var(--surface-hover)`, which would drop a light-mood
+   surface onto the dark slab mid-hover. (0,4,0) against its (0,3,0), and later in the file. */
+.analytics-ai-heading .secondary-button:hover:not(:disabled) { background: var(--secondary-foreground); box-shadow: 4px 4px 0 color-mix(in srgb, var(--secondary-foreground) 45%, var(--secondary)); }
+/* The pen line motif from the wide panels, at badge scale: the icon is drawn once as a solid ring
+   and once again, loosely, outside it. */
+.analytics-ai-icon { position: relative; display: grid; place-items: center; width: 2.5rem; height: 2.5rem; flex: 0 0 auto; border: 2px solid currentColor; border-radius: 50%; color: color-mix(in srgb, var(--primary) 50%, var(--secondary-foreground)); }
+.analytics-ai-icon::after { content: ""; position: absolute; inset: -5px; border: 1.5px dashed color-mix(in srgb, var(--secondary-foreground) 34%, transparent); border-radius: 50%; }
+/* Header, readings and footnote as three bands divided by drawn rules -- the same grammar
+   .analytics-split uses inside the pale panels, which is what ties this dark one to the rest of the
+   page. auto-fit rather than a fixed 4, now that buildSignals emits six: a hard four-column track
+   left two orphans on a row of their own at every width above the 760px query. */
+.analytics-signal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: var(--space-3); margin-top: var(--space-4); padding-top: var(--space-4); border-top: 2px dashed color-mix(in srgb, var(--secondary-foreground) 30%, transparent); }
+/* Real cards, not bare dashed outlines. The wash is --surface at low alpha, so it lifts off the slab
+   in the four dark moods and sinks into it in cosmic -- either way it separates. */
+.analytics-signal-grid article { align-items: flex-start; gap: var(--space-2); padding: var(--space-3); border: 2px solid color-mix(in srgb, var(--secondary-foreground) 40%, transparent); border-radius: var(--radius-doodle-card); background: color-mix(in srgb, var(--surface) 12%, transparent); box-shadow: 2px 2px 0 color-mix(in srgb, var(--secondary-foreground) 24%, transparent); }
+/* One ink per card, from tokens rather than the two hardcoded hexes this replaced -- the same
+   mood-blind fault the charts on this page had. Mixing toward --secondary-foreground is what makes
+   it work in both directions: --success is a dark green in aurora and sunset, and mixing it toward
+   white lightens it for the dark slab, while in cosmic it mixes toward near-black for the light one. */
+.analytics-signal-grid article { --signal-ink: color-mix(in srgb, var(--primary) 55%, var(--secondary-foreground)); }
+.analytics-signal-grid article[data-tone="green"] { --signal-ink: color-mix(in srgb, var(--success) 55%, var(--secondary-foreground)); }
+.analytics-signal-grid article[data-tone="amber"] { --signal-ink: color-mix(in srgb, var(--warning) 55%, var(--secondary-foreground)); }
+/* The badge is the svg's own border box: content-box sizing means the padding grows the ring instead
+   of the glyph, so it matches .analytics-metric-icon at the top of the page with no extra element. */
+.analytics-signal-grid article > svg { box-sizing: content-box; width: 1rem; height: 1rem; padding: 0.42rem; flex: 0 0 auto; border: 1.5px solid currentColor; border-radius: 50%; color: var(--signal-ink); }
 .analytics-signal-grid span { display: block; color: color-mix(in srgb, var(--secondary-foreground) 80%, transparent); font-size: 0.7rem; font-weight: 800; }
-.analytics-signal-grid strong { display: block; margin-top: 0.2rem; font-family: var(--font-mono); font-size: var(--text-base); }
+/* The reading itself, at the size the summary cards use and in the card's own tone ink -- so a green
+   reading and an amber one are told apart at a glance rather than by the colour of a 17px icon. */
+.analytics-signal-grid strong { display: block; margin-top: 0.15rem; color: var(--signal-ink); font-family: var(--font-mono); font-size: var(--text-xl); font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.15; }
 .analytics-signal-grid p { margin: 0.35rem 0 0; color: color-mix(in srgb, var(--secondary-foreground) 88%, transparent); font-size: 0.7rem; line-height: 1.45; }
-.analytics-ai-disclaimer { margin: var(--space-4) 0 0; color: color-mix(in srgb, var(--secondary-foreground) 78%, transparent); font-size: 0.7rem; }
+.analytics-ai-disclaimer { margin: var(--space-4) 0 0; padding-top: var(--space-3); border-top: 2px dashed color-mix(in srgb, var(--secondary-foreground) 30%, transparent); color: color-mix(in srgb, var(--secondary-foreground) 78%, transparent); font-size: 0.7rem; }
 @media (max-width: 980px) { .analytics-workspace { grid-template-columns: minmax(0, 1fr); } .analytics-sidebar { position: static; } .analytics-sidebar nav { display: flex; overflow-x: auto; } .analytics-sidebar nav a { flex: 0 0 auto; } .analytics-sidebar-note { display: none; } .analytics-sidebar .secondary-button { align-self: flex-start; } }
-@media (max-width: 760px) { .analytics-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } .analytics-chart-grid, .analytics-signal-grid { grid-template-columns: 1fr; } .analytics-toolbar, .analytics-ai-heading { align-items: stretch; flex-direction: column; } .analytics-ai-heading .secondary-button { align-self: flex-start; } }
-@media (max-width: 420px) { .analytics-summary { grid-template-columns: 1fr; } .analytics-panel, .analytics-ai-panel { padding: var(--space-4); } }
+/* The donut + deep-dive pair goes first: a 15rem donut beside an auto-fit card grid runs out of
+   room for two cards well before the page runs out of room for two columns. */
+@media (max-width: 1180px) { .analytics-course-layout { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 760px) {
+  .analytics-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .analytics-split, .analytics-consistency, .analytics-course-layout { grid-template-columns: minmax(0, 1fr); }
+  /* Streaks stop being a column beside the calendar and become a row under it. */
+  .analytics-streaks { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .analytics-streak { min-width: 0; }
+  .analytics-toolbar, .analytics-ai-heading { align-items: stretch; flex-direction: column; }
+  .analytics-toolbar-controls { flex-direction: column; align-items: stretch; }
+  .analytics-toolbar select { max-width: none; }
+  .analytics-ai-heading .secondary-button { align-self: flex-start; }
+}
+/* 24 hour columns cannot be read at this width even with a scroller, so the whole table is swapped
+   for the 4-hour one. `display` rather than a width tweak, because the hidden table then leaves the
+   accessibility tree too -- otherwise a screen reader hears both, 168 cells twice. */
+@media (max-width: 480px) {
+  .analytics-hourmap[data-step="1"] { display: none; }
+  .analytics-hourmap[data-step="4"] { display: table; }
+}
+/* `minmax(0, 1fr)`, not `1fr`, to match the four- and two-column rules above it: a bare `1fr` track
+   has an automatic minimum of min-content, so the widest unbreakable thing in a card -- the mono
+   value, the nowrap delta chip -- becomes a floor the track cannot go below, and the grid grows
+   wider than the column it sits in instead of the card wrapping inside it. That reads as a
+   document-level horizontal scroll at 320px, and it is font-dependent, so it shows up in one
+   direction and not the other depending on which family the digits fall back to. */
+@media (max-width: 420px) { .analytics-summary { grid-template-columns: minmax(0, 1fr); } .analytics-panel, .analytics-ai-panel { padding: var(--space-4); } .analytics-streaks { grid-template-columns: minmax(0, 1fr); } .analytics-calendar { --cal-cell: 0.8rem; } }
 
 /* ================= AI Insights notebook ================= */
 .insight-status-strip {
@@ -3619,9 +4784,13 @@
   .insight-status-strip { align-items: flex-start; }
 }
 
-@media (max-width: 768px) {
-  .analytics-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
+/* The `@media (max-width: 768px) { .analytics-summary { repeat(2, …) } }` that used to sit here was
+   a stray duplicate of the 760px rule in the analytics block above -- and because it came 200 lines
+   later in the file, and media queries add no specificity of their own, it beat the 420px
+   single-column rule that was supposed to follow it. So the summary stayed two columns all the way
+   down to 320px, where each card gets 138px and the icon + delta row does not fit inside one: the
+   metric head overflowed its card, which is what put 17px of horizontal scroll on the page. The
+   ramp is 4 -> 2 -> 1 and the analytics block owns all three steps. */
 
 /* Secondary route gaps shared by goals, friends, insights and task details. */
 .goal-workspace,
@@ -4481,7 +5650,11 @@
 
 @media (max-width: 860px) {
   .exam-plan-create-layout {
-    grid-template-columns: 1fr;
+    /* `minmax(0, 1fr)`, not `1fr`: the shorthand's minimum is `auto`, i.e. min-content, so the
+       single column was sized by the widest indivisible thing in the wizard -- a three-column row
+       of selects, a `flex-basis: 16rem` line of copy -- and grew past the viewport instead of
+       making its contents fit. It measured 397px inside a 288px page on a 320px phone. */
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -4503,6 +5676,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  /* `space-between` alone leaves nothing between title and arrow once the title fills the row. */
+  gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   border: 2px solid var(--secondary);
   border-radius: var(--radius-md);
@@ -4519,17 +5694,51 @@
   box-shadow: var(--shadow-doodle);
 }
 
+/* Title over date, not title then date: inline, the two ran together as "family medicine exam1 Sept
+   2026". The card is a flex row, so the text block needs `min-width: 0` to be allowed to shrink. */
+.exam-plan-card > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.exam-plan-card > svg {
+  flex: none;
+}
+
+.exam-plan-card strong {
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.exam-plan-card time {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--muted);
+}
+
 .exam-plan-detail-shell {
   max-width: 54rem;
   margin: 0 auto;
   padding: var(--space-4) var(--space-4) var(--space-8);
+  /* A grid, so the sections are spaced by one rule instead of by whatever margin each happened to
+     carry -- the share bar carried none, the attribution strip carried its own, and the stack read
+     as four things shoved together. One explicit `minmax(0, 1fr)` column rather than the implicit
+     `auto` one: an auto track takes its minimum from the widest indivisible thing in any section
+     (the share bar's `flex-basis: 16rem` line, a plan title with no spaces in it) and grows the
+     whole page past the viewport instead of letting that one thing wrap. */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-content: start;
 }
 
-/* `.exam-plan-detail-header` deliberately has no rule here. It is one of the 22 selectors in
+/* `.exam-plan-detail-header` deliberately has no *frame* rule here. It is one of the 22 selectors in
    the shared page-header list in shell.css, and components.css is imported after shell.css --
    so the copy that used to live here won on source order at equal specificity. Once the shared
    rule became a bordered card, its leftover `border-bottom: 2px dashed` overrode only the
-   bottom edge, leaving this one page a solid card with a dashed bottom. */
+   bottom edge, leaving this one page a solid card with a dashed bottom. The single property this
+   page does still override is its `margin-bottom`; see "The proposal page itself" further down. */
 
 .exam-plan-attribution {
   display: flex;
@@ -4541,11 +5750,18 @@
   border: 1.5px solid var(--secondary);
   font-size: var(--text-xs);
   font-weight: 700;
-  margin: var(--space-2) 0;
+  /* The shell's grid gap spaces this now; the own margin doubled it. */
+  margin: 0;
 }
 
+/* `minmax(0, 1fr)` on all four of the grids below, not the implicit `auto` column: an `auto`
+   track takes its minimum from the widest indivisible thing anywhere inside it -- a plan-item
+   title with no spaces, a `flex-basis` line of copy -- and grows the whole editor past the
+   viewport instead of letting that one thing wrap. On a 320px phone that measured 302px of
+   content inside a 256px page, so every card spilled off the right edge together. */
 .exam-plan-editor {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-6);
 }
 
@@ -4556,16 +5772,19 @@
   background: var(--surface);
   box-shadow: var(--shadow-doodle);
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
 }
 
 .exam-plan-items {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
 }
 
 .exam-plan-item-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
 }
 
@@ -4576,6 +5795,7 @@
   background: var(--surface);
   box-shadow: var(--shadow-doodle);
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
 }
 
@@ -5531,6 +6751,14 @@
     padding: 4px 12px;
   }
 
+  /* The /analytics controls. The range and course selects sit in a wrapping flex row, so a
+     min-height is enough -- nothing needs to grow sideways. The sort chips are a row of five
+     and would burst the panel at 44px wide, so they too only grow vertically. */
+  .analytics-toolbar select,
+  .analytics-sort button {
+    min-height: 44px;
+  }
+
   /* Month cells are a 7-across grid, so events grow vertically only. */
   .calendar-event {
     min-height: 2rem;
@@ -5553,6 +6781,1746 @@
     height: 24px;
   }
 }
+
+/* ================= Plan Forum =================
+   Two screens and one calendar attachment, all built from the doodle vocabulary already in this
+   file: `.sticky-tape-top` for the tape, `--radius-doodle-card` for the torn corners,
+   `--shadow-doodle*` for the offset ink shadow, and the `[data-color]` -> `--subject-color`
+   resolution at line 1202 for a note's course colour. Nothing new is invented; a plan should look
+   like the rest of the desk it sits on.
+
+   The one deliberately new shape is `.plan-day-note` -- taller than a task card and unbounded in
+   content, because a day takes as many tasks as the student needs. Everything else is a variation
+   on the cards above. */
+.plan-forum-layout,
+.plan-board {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* --- The new-plan pad --- */
+/* A sheet torn off a pad: the tape needs `position: relative` here, since `.sticky-tape-top` is
+   absolutely positioned and would otherwise hang off the page shell. */
+.plan-new-pad {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 2.5px solid var(--secondary);
+  border-radius: var(--radius-doodle-card);
+  background-color: var(--card-pastel-yellow, #FEFCE8);
+  box-shadow: var(--shadow-doodle-md);
+}
+
+.plan-new-head h2 {
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: 800;
+  margin: 0;
+}
+
+.plan-new-head p {
+  margin: 2px 0 0;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.plan-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.plan-field > span {
+  font-size: var(--text-xs);
+  font-weight: 800;
+  color: var(--secondary);
+}
+
+.plan-field input,
+.plan-note-form input {
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--foreground);
+  min-width: 0;
+}
+
+/* `auto` on the readout rather than a third equal column: "14 days · 14 notes" is short and the two
+   date inputs are the parts that need room. It wraps to its own line on a phone. */
+.plan-period-row {
+  display: grid;
+  grid-template-columns: minmax(8rem, 1fr) minmax(8rem, 1fr) auto;
+  gap: var(--space-3);
+  align-items: end;
+}
+
+.plan-span-readout {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 2px dashed var(--secondary);
+  border-radius: var(--radius-doodle-chip);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  color: var(--secondary);
+  white-space: nowrap;
+}
+
+.plan-span-readout[data-invalid="yes"] {
+  border-color: var(--danger);
+  color: var(--danger);
+  white-space: normal;
+}
+
+.plan-create-btn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-5);
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-doodle-btn);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 800;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  box-shadow: var(--shadow-doodle);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.plan-create-btn:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow-doodle-md);
+}
+
+.plan-create-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* --- Shelves --- */
+.plan-shelf {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.plan-shelf-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  border-bottom: 2px dashed var(--secondary);
+  padding-bottom: var(--space-2);
+}
+
+.plan-shelf-head h2 {
+  font-family: var(--font-heading);
+  font-size: var(--text-base);
+  font-weight: 800;
+  margin: 0;
+}
+
+.plan-shelf-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  padding: 0 6px;
+  border: 1.5px solid var(--secondary);
+  border-radius: var(--radius-full);
+  background: var(--surface-sunken);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--secondary);
+}
+
+/* `auto-fill` rather than a fixed column count: the same grid then serves one saved plan and
+   thirty, and collapses to a single column on a phone without a media query. */
+.plan-shelf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: var(--space-4);
+}
+
+.plan-shelf-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-6) var(--space-4);
+  border: 2px dashed var(--secondary);
+  border-radius: var(--radius-doodle-card);
+  background: var(--surface-sunken);
+  text-align: center;
+}
+
+.plan-shelf-empty .ecg-trace {
+  width: min(14rem, 100%);
+  height: 2rem;
+}
+
+.plan-shelf-empty p {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+/* --- A plan card --- */
+/* `--subject-color` arrives from `[data-color]` above, hashed off the plan id, so a shelf is varied
+   and a given plan keeps its paper between visits. */
+.plan-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  padding-top: var(--space-5);
+  overflow: hidden;
+  border: 2.5px solid var(--secondary);
+  border-radius: var(--radius-doodle-card);
+  background: color-mix(in srgb, var(--subject-color, var(--primary)) 12%, var(--surface));
+  box-shadow: var(--shadow-doodle);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.plan-card:hover {
+  transform: translate(-1px, -1px) rotate(0deg);
+  box-shadow: var(--shadow-doodle-md);
+}
+
+.plan-card-watermark {
+  position: absolute;
+  inset-block-end: var(--space-2);
+  inset-inline-end: var(--space-2);
+  width: 4.5rem;
+  height: 4.5rem;
+  color: var(--secondary);
+  opacity: 0.08;
+  pointer-events: none;
+}
+
+.plan-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.plan-card-head h3 {
+  font-family: var(--font-heading);
+  font-size: var(--text-base);
+  font-weight: 800;
+  margin: 0;
+  min-width: 0;
+}
+
+.plan-card-head a {
+  color: var(--foreground);
+  text-decoration: none;
+}
+
+.plan-card-head a:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.plan-card-note,
+.plan-board-note {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.plan-visibility-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  padding: 2px 8px;
+  border: 1.5px solid var(--secondary);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--secondary);
+  white-space: nowrap;
+}
+
+.plan-visibility-pill svg {
+  flex: none;
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+/* Shared reads as an active state, private as a quiet one -- the difference is worth a glance,
+   because it is the difference between "my year can read this" and "nobody can". */
+.plan-visibility-pill[data-visibility="CLASS"] {
+  background: var(--success-subtle, var(--primary-subtle));
+  color: var(--foreground);
+}
+
+.plan-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.plan-card-meta dt {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.plan-card-meta dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.plan-card-author {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.plan-card-actions,
+.plan-board-actions,
+.plan-edit-actions,
+.plan-note-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.plan-card-btn,
+.plan-board-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-doodle-btn);
+  background: var(--surface);
+  color: var(--foreground);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: var(--shadow-doodle-xs);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.plan-card-btn svg,
+.plan-board-btn svg,
+.plan-note-add-btn svg,
+.plan-create-btn svg,
+.plan-forum-footnote svg,
+.calendar-source-tabs svg,
+.calendar-copy-done svg {
+  flex: none;
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.plan-card-btn:hover:not(:disabled),
+.plan-board-btn:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow-doodle);
+}
+
+.plan-card-btn:disabled,
+.plan-board-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Bookmarked is a state, not an action, so the button carries the filled look once it is on. */
+.plan-card-btn[data-active="yes"],
+.plan-board-btn[data-active="yes"] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.plan-board-btn.danger {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.plan-forum-footnote {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+/* --- The day board --- */
+.plan-board-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-doodle-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-doodle);
+}
+
+.plan-board-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  font-size: var(--text-xs);
+  font-weight: 800;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.plan-board-back svg {
+  flex: none;
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.plan-board-back:hover {
+  color: var(--primary);
+}
+
+.plan-board-title h1 {
+  font-family: var(--font-heading);
+  font-size: var(--text-2xl);
+  font-weight: 800;
+  margin: 0;
+}
+
+.plan-board-period {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--secondary);
+}
+
+.plan-board-notice,
+.plan-readonly-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 2px dashed var(--secondary);
+  border-radius: var(--radius-doodle-card);
+  background: var(--primary-subtle);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+/* The period edit sits in the same header block, so the board does not jump when it opens. */
+.plan-edit-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--space-3);
+  align-items: end;
+  padding: var(--space-3);
+  border: 2px dashed var(--secondary);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.plan-edit-row .form-error,
+.plan-edit-actions {
+  grid-column: 1 / -1;
+}
+
+/* 16rem tracks: wide enough for "Wednesday" plus a four-task list, narrow enough that a laptop
+   fits four across and a phone falls to one. */
+.plan-day-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: var(--space-5) var(--space-4);
+}
+
+/* The tilt is the same 2n/2n+1 alternation the dashboard's sticky list uses (line 681), and the
+   hover straighten is what sells it as paper. Row-gap above is larger than column-gap to leave
+   room for the tape, which hangs 0.65rem above the note's own box. */
+.plan-day-note {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  padding-top: var(--space-5);
+  overflow: hidden;
+  border: 2.5px solid var(--secondary);
+  border-radius: var(--radius-doodle-card);
+  background-color: var(--card-pastel-yellow, #FEFCE8);
+  box-shadow: var(--shadow-doodle);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.plan-day-grid > .plan-day-note:nth-child(2n) { transform: rotate(0.45deg); }
+.plan-day-grid > .plan-day-note:nth-child(2n + 1) { transform: rotate(-0.4deg); }
+.plan-day-grid > .plan-day-note:hover {
+  transform: translate(-1px, -1px) rotate(0deg);
+  box-shadow: var(--shadow-doodle-md);
+}
+
+/* Today's note is the one a student looks for first, so it gets the accent paper and a coloured
+   border. Deliberately *not* a heavier shadow: the mobile comfort block in globals.css steps every
+   card down to `--shadow-doodle-xs`, and a `[data-today]` rule outranks it on specificity -- today's
+   note would then be the one card on the page still carrying a desktop shadow on a phone. */
+.plan-day-note[data-today="yes"] {
+  background-color: var(--card-pastel-sky, #F0F9FF);
+  border-color: var(--primary);
+}
+
+.plan-note-watermark {
+  position: absolute;
+  inset-block-end: var(--space-2);
+  inset-inline-end: var(--space-2);
+  width: 4.5rem;
+  height: 4.5rem;
+  color: var(--secondary);
+  opacity: 0.08;
+  pointer-events: none;
+}
+
+.plan-day-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  border-bottom: 2px dashed var(--secondary);
+  padding-bottom: var(--space-2);
+}
+
+.plan-day-weekday {
+  font-family: var(--font-heading);
+  font-size: var(--text-base);
+  font-weight: 800;
+  color: var(--foreground);
+}
+
+.plan-day-date {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--secondary);
+}
+
+.plan-day-today {
+  padding: 1px 7px;
+  border: 1.5px solid var(--secondary);
+  border-radius: var(--radius-full);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.plan-note-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The coloured spine is the same device the task rows use: the course reads at a glance without
+   spending a line of the note on a label. */
+.plan-note-task {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1.5px solid var(--secondary);
+  border-inline-start: 4px solid var(--subject-color, var(--primary));
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.plan-note-swatch {
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-top: 5px;
+  border: 1px solid var(--secondary);
+  border-radius: var(--radius-full);
+  background: var(--subject-color, var(--primary));
+}
+
+.plan-note-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+.plan-note-text strong {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+}
+
+.plan-note-text em {
+  font-size: 11px;
+  font-weight: 700;
+  font-style: normal;
+  color: var(--secondary);
+}
+
+.plan-note-remove {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 1.5px solid var(--secondary);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.plan-note-remove svg {
+  width: 0.7rem;
+  height: 0.7rem;
+}
+
+.plan-note-remove:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.plan-note-blank {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* Dashed and full-width: an invitation on an otherwise blank note, and the widest target on it. */
+.plan-note-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: auto;
+  padding: var(--space-2);
+  border: 2px dashed var(--secondary);
+  border-radius: var(--radius-doodle-btn);
+  background: transparent;
+  color: var(--secondary);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.plan-note-add-btn:hover {
+  background: var(--primary);
+  border-style: solid;
+  color: var(--primary-foreground);
+}
+
+.plan-note-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding: var(--space-3);
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-doodle-xs);
+}
+
+.plan-note-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.plan-note-form label > span {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--secondary);
+}
+
+.plan-note-form-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-doodle-btn);
+  background: var(--surface-sunken);
+  color: var(--foreground);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.plan-note-form-actions button[type="submit"] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.plan-note-form-actions button svg {
+  flex: none;
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+/* ================= Calendar source switch and Copy to tasks =================
+   Pointing the calendar at a plan is a *view*: the bar swaps what the grid paints and writes
+   nothing. `.calendar-copy-box` is the single exception, and it is one press, one day at a time --
+   which is why it is a bordered box in the day drawer rather than a bar-level action. */
+.calendar-source-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 2px dashed var(--secondary);
+  border-radius: var(--radius-doodle-card);
+  background: var(--surface-sunken);
+}
+
+/* `.exam-view-tabs` (the AI Exam Plan's Board/List switch) is grouped in rather than copied: it is
+   the same pill tablist doing the same job, and a second copy of these three rules is a second
+   thing to keep in step. */
+.calendar-source-tabs,
+.exam-view-tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  box-shadow: var(--shadow-doodle-xs);
+}
+
+.calendar-source-tabs button,
+.exam-view-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.35rem 0.85rem;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.calendar-source-tabs button[aria-selected="true"],
+.exam-view-tabs button[aria-selected="true"] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border: 1.5px solid var(--secondary);
+  box-shadow: 1px 1px 0px var(--secondary);
+}
+
+.calendar-source-tabs svg,
+.exam-view-tabs svg {
+  flex: none;
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.calendar-source-picker select {
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--foreground);
+  max-width: 16rem;
+}
+
+.calendar-source-note {
+  flex: 1 1 14rem;
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+/* A plan note is not a task and must not be mistaken for one at a glance, so it takes the warning
+   spine -- the one accent no other event type on this grid uses. */
+.calendar-event.plan {
+  border-left: 3px solid var(--warning);
+  background: var(--warning-subtle, var(--surface-sunken));
+  border-style: dashed;
+}
+
+.calendar-copy-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  border: 2px dashed var(--secondary);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.calendar-copy-count {
+  margin: 0;
+  font-size: var(--text-xs);
+  font-weight: 800;
+  color: var(--secondary);
+}
+
+.calendar-copy-box button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-2) var(--space-4);
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-doodle-btn);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: var(--shadow-doodle-xs);
+}
+
+.calendar-copy-box button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.calendar-copy-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--text-xs);
+  font-weight: 800;
+  color: var(--success-strong, var(--primary));
+}
+
+/* --- Plan Forum on a phone --- */
+/* Both grids are `auto-fill` and fall to one column on their own, so this block is only about the
+   two things a narrower column changes: the tilt and the tap targets.
+   The tilt goes for the same reason the task cards' does above -- at full content width a rotated
+   card's bounding box grows wider than its layout box and hangs over the content edge, which is
+   both a visible clip and what `padding-block: 1px` on `.subjects-scroll` was added to fix. A
+   0.45deg wobble is charm on a four-across pinboard and a misaligned edge on a single column. */
+@media (max-width: 768px) {
+  .plan-day-grid > .plan-day-note:nth-child(2n),
+  .plan-day-grid > .plan-day-note:nth-child(2n + 1) {
+    transform: none;
+  }
+
+  .plan-note-watermark,
+  .plan-card-watermark {
+    width: 3.5rem;
+    height: 3.5rem;
+    opacity: 0.07;
+  }
+
+  /* One tap target per row at full width; the delete X only grows to the square minimum. */
+  .plan-note-add-btn,
+  .calendar-copy-box button,
+  .plan-note-form-actions button {
+    min-height: 44px;
+  }
+
+  .plan-note-remove {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .calendar-source-tabs button,
+  .exam-view-tabs button {
+    min-height: 44px;
+  }
+
+  /* The readout is the one part of the row that can wrap to its own line without cost. */
+  .plan-period-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .plan-span-readout {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ================= AI Exam Plan =================
+   The board deliberately reuses the Plan Forum's own note rules above (`.plan-day-grid`,
+   `.plan-day-note`, `.plan-note-task`), so what follows is only what an exam plan *adds*: the topic
+   composer, the فهرس scanner, the two rhythm cards, and the kind/load badges painted onto a
+   borrowed note. Nothing here restyles a `.plan-*` selector except through a `data-` attribute the
+   forum never sets. */
+
+/* --- Step 2a: composing topics --- */
+.exam-topic-composer {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.exam-topic-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.exam-topic-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* "Is this enough to plan from?" is a count, not a sentence, so it is set as a figure. */
+.exam-topic-readout {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  color: var(--secondary);
+}
+
+.exam-topic-paste {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 2px dashed var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.exam-topic-paste-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.exam-topic-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.exam-topic-card {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 2px solid var(--secondary);
+  border-inline-start: 4px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-doodle-xs);
+}
+
+/* The heavy topic is the one that will eat the week. The spine says so before the select is read,
+   which is the entire difference between these rows and the textarea they replace. */
+.exam-topic-card[data-weight="heavy"] {
+  border-inline-start-color: var(--subject-coral);
+}
+
+.exam-topic-card[data-weight="light"] {
+  border-inline-start-color: var(--subject-sky);
+}
+
+.exam-topic-main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.exam-topic-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.exam-topic-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+.exam-topic-remove {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1.5px solid var(--secondary);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.exam-topic-remove:hover:not(:disabled) {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.exam-topic-remove:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- Step 2b: photographing the فهرس --- */
+.exam-upload {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.exam-upload-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* A label, not a button: it wraps the file input, which is the only way to reach a phone camera
+   without scripting a click -- so it has to look like the button it stands in for. Dashed, because
+   what it opens is an import, not a submit. */
+.exam-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.5rem;
+  padding: 0.45rem var(--space-4);
+  border: 2px dashed var(--secondary);
+  border-radius: var(--radius-doodle-btn);
+  background: var(--primary-subtle);
+  color: var(--foreground);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.exam-upload-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow-doodle-xs);
+}
+
+.exam-upload-btn[data-disabled="yes"] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.exam-upload-btn svg {
+  flex: none;
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.exam-upload-thumb {
+  position: relative;
+  flex: none;
+  width: 3.5rem;
+  height: 3.5rem;
+  overflow: hidden;
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+}
+
+.exam-upload-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.exam-upload-thumb-clear {
+  position: absolute;
+  inset-block-start: 2px;
+  inset-inline-end: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 1.5px solid var(--secondary);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.exam-upload-note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.exam-upload-note[data-failed="yes"] {
+  font-weight: 700;
+  color: var(--danger);
+}
+
+/* The wizard's per-step hint carries a countdown, so it is set louder than `.fine-print`: the
+   number of days left to the exam is the one fact on step 1 worth reading twice. */
+.wizard-step-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--secondary);
+}
+
+.wizard-step-hint svg {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  color: var(--primary);
+}
+
+/* --- Step 3: question rhythm --- */
+.exam-strategy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-3);
+}
+
+.exam-strategy-card {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border: 2px dashed var(--line);
+  border-radius: var(--radius-doodle-card);
+  background: var(--surface);
+  cursor: pointer;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.exam-strategy-card strong {
+  font-family: var(--font-heading);
+  font-size: var(--text-base);
+  color: var(--foreground);
+}
+
+.exam-strategy-card span {
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.exam-strategy-card[data-selected="yes"] {
+  border-style: solid;
+  border-color: var(--secondary);
+  background: var(--primary-subtle);
+  box-shadow: var(--shadow-doodle-xs);
+}
+
+/* Every field in this wizard is written as a `.ui-label` that *wraps* its control rather than
+   sitting beside it, and `.ui-label` is typography only -- no display, no gap -- because most of
+   the app uses it as a sibling of its input. Wrapped, the caption and the box shared a line with
+   nothing between them: "Exam or course title" ran straight into the field. Scoped to the wizard
+   so the sibling usages elsewhere keep their current box. */
+.wizard-step-content > .ui-label {
+  display: grid;
+  gap: var(--space-1);
+}
+
+/* `.ui-label.exam-capacity-label`, not the bare class: it has to out-specify the rule above, which
+   would otherwise flatten the two-column gap into one value and push the readout onto its own row. */
+.ui-label.exam-capacity-label {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  /* No `margin-top`: `.wizard-step-content` is a flex column with `gap: var(--space-4)`. */
+  gap: var(--space-1) var(--space-2);
+}
+
+.exam-capacity-readout {
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  font-weight: 800;
+  color: var(--primary-strong, var(--primary));
+}
+
+.exam-capacity-range {
+  /* Its own row under the pair, or the track would be squeezed into the second column. */
+  grid-column: 1 / -1;
+  width: 100%;
+  accent-color: var(--primary);
+}
+
+.exam-rest-days {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border: 2px dashed var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.exam-rest-days legend {
+  padding: 0 var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  color: var(--secondary);
+}
+
+.exam-rest-day-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.exam-rest-day {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  min-height: 2.25rem;
+  padding: 0 var(--space-2);
+  border: 1.5px solid var(--secondary);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.exam-rest-day[data-selected="yes"] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: 1px 1px 0px var(--secondary);
+}
+
+/* --- Step 4: review --- */
+.exam-review-card {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-doodle-card);
+  background: var(--surface-sunken);
+}
+
+.exam-review-card h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+}
+
+/* An `<svg>` carrying only a viewBox resolves to `width: 100%` and takes its height from the aspect
+   ratio, so an unsized icon here is not a slightly-large icon -- it is a 230px square. Lucide writes
+   width/height attributes and would hide that, which is exactly why the size lives in CSS. */
+.exam-review-card h3 svg {
+  flex: none;
+  width: 1.1rem;
+  height: 1.1rem;
+  color: var(--primary-strong, var(--primary));
+}
+
+.exam-review-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.exam-review-list dt {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.exam-review-list dd {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+}
+
+/* --- Publishing to the forum --- */
+.exam-plan-share {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 2px dashed var(--secondary);
+  border-radius: var(--radius-doodle-card);
+  background: var(--surface);
+}
+
+.exam-plan-share .muted-copy {
+  flex: 1 1 16rem;
+  margin: 0;
+  font-size: var(--text-xs);
+}
+
+/* Two of the three are anchors, so the underline has to go and the icon has to align. */
+.exam-plan-share .primary-button,
+.exam-plan-share .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  text-decoration: none;
+}
+
+.exam-plan-share svg {
+  flex: none;
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+/* --- The proposal board --- */
+.exam-board {
+  display: grid;
+  gap: var(--space-3);
+}
+
+/* A day of nothing but question practice is a different kind of day, and the paper says so before
+   any badge is read. `--card-pastel-lavender` is themed in all five moods, so this stays legible in
+   dark mode instead of going white-on-white. */
+.plan-day-note[data-kind="questions"] {
+  background-color: var(--card-pastel-lavender, #FAF5FF);
+}
+
+/* Solid where every other note is solid too -- what changes is the colour, since the exam is the
+   deadline the whole board is aimed at. */
+.plan-day-note[data-exam="yes"] {
+  border-color: var(--danger);
+}
+
+.exam-note-exam-day {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--text-sm);
+  font-weight: 800;
+  color: var(--danger);
+}
+
+.exam-note-exam-day svg {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+}
+
+/* The load chip closes the header line opposite the date, because "how long is this day" is the
+   first question asked of a plan that has to fit around lectures. */
+.exam-day-load {
+  margin-inline-start: auto;
+  padding: 1px 7px;
+  border: 1.5px solid var(--secondary);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--secondary);
+}
+
+.exam-note-kind {
+  display: inline-block;
+  padding: 0 5px;
+  border-radius: var(--radius-sm);
+  background: var(--secondary);
+  color: var(--surface);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.exam-note-kind[data-kind="questions"] {
+  background: var(--subject-violet);
+  color: #FFFFFF;
+}
+
+.exam-note-kind[data-kind="review"] {
+  background: var(--subject-amber);
+  color: #FFFFFF;
+}
+
+.exam-note-minutes {
+  margin-inline-start: 6px;
+  font-family: var(--font-mono);
+}
+
+.exam-note-check {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  cursor: pointer;
+}
+
+.exam-note-check input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+/* Takes the checkbox's box, not the glyph's: an accepted row and a selectable row sit side by side in
+   the same note, and a narrower tick would pull every accepted title 12px left of the others. The
+   padding is what keeps the drawn tick the size of the checkbox inside it rather than filling 28px.
+   Sizing it at all is not cosmetic -- see the note on `.exam-review-card h3 svg`. */
+.exam-note-done {
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0.375rem;
+  margin-top: 2px;
+  color: var(--success-strong, var(--primary));
+}
+
+/* --- The proposal page itself --- */
+/*
+ * The sections of /exam-plans/<id> used to be framed by one blanket `.exam-plan-detail-shell > *`
+ * rule (see the note on the "Remaining route surfaces" list above) and their contents were framed by
+ * nothing at all: no rule reached the labels, inputs, facts or the close-out row, and Tailwind's
+ * preflight zeroes an input's border and background. So a form field rendered as its label and its
+ * value running together in one line of body text -- "Plan titlefamily medicine exam" -- and the
+ * textarea sat at its default 20-column width in the middle of a 54rem card.
+ */
+
+/* The AI strip: three labelled figures, not three sentences. */
+.exam-plan-attribution {
+  flex-wrap: wrap;
+}
+
+/* The one property this page does override on the shared header card. The shared rule ends with
+   `margin-bottom: var(--space-6)`, which made sense when every section below it carried its own
+   margin; against the shell's grid gap it simply adds to it, so the header floated further from the
+   share bar than the share bar does from anything else. */
+.exam-plan-detail-header {
+  margin-bottom: 0;
+}
+
+.exam-plan-fact {
+  display: grid;
+  gap: 1px;
+  /* Fills the strip evenly and still wraps on a phone rather than squeezing the model name. */
+  flex: 1 1 9rem;
+  min-width: 0;
+  padding-inline-start: var(--space-3);
+  border-inline-start: 1.5px dashed var(--secondary);
+}
+
+.exam-plan-fact strong {
+  font-size: var(--text-sm);
+  color: var(--secondary);
+  overflow-wrap: anywhere;
+}
+
+.exam-plan-fact span {
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+/* Both cards are grids with their own gap, so a heading margin on top of it doubles the space. */
+.exam-plan-meta .section-heading,
+.exam-plan-items .section-heading {
+  margin-bottom: 0;
+}
+
+.exam-plan-meta h2,
+.exam-plan-items h2 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
+}
+
+.exam-plan-items .section-heading .eyebrow {
+  margin: 0 0 2px;
+}
+
+/* An `inline-flex` pill is still stretched by a grid parent -- blockification applies to grid items
+   regardless of the outer display -- so the Board/List switch spanned the full card width. */
+.exam-view-tabs {
+  justify-self: start;
+  max-width: 100%;
+}
+
+/* The fields. `.plan-item-select` is excluded by name: it is a checkbox row that must stay a
+   horizontal flex line, and this selector would otherwise beat it on specificity. */
+.exam-plan-meta label,
+.exam-plan-item label:not(.plan-item-select) {
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--foreground);
+  min-width: 0;
+}
+
+.exam-plan-meta input,
+.exam-plan-meta textarea,
+.exam-plan-item input:not([type="checkbox"]),
+.exam-plan-item select,
+.exam-plan-item textarea {
+  width: 100%;
+  min-width: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--foreground);
+  background: var(--surface);
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-md);
+  padding: 0.55rem 0.85rem;
+  box-shadow: var(--shadow-doodle-xs);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.exam-plan-meta input,
+.exam-plan-item input:not([type="checkbox"]),
+.exam-plan-item select {
+  height: 42px;
+}
+
+.exam-plan-meta textarea,
+.exam-plan-item textarea {
+  min-height: 6rem;
+  resize: vertical;
+}
+
+.exam-plan-meta input:focus,
+.exam-plan-meta textarea:focus,
+.exam-plan-item input:focus,
+.exam-plan-item select:focus,
+.exam-plan-item textarea:focus {
+  outline: 2px dashed var(--secondary);
+  outline-offset: 2px;
+}
+
+/* A locked field is still readable -- this page shows an accepted plan as history. */
+.exam-plan-meta input:disabled,
+.exam-plan-meta textarea:disabled,
+.exam-plan-item input:disabled,
+.exam-plan-item select:disabled,
+.exam-plan-item textarea:disabled {
+  background: var(--surface-sunken);
+  border-style: dashed;
+  color: var(--muted);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* The conversion gate: centred prompt, left-aligned checklist. A centred checkbox row puts the tick
+   somewhere different on every line length. */
+.exam-plan-conversion h2 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
+}
+
+.exam-plan-conversion .eyebrow {
+  margin: 0 0 2px;
+}
+
+.exam-plan-conversion > div > p {
+  margin: var(--space-1) 0 var(--space-3);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.task-conversion-confirmation {
+  display: grid;
+  gap: var(--space-3);
+  text-align: start;
+}
+
+.task-conversion-confirmation label {
+  display: flex;
+  align-items: start;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.task-conversion-confirmation input[type="checkbox"] {
+  flex: none;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-top: 2px;
+  accent-color: var(--primary-strong, var(--primary));
+}
+
+.task-conversion-confirmation .form-actions {
+  margin: 0;
+  flex-wrap: wrap;
+}
+
+/*
+ * Framed only when it is holding something.
+ *
+ * The two paragraphs inside stay mounted either way -- a live region that is inserted at the same
+ * moment as its text is announced unreliably -- so an empty slot goes visually hidden rather than
+ * `display: none`, which would take it out of the accessibility tree along with the frame. Taking it
+ * out of flow matters for a second reason: the shell is a grid, and a zero-height grid item still
+ * collects a gap on each side, which left a double gap between the cards above and below it.
+ */
+.exam-plan-feedback[data-visible="no"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  background: none;
+}
+
+.exam-plan-feedback p {
+  margin: 0;
+}
+
+/* The close-out row. Destructive, so it reads as a marked-off zone rather than another card. */
+.exam-plan-reject-zone {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border: 2px dashed var(--danger);
+  border-radius: var(--radius-doodle-card);
+  background: var(--danger-subtle);
+}
+
+.exam-plan-reject-zone h2 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  color: var(--danger-strong);
+}
+
+.exam-plan-reject-zone p {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  color: var(--muted);
+  max-width: 46ch;
+}
+
+/* --- AI Exam Plan on a phone --- */
+/* Only tap targets and one grid. Every card in this section is already in the mobile step-down list
+   in globals.css, which is imported after this file and therefore wins on source order anyway. */
+@media (max-width: 768px) {
+  /* One fact per row, and the divider goes with the row: a dashed rule on the inline start of a
+     wrapped item is a stray vertical line under the item above it, not a separator. */
+  .exam-plan-fact {
+    flex: 1 1 100%;
+    padding-inline-start: 0;
+    border-inline-start: 0;
+  }
+
+  .exam-plan-reject-zone {
+    padding: var(--space-4);
+  }
+
+  /* Three selects across is under 6rem each on a 360px screen; stacked, every row stays readable. */
+  .exam-topic-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* An `auto-fit` track whose 14rem minimum is wider than the panel does not fall to one column --
+     it forces the track and overflows. One explicit column instead. */
+  .exam-strategy-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .exam-upload-btn {
+    min-height: 44px;
+  }
+
+  .exam-topic-remove,
+  .exam-note-check {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  /* Grows with the checkbox it stands in for, or the accepted rows fall out of column. */
+  .exam-note-done {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .exam-upload-thumb-clear {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .exam-rest-day {
+    min-width: 3rem;
+    min-height: 2.75rem;
+  }
+
+  /* Three actions side by side wrap to a 5rem-wide button each; one per row instead. */
+  .exam-plan-share .primary-button,
+  .exam-plan-share .secondary-button {
+    flex: 1 1 100%;
+    justify-content: center;
+    min-height: 44px;
+  }
+}
+
 
 
 

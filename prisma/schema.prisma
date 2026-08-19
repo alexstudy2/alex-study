@@ -178,6 +178,29 @@ enum ExamPlanStatus {
   REJECTED
 }
 
+/// How question practice is folded into an AI exam plan. DEDICATED_DAYS keeps whole days clear of
+/// new material for question banks and past papers; INTEGRATED ends each study day with practice on
+/// what was just covered. The student picks one in the wizard and the prompt is written around it.
+enum ExamQuestionStrategy {
+  DEDICATED_DAYS
+  INTEGRATED
+}
+
+/// What one plan item asks of the student. Only used for display and for checking that the model
+/// honoured the chosen strategy -- an accepted item becomes a plain Task either way.
+enum ExamPlanItemKind {
+  STUDY
+  QUESTIONS
+  REVIEW
+}
+
+/// Who may read a hand-built plan from the Plan Forum. CLASS means every user sharing the plan's
+/// snapshotted academicYear -- see StudyPlan.academicYear for why it is a snapshot.
+enum StudyPlanVisibility {
+  PRIVATE
+  CLASS
+}
+
 model User {
   id                        String                       @id @default(uuid())
   collegeId                 String
@@ -229,6 +252,8 @@ model User {
   createdAccountability     AccountabilityPair[]         @relation("AccountabilityCreator")
   accountabilitySubjects    AccountabilityCheck[]        @relation("AccountabilitySubject")
   accountabilityRecipients  AccountabilityCheck[]        @relation("AccountabilityRecipient")
+  studyPlans                StudyPlan[]
+  studyPlanSaves            StudyPlanSave[]
 
   @@unique([collegeId, academicYear])
 }
@@ -314,6 +339,7 @@ model Subject {
   challenges     Challenge[]
   timerRuns      TimerRun[]
   examPlanItems  ExamPlanItem[]
+  planItems      StudyPlanItem[]
 
   @@unique([userId, normalizedName])
 }
@@ -793,6 +819,14 @@ model ExamPlan {
   overview        String?
   examAt          DateTime
   syllabusText    String?
+  /// The two intake answers that shape the whole proposal, kept so the board can explain what it
+  /// was built from and so a later regeneration starts from the same brief.
+  questionStrategy     ExamQuestionStrategy @default(INTEGRATED)
+  dailyCapacityMinutes Int                  @default(180)
+  /// Set once the student publishes the finished plan to the Plan Forum. The link lives here rather
+  /// than on StudyPlan so the forum feature stays unaware of exam plans; SetNull means deleting the
+  /// forum copy simply un-publishes, it does not touch the proposal.
+  studyPlanId     String?        @unique
   status          ExamPlanStatus @default(GENERATING)
   locale          AppLocale      @default(EN)
   model           String
@@ -805,6 +839,7 @@ model ExamPlan {
   updatedAt       DateTime       @updatedAt
   user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   aiJob           AIJob?         @relation("ExamPlanJob", fields: [aiJobId], references: [id], onDelete: SetNull)
+  studyPlan       StudyPlan?     @relation("ExamPlanPublication", fields: [studyPlanId], references: [id], onDelete: SetNull)
   items           ExamPlanItem[]
 
   @@index([userId, status, createdAt])
@@ -812,23 +847,24 @@ model ExamPlan {
 }
 
 model ExamPlanItem {
-  id               String    @id @default(uuid())
+  id               String           @id @default(uuid())
   examPlanId       String
   subjectId        String?
   title            String
   notes            String?
+  kind             ExamPlanItemKind @default(STUDY)
   plannedDate      DateTime
   estimatedMinutes Int
   sortOrder        Int
-  accepted         Boolean   @default(false)
+  accepted         Boolean          @default(false)
   acceptedAt       DateTime?
   rejectedAt       DateTime?
-  createdTaskId    String?   @unique
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  examPlan         ExamPlan  @relation(fields: [examPlanId], references: [id], onDelete: Cascade)
-  subject          Subject?  @relation(fields: [subjectId], references: [id], onDelete: SetNull)
-  createdTask      Task?     @relation("ExamPlanCreatedTask", fields: [createdTaskId], references: [id], onDelete: SetNull)
+  createdTaskId    String?          @unique
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  examPlan         ExamPlan         @relation(fields: [examPlanId], references: [id], onDelete: Cascade)
+  subject          Subject?         @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  createdTask      Task?            @relation("ExamPlanCreatedTask", fields: [createdTaskId], references: [id], onDelete: SetNull)
 
   @@index([examPlanId, sortOrder])
 }
@@ -870,4 +906,77 @@ model ServiceUsageLog {
   @@index([service, occurredAt])
   @@index([userId, service, occurredAt])
   @@index([aiJobId, occurredAt])
+}
+
+/// A hand-built study plan from the Plan Forum: a title, a date range, and one sticky note per day.
+///
+/// Deliberately not ExamPlan. That model is the shape of an *AI proposal* -- aiJobId, inputHash,
+/// contextPurgeAt, per-item `accepted` and `createdTaskId` -- and its lifecycle ends when the
+/// student accepts the items into tasks. This one is authored by hand, keyed by day, shareable,
+/// and never becomes tasks unless somebody explicitly copies a day across.
+model StudyPlan {
+  id          String              @id @default(uuid())
+  authorId    String
+  title       String
+  description String?
+  /// Cairo midnight of day one, and of the last day. Stored as instants because Prisma has no
+  /// date-only type on PostgreSQL; every read goes back through the Cairo helpers in
+  /// src/lib/plan-forum/dates.ts so a reader in another zone still sees the author's days.
+  startDate   DateTime
+  endDate     DateTime
+  visibility  StudyPlanVisibility @default(PRIVATE)
+  /// Snapshot of the author's year at share time, not a join through author.academicYear.
+  /// The year is editable in Settings, so joining would silently migrate a plan shared with
+  /// Year 3 into Year 4 the moment its author advanced.
+  academicYear Int
+  sharedAt     DateTime?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  author       User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  items        StudyPlanItem[]
+  saves        StudyPlanSave[]
+  /// Set when this plan is the published copy of an AI exam plan. Optional in both directions: a
+  /// hand-built plan has no exam plan behind it, and an unpublished proposal has no forum copy.
+  sourceExamPlan ExamPlan?        @relation("ExamPlanPublication")
+
+  @@index([authorId, updatedAt])
+  @@index([visibility, academicYear, sharedAt])
+}
+
+/// One task on one day's note: a title and a subject, nothing else.
+model StudyPlanItem {
+  id           String    @id @default(uuid())
+  planId       String
+  /// Cairo midnight of the day this note belongs to.
+  dayDate      DateTime
+  title        String
+  /// The subject as text, because Subject rows are per-user (@@unique([userId, normalizedName]))
+  /// and a classmate reading a shared plan cannot resolve the author's subjectId. The label is
+  /// what travels; subjectId below is only the author's own convenience link.
+  subjectLabel String
+  subjectId    String?
+  /// Copied rather than read through `subject`, so a shared note keeps its paper for a reader
+  /// who has no such course -- and keeps it if the author later deletes the course.
+  colorToken   String
+  sortOrder    Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  plan         StudyPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  subject      Subject?  @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+
+  @@index([planId, dayDate, sortOrder])
+}
+
+/// A read-only bookmark of somebody else's plan. Not a fork: the author's edits show through,
+/// and there is no copy to drift.
+model StudyPlanSave {
+  id        String    @id @default(uuid())
+  userId    String
+  planId    String
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan      StudyPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, planId])
+  @@index([userId, createdAt])
 }
