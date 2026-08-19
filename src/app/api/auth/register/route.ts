@@ -22,7 +22,11 @@ export async function POST(request: Request) {
         academicYear: data.academicYear,
         email: data.email || null,
         passwordHash: await hash(data.password, 12),
-        preference: { create: { locale: data.locale } },
+        /* Everything the wizard's preferences step collected, written with the account rather
+           than patched in afterwards -- so the very first dashboard render is already in the
+           chosen mood, with the chosen rhythm. Every field is defaulted in
+           `signupPreferencesSchema`, so this spread is complete even when the step was skipped. */
+        preference: { create: { locale: data.locale, ...data.preferences } },
         consents: { create: { kind: "analytics", version: "2026-08", status: "PENDING" } },
       },
       select: { id: true, collegeId: true },

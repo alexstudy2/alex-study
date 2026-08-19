@@ -655,40 +655,55 @@ export function TaskWorkspace({
 
       {/* 3. Subjects Divider Ribbon */}
       <nav className="subjects-ribbon" aria-label={ar ? "تصفية المواد" : "Course filter"}>
-        <div className="subjects-scroll">
-          <button
-            type="button"
-            onClick={() => setSelectedSubjectId(null)}
-            className={`subject-chip ${selectedSubjectId === null ? "active" : ""}`}
-          >
-            <BookOpen className="w-3.5 h-3.5" />
-            <span>{ar ? "كل المقررات" : "All Courses"}</span>
-            <span className="chip-count">{tasks.length}</span>
-          </button>
+        {/* Mobile only (.notebook-zone-label is display:none above the breakpoint). This page can
+            create exactly two things, and on a phone its zones arrive stacked with nothing naming
+            any of them: four numbers, a row of chips, a text field. The caption is what makes the
+            ribbon read as "courses live here" before the eye reaches the button at its foot. */}
+        <span className="notebook-zone-label" aria-hidden="true">
+          <BookOpen className="w-3.5 h-3.5" />
+          {ar ? "مقرراتك" : "Your courses"}
+        </span>
 
-          {subjects.map((s) => {
-            const count = tasks.filter((t) => t.subject?.id === s.id).length;
-            const isSelected = selectedSubjectId === s.id;
-            return (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => setSelectedSubjectId(isSelected ? null : s.id)}
-                className={`subject-chip ${isSelected ? "active" : ""}`}
-                data-color={s.colorToken}
-              >
-                <span className="subject-color-indicator" data-color={s.colorToken} />
-                <span>{s.name}</span>
-                {count > 0 && <span className="chip-count">{count}</span>}
-              </button>
-            );
-          })}
+        <div className="subjects-ribbon-row">
+          <div className="subjects-scroll">
+            <button
+              type="button"
+              onClick={() => setSelectedSubjectId(null)}
+              className={`subject-chip ${selectedSubjectId === null ? "active" : ""}`}
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>{ar ? "كل المقررات" : "All Courses"}</span>
+              <span className="chip-count">{tasks.length}</span>
+            </button>
 
+            {subjects.map((s) => {
+              const count = tasks.filter((t) => t.subject?.id === s.id).length;
+              const isSelected = selectedSubjectId === s.id;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setSelectedSubjectId(isSelected ? null : s.id)}
+                  className={`subject-chip ${isSelected ? "active" : ""}`}
+                  data-color={s.colorToken}
+                >
+                  <span className="subject-color-indicator" data-color={s.colorToken} />
+                  <span>{s.name}</span>
+                  {count > 0 && <span className="chip-count">{count}</span>}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Outside .subjects-scroll on purpose, and the single biggest reason nobody could find
+              where a course gets added: as the last item of a horizontal scroller it was already
+              off-screen on a phone by the third course, so the only visible "add" on the page was
+              the one in the header -- which makes tasks, not courses. */}
           <button
             type="button"
             onClick={() => setShowAddCourse(!showAddCourse)}
             className="subject-add-chip"
-            title={ar ? "إضافة مادة جديدة" : "Add new course"}
+            aria-expanded={showAddCourse}
           >
             <Plus className="w-3.5 h-3.5" />
             <span>{ar ? "مقرر جديد" : "New Course"}</span>
@@ -751,6 +766,15 @@ export function TaskWorkspace({
           className="notebook-quick-add-line"
           data-options={quickOptionsOpen ? "on" : "off"}
         >
+          {/* The ribbon's caption, for the other half of the pair. On a phone this row is an empty
+              box under four numbers, and its placeholder is the only thing that says what it makes
+              -- which is invisible the moment anyone starts typing. aria-hidden because the input
+              carries its own aria-label, so hiding this above the breakpoint costs it nothing. */}
+          <span className="notebook-zone-label" aria-hidden="true">
+            <PenTool className="w-3.5 h-3.5" />
+            {ar ? "مهمة جديدة" : "New task"}
+          </span>
+
           <div className="quick-add-left-icon">
             <PenTool className="w-4 h-4 text-muted" />
           </div>
@@ -760,6 +784,7 @@ export function TaskWorkspace({
             ref={quickInputRef}
             value={quickTitle}
             onChange={(e) => setQuickTitle(e.target.value)}
+            aria-label={ar ? "عنوان المهمة الجديدة" : "New task title"}
             placeholder={
               ar
                 ? "اكتب مهمتك الدراسية هنا... واضغط Enter"

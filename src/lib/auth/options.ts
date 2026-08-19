@@ -7,6 +7,12 @@ import { credentialsSchema } from "@/lib/auth/validation";
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
   pages: { signIn: "/sign-in" },
+  /* Left to next-auth this is inferred from whether NEXTAUTH_URL starts with https://
+     (core/init.js), so a stale localhost value in a hosted environment silently drops the
+     __Secure- cookie prefix and the `secure` flag on the session cookie. Deciding it from
+     NODE_ENV instead keeps that guarantee independent of a hand-maintained URL.
+     Caveat: serving a production build over plain HTTP locally will not keep a session. */
+  useSecureCookies: process.env.NODE_ENV === "production",
   providers: [
     CredentialsProvider({
       name: "College ID",
@@ -39,6 +45,29 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
+    /**
+     * Keep every redirect on the deployment's own origin, and keep it absolute.
+     *
+     * Absolute matters more than it looks: `signIn()` runs `new URL(data.url)` with no base
+     * (next-auth/react/index.js:267) on the JSON the credentials callback returns, so a
+     * relative value there throws `Failed to construct 'URL': Invalid URL` and takes the
+     * sign-in with it. So same-origin is enforced here, not relativised.
+     *
+     * `baseUrl` is next-auth's own idea of the origin, derived from NEXTAUTH_URL before it
+     * ever looks at the forwarded host (utils/detect-origin.js) -- which is why the three
+     * sign-out call sites do not rely on this callback at all: they pass `redirect: false`
+     * and navigate to a relative path themselves, so the browser resolves it against the
+     * origin the user is actually on. See the note in components/navigation/app-shell.tsx.
+     */
+    async redirect({ url, baseUrl }) {
+      try {
+        const target = new URL(url, baseUrl);
+        if (target.origin === new URL(baseUrl).origin) return target.toString();
+      } catch {
+        // Unparseable target: fall through to the safe default below.
+      }
+      return baseUrl;
+    },
     async jwt({ token, user, trigger, session }) {
       if (user)
         Object.assign(token, {

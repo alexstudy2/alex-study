@@ -24,6 +24,7 @@ import {
   type StudyMood,
   type StudyMoodEnum,
 } from "@/lib/settings/study-mood";
+import { writeLocaleCookie } from "@/lib/i18n/locale-cookie";
 
 type Locale = "en" | "ar";
 type Initial = {
@@ -155,7 +156,7 @@ export function SettingsWorkspace({ initial, locale }: { initial: Initial; local
       email: data.account.email,
       locale: payload.locale,
     });
-    document.cookie = `alex-study-locale=${String(payload.locale).toLowerCase()}; path=/; max-age=31536000; samesite=lax`;
+    writeLocaleCookie(String(payload.locale));
     flashSaved();
     router.refresh();
   }
@@ -263,7 +264,10 @@ export function SettingsWorkspace({ initial, locale }: { initial: Initial; local
       );
       return;
     }
-    await signOut({ callbackUrl: "/sign-in?deleted=1" });
+    /* Relative navigation by hand -- see the note in app-shell.tsx: next-auth's own
+       redirect is derived from NEXTAUTH_URL and can point off this origin entirely. */
+    await signOut({ redirect: false });
+    window.location.assign("/sign-in?deleted=1");
   }
 
   const tabs: { key: TabKey; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -788,7 +792,11 @@ export function SettingsWorkspace({ initial, locale }: { initial: Initial; local
                   variant="secondary"
                   size="sm"
                   leftIcon={<LogOut className="w-4 h-4 text-danger" />}
-                  onClick={() => void signOut({ callbackUrl: "/sign-in" })}
+                  onClick={() => {
+                    void signOut({ redirect: false }).then(() =>
+                      window.location.assign("/sign-in")
+                    );
+                  }}
                 >
                   {text.signOut}
                 </Button>

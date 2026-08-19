@@ -72,7 +72,12 @@ export function AppShell({
     try {
       localStorage.removeItem("alex-study-bg-mood");
     } catch {}
-    await signOut({ callbackUrl: "/sign-in" });
+    /* `redirect: false` still clears the session server-side, it just declines next-auth's
+       own navigation. That navigation is built from NEXTAUTH_URL, which is baked per
+       environment and sent users to http://localhost:3000 from the live site. Navigating
+       to a relative path ourselves resolves against the origin we are actually on. */
+    await signOut({ redirect: false });
+    window.location.assign("/sign-in");
   }
 
   return (

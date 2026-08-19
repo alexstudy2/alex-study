@@ -5,12 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="./css-geometry.css" />
     <!--
-      Stands in for next/font. layout.tsx puts four generated classes on <html>, each declaring
+      Stands in for next/font. layout.tsx puts five generated classes on <html>, each declaring
       one --font-* variable; without them every family in tokens.css that opens with
-      `var(--font-delius)` is guaranteed-invalid, which makes `font-family` invalid at
-      computed-value time and drops it to the inherited value. That is not a cosmetic gap in the
-      fixture: it silently deleted the declared family from every measured element, so text ran
-      in whatever Chromium inherits and the button-spill probe measured the wrong widths.
+      `var(--font-plex)` or `var(--font-fraunces)` is guaranteed-invalid, which makes
+      `font-family` invalid at computed-value time and drops it to the inherited value. That is
+      not a cosmetic gap in the fixture: it silently deleted the declared family from every
+      measured element, so text ran in whatever Chromium inherits and the button-spill probe
+      measured the wrong widths.
 
       A class, not `:root`, to match the real specificity -- tokens.css declares
       `--font-mono: var(--font-mono), ...` on `:root` (0,0,1), which in the app loses outright to
@@ -18,14 +19,15 @@
       corrected, because the point of this file is to be wrong in the same places the app is.
 
       The named faces are not installed offline, so glyph metrics still come from Chromium's
-      `cursive`/`sans-serif` -- what this fixes is the cascade, not the rasteriser.
+      `serif`/`sans-serif` -- what this fixes is the cascade, not the rasteriser.
     -->
     <style>
       html.fx-font-vars {
-        --font-delius: "Delius Swash Caps";
-        --font-delius-body: "Delius";
+        --font-plex: "IBM Plex Sans";
+        --font-fraunces: "Fraunces";
         --font-mono: "JetBrains Mono";
-        --font-arabic: "IBM Plex Sans Arabic";
+        --font-arabic: "Cairo";
+        --font-arabic-display: "Amiri";
       }
     </style>
   </head>
@@ -140,21 +142,29 @@
             </section>
 
             <!-- Horizontal chip scroller. Present so the 2.5rem chip height is actually
-                 measured against the tap-target floor rather than assumed. -->
+                 measured against the tap-target floor rather than assumed. "New Course" sits
+                 outside .subjects-scroll exactly as the component has it: it is pinned so that it
+                 cannot scroll out of reach, and below the breakpoint it goes full width on its own
+                 line -- neither of which a copy that left it inside the scroller would show. -->
             <nav class="subjects-ribbon" aria-label="Course filter">
-              <div class="subjects-scroll">
-                <button type="button" class="subject-chip active">
-                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24"></svg><span>All Courses</span
-                  ><span class="chip-count">12</span>
-                </button>
-                <button type="button" class="subject-chip" data-color="teal">
-                  <span class="subject-color-indicator" data-color="teal"></span><span>Pharmacology</span
-                  ><span class="chip-count">4</span>
-                </button>
-                <button type="button" class="subject-chip" data-color="rose">
-                  <span class="subject-color-indicator" data-color="rose"></span><span>Histology</span>
-                </button>
-                <button type="button" class="subject-add-chip">
+              <span class="notebook-zone-label" aria-hidden="true">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24"></svg>Your courses
+              </span>
+              <div class="subjects-ribbon-row">
+                <div class="subjects-scroll">
+                  <button type="button" class="subject-chip active">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24"></svg><span>All Courses</span
+                    ><span class="chip-count">12</span>
+                  </button>
+                  <button type="button" class="subject-chip" data-color="teal">
+                    <span class="subject-color-indicator" data-color="teal"></span><span>Pharmacology</span
+                    ><span class="chip-count">4</span>
+                  </button>
+                  <button type="button" class="subject-chip" data-color="rose">
+                    <span class="subject-color-indicator" data-color="rose"></span><span>Histology</span>
+                  </button>
+                </div>
+                <button type="button" class="subject-add-chip" aria-expanded="false">
                   <svg class="w-3.5 h-3.5" viewBox="0 0 24 24"></svg><span>New Course</span>
                 </button>
               </div>
@@ -538,10 +548,14 @@
           <section id="fx-taskrow">
             <div class="master-notebook-card">
               <form class="notebook-quick-add-line" data-options="off">
+                <span class="notebook-zone-label" aria-hidden="true">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24"></svg>New task
+                </span>
                 <div class="quick-add-left-icon"><svg class="w-4 h-4" viewBox="0 0 24 24"></svg></div>
                 <input
                   type="text"
                   class="quick-add-input"
+                  aria-label="New task title"
                   placeholder="Write your study task here... and press Enter"
                 />
                 <button type="button" class="quick-add-options-toggle" aria-expanded="false" aria-label="Task options">

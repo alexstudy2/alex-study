@@ -107,19 +107,37 @@
   --text-3xl: 2.5rem;    /* 40px max display */
   --text-4xl: 2.5rem;
 
-  /* Fonts */
-  --font-primary: var(--font-delius), "Delius Swash Caps", "Delius", cursive, sans-serif;
-  --font-display: var(--font-delius), "Delius Swash Caps", "Delius", cursive, serif;
-  --font-heading: var(--font-delius), "Delius Swash Caps", "Delius", cursive, sans-serif;
-  --font-sans: var(--font-arabic), var(--font-delius-body), var(--font-delius), "Delius", system-ui, -apple-system, sans-serif;
+  /* ================= Fonts =================
+     Four display/text families carry the app, chosen as two script-matched pairs:
+       Latin  -- Fraunces (variable high-contrast serif, 100-900 + opsz/SOFT/WONK) for headings,
+                 IBM Plex Sans (variable humanist sans, 100-700) for body/labels/controls.
+       Arabic -- Amiri (classic high-contrast Naskh) for headings, Cairo (variable humanist
+                 Arabic, 200-1000) for body/labels/controls.
+     The pairing is chosen so each script keeps its own character rather than borrowing the
+     other's: Fraunces and Amiri are both high-contrast and a little calligraphic, so an Arabic
+     heading reads as the sibling of a Latin one instead of a fallback; Plex and Cairo are both
+     level humanist sans, so body text matches across scripts. Font matching is per glyph, so the
+     splice is what does the work -- an Arabic heading lands on Amiri (--font-arabic-display) before
+     it ever reaches Georgia/serif, and Arabic body lands on Cairo (--font-arabic) before system-ui.
+     The Arabic faces sit ahead of the Latin-name string fallbacks for exactly that reason.
+
+     This replaced the hand-lettered Delius pair that used to fill every one of these tokens, and
+     also retired IBM Plex Sans Arabic (the previous --font-arabic) in favour of Cairo/Amiri.
+     Delius carried exactly one weight (400), so the many `font-weight: 800` rules across the app
+     were all synthesised; Fraunces, Plex and Cairo all have real weights to hit instead. */
+  --font-primary: var(--font-plex), "IBM Plex Sans", var(--font-arabic), system-ui, sans-serif;
+  --font-display: var(--font-fraunces), "Fraunces", var(--font-arabic-display), var(--font-arabic), Georgia, serif;
+  --font-heading: var(--font-fraunces), "Fraunces", var(--font-arabic-display), var(--font-arabic), Georgia, serif;
+  --font-sans: var(--font-plex), "IBM Plex Sans", var(--font-arabic), system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-mono), "JetBrains Mono", ui-monospace, monospace;
-  /* Small UI labels and form controls that should read as hand-lettered rather than as chrome:
-     course chips, the quick-add field, the selects. Same Delius faces as --font-heading, with the
-     Arabic family spliced in ahead of the generic fallbacks -- font matching is per glyph, so
-     Latin still comes from Delius Swash Caps while Arabic resolves to IBM Plex Sans Arabic
-     instead of whatever the browser happens to call `cursive`. A separate token rather than a fix
-     to --font-heading, which would repaint every heading on every route. */
-  --font-label: var(--font-delius), "Delius Swash Caps", var(--font-arabic), "Delius", cursive, sans-serif;
+  /* Small UI labels and form controls: course chips, the quick-add field, the selects. The same
+     chain as --font-sans today, kept as its own token so label tracking or family can be tuned
+     later without repainting every paragraph in the app. */
+  --font-label: var(--font-plex), "IBM Plex Sans", var(--font-arabic), system-ui, sans-serif;
+  /* The auth pages' headline face. Deliberately the same chain as --font-heading -- the front
+     door is set apart by the variation axes (SOFT/WONK, see .auth-headline in auth.css) rather
+     than by a fifth family download, and an Arabic headline still resolves to Amiri. */
+  --font-display-fancy: var(--font-fraunces), "Fraunces", var(--font-arabic-display), var(--font-arabic), Georgia, serif;
 
   /* One step wobblier than --radius-doodle-btn, for chips and pills that are small enough that
      the btn radius reads as an ordinary rounded rectangle. */

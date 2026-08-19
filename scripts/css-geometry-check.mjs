@@ -38,7 +38,7 @@ for (const probe of [".min-h-6", "--primary:", "--mobile-nav-total:", ".calendar
 const SECTIONS = [
   ["fx-calendar", "/calendar month grid", [".month-grid", ".calendar-day", ".calendar-day > div"]],
   ["fx-week", "/calendar week grid", [".week-grid", ".week-day", ".week-day-events"]],
-  ["fx-tabs", "/tasks header + chips", [".notebook-top-header", ".notebook-filter-tabs", ".header-branding", ".header-actions", ".task-vitals-strip", ".task-vitals", ".task-vital", ".subjects-ribbon", ".subjects-scroll"]],
+  ["fx-tabs", "/tasks header + chips", [".notebook-top-header", ".notebook-filter-tabs", ".header-branding", ".header-actions", ".task-vitals-strip", ".task-vitals", ".task-vital", ".subjects-ribbon", ".subjects-ribbon-row", ".subjects-scroll"]],
   ["fx-pill", "page-header nav pill", [".page-header-container", ".page-header-main", ".page-header-text", ".page-header-actions", ".page-header"]],
   ["fx-orbit", "score-orbit", [".score-orbit"]],
   ["fx-lobbyform", "/lobbies/create form", [".lobby-form", ".lobby-form label", ".form-grid"]],
@@ -95,6 +95,9 @@ const TAP = [
   ".sticky-cancel-btn",
   ".empty-actions .btn",
   ".subject-chip",
+  // Left the horizontal scroller, so it is now a control of its own rather than one more chip
+  // covered by the line above -- and below the breakpoint it is the only way to add a course.
+  ".subject-add-chip",
   ".timer-mode-tab",
   ".analytics-toolbar select",
   ".analytics-sort button",
@@ -411,6 +414,50 @@ for (const [mood, dir] of RUNS) {
             // is behind the text where that is easy not to notice.
             markW: Math.round(collapsed.querySelector(".task-note-watermark").getBoundingClientRect().width),
             barW: Math.round(collapsed.querySelector(".task-subtask-bar").getBoundingClientRect().width),
+          };
+        }
+
+        /* ---- tasks page: where do I add a task, and where a course? ----
+           The complaint was that on a phone you cannot tell, and the two halves of the answer are
+           both invisible to a stylesheet read.
+
+           "New Course" was the last item of an `overflow-x: auto` scroller, so with a handful of
+           courses it was off-screen -- and off-screen inside a scroller is not a clip the sweep
+           above can see, because a scroller is *meant* to be wider than its box. What can be
+           measured is the thing that made it reachable: the button is not inside the scroller at
+           all, its box is inside the ribbon's, and below the breakpoint it sits on its own line
+           under the chips rather than sharing theirs.
+
+           The two captions are the other half, and their whole job is to be on screen: a caption
+           that renders at zero height, or that leaks onto the desktop layout, is exactly the
+           failure a rule reviewed by eye passes. */
+        const ribbon = document.querySelector("#fx-tabs .subjects-ribbon");
+        const addChip = ribbon?.querySelector(".subject-add-chip");
+        const scroller = ribbon?.querySelector(".subjects-scroll");
+        const captions = [
+          ribbon?.querySelector(".notebook-zone-label"),
+          document.querySelector("#fx-taskrow .notebook-zone-label"),
+        ];
+        if (ribbon && addChip && scroller && captions.every(Boolean)) {
+          const rr = ribbon.getBoundingClientRect();
+          const ar = addChip.getBoundingClientRect();
+          const sr = scroller.getBoundingClientRect();
+          // The header's "Detailed Form": a task control sitting above the labelled task zone, so
+          // below the breakpoint it is demoted out of the filled tier and has to come back into it
+          // above -- the one property of this pass that is a variant swap rather than a layout.
+          const detailed = document.querySelector("#fx-tabs .header-actions .btn-secondary");
+          out.addFlow = {
+            inScroller: scroller.contains(addChip),
+            // Both edges, because in RTL an over-wide button hangs off the inline-start one and a
+            // single-edge test reads as a pass.
+            outside: Math.max(Math.round(ar.right - rr.right), Math.round(rr.left - ar.left)),
+            ownLine: Math.round(ar.top) >= Math.round(sr.bottom),
+            capH: captions.map((c) => Math.round(c.getBoundingClientRect().height)),
+            capShown: captions.map((c) => getComputedStyle(c).display !== "none"),
+            detailedOutline: detailed
+              ? getComputedStyle(detailed).borderTopStyle === "dashed" &&
+                /(,|\/)\s*0\)$/.test(getComputedStyle(detailed).backgroundColor)
+              : null,
           };
         }
 
@@ -971,8 +1018,10 @@ for (const [mood, dir] of RUNS) {
       if (!res.task.optsHidden) taskBad.push("quick-add selects are visible with data-options=off");
       if (!res.task.oneLine) taskBad.push("quick-add input and submit are not on the same line");
       if (res.task.submitH < 44) taskBad.push(`quick-add submit is ${res.task.submitH}px tall, under the 44px row`);
-      // The input gets `viewport - 248` (see the 359px block in components.css). The binding
-      // case is 360px at 112px; 320px only clears this because the decorative pen drops out.
+      // The row is [input][options 44][add 74] plus two 8px gaps and 2x16px of card padding, so
+      // the input gets `viewport - 208`: 112px at 320px, 152px at 360px. The decorative pen used
+      // to be in that sum and is now dropped for the whole mobile range, which is where the 40px
+      // came from -- 320px was the width that only just cleared this before.
       if (res.task.inputW < 110) taskBad.push(`quick-add input squeezed to ${res.task.inputW}px`);
     } else {
       // Above the breakpoint every one of those is the opposite: the pinboard is the design.
@@ -1006,6 +1055,26 @@ for (const [mood, dir] of RUNS) {
     if (res.task.markW < 40) taskBad.push(`the doodle watermark is only ${res.task.markW}px wide`);
     if (res.task.barW < 20) taskBad.push(`the subtask progress bar is only ${res.task.barW}px wide`);
 
+    /* The two add flows. Reachability holds at every width -- a "New Course" button that went back
+       inside the scroller is the original defect at any size -- while the line it sits on and the
+       captions are the mobile half of the answer, and both have to reverse above the breakpoint. */
+    if (!res.addFlow) throw new Error("tasks add-flow probe found nothing -- fixture drifted");
+    if (res.addFlow.inScroller)
+      taskBad.push("New Course is back inside .subjects-scroll, where it scrolls out of reach");
+    if (res.addFlow.outside > 0)
+      taskBad.push(`New Course hangs ${res.addFlow.outside}px outside the ribbon${dir === "rtl" ? " (RTL flip)" : ""}`);
+    if (w <= 768) {
+      if (!res.addFlow.ownLine) taskBad.push("New Course is sharing the chips' line instead of taking its own");
+      if (res.addFlow.capShown.some((s) => !s)) taskBad.push("a zone caption is hidden below the breakpoint");
+      const flat = res.addFlow.capH.findIndex((h) => h < 16);
+      if (flat >= 0) taskBad.push(`zone caption ${flat + 1} rendered ${res.addFlow.capH[flat]}px tall`);
+      if (res.addFlow.detailedOutline === false)
+        taskBad.push("the header's Detailed Form button is still in the filled tier on mobile");
+    } else {
+      if (res.addFlow.capShown.some(Boolean)) taskBad.push("a zone caption leaked onto the desktop layout");
+      if (res.addFlow.detailedOutline) taskBad.push("desktop lost the filled Detailed Form button");
+    }
+
     if (!res.vitals) throw new Error("vitals strip probe found nothing -- fixture drifted");
     if (res.vitals.hidden > 1) taskBad.push(`the vitals strip hides ${res.vitals.hidden}px of itself`);
     if (!res.vitals.sameH) taskBad.push("the four vitals are different heights -- a label wrapped");
@@ -1038,7 +1107,10 @@ for (const [mood, dir] of RUNS) {
     }
     if (!res.doodle) throw new Error("hand-drawn chrome probe found nothing -- fixture drifted");
     const doodleBad = [];
-    const LETTERED = "Delius Swash Caps";
+    /* --font-label opens with var(--font-plex), which the fixture sets to "IBM Plex Sans"; a
+       computed family that contains it proves the label chain resolved and reached the element.
+       (Was "Delius Swash Caps" before the app moved off the hand-lettered pair.) */
+    const LABEL_FACE = "IBM Plex Sans";
     // Four different corner strings is the definition being asserted; three is the tolerance for
     // a shape that happens to repeat one pair, and one means somebody wrote a single radius.
     const wobbly = (c) => new Set(c).size >= 3 && !c.some((v) => v.includes("9999px"));
@@ -1056,7 +1128,7 @@ for (const [mood, dir] of RUNS) {
       ["quick-add select", res.doodle.selFont],
       ["dashboard task title", res.doodle.cardTitleFont],
     ]) {
-      if (!fam.includes(LETTERED)) doodleBad.push(`${what} is not hand-lettered (${fam})`);
+      if (!fam.includes(LABEL_FACE)) doodleBad.push(`${what} did not resolve to the label face (${fam})`);
     }
     if (res.doodle.selAppearance !== "none")
       doodleBad.push(`the native select chrome is still on (appearance: ${res.doodle.selAppearance})`);
@@ -1330,6 +1402,7 @@ for (const [mood, dir] of RUNS) {
         (res.nav ? ` nav=${res.nav.shown ? `${res.nav.navH}px` : "hidden"} padB=${res.nav.padB}` : "") +
         ` hdr=h1:${res.hdr.h1}px/${res.hdr.xs ? "xs" : res.hdr.base ? "base" : "?"}` +
         ` task=${res.task.tilted ? "tilt" : "flat"}/${res.task.tape ? "tape" : "notape"}/minH${res.task.minH}` +
+        ` add=${res.addFlow.ownLine ? "ownline" : "inline"}/cap${res.addFlow.capShown.filter(Boolean).length}` +
         ` vitals=${res.vitals.rows}row/${res.vitals.ecgShown ? "ecg" : "noecg"}` +
         ` sticky=${res.sticky.rows}row/glyph${res.sticky.glyphW}px/sel${res.sticky.selH}px` +
         ` doodle=${new Set(res.doodle.chipCorners).size}corner/${res.doodle.selAppearance}/tilt${res.doodle.cardTilted}` +

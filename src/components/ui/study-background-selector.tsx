@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { Sparkles, BookOpen, Moon, Compass, Coffee, Heart, Check, ChevronDown } from "lucide-react";
 import {
   MOOD_STORAGE_KEY,
+  MOOD_SWATCH,
   applyMood,
   saveMood,
   type StudyMood,
@@ -25,7 +26,7 @@ export const STUDY_MOODS: {
     descEn: "Clean graph paper with warm study glow",
     descAr: "ورق مربعات هادئ مع إضاءة دافئة",
     icon: BookOpen,
-    colorToken: "#49B6E5",
+    colorToken: MOOD_SWATCH.notebook,
   },
   {
     id: "sakura",
@@ -34,7 +35,7 @@ export const STUDY_MOODS: {
     descEn: "Dreamy floral pastel paper with gentle study doodles",
     descAr: "أجواء وردية وبنفسجية حالمة ومبهجة للمذاكرة",
     icon: Heart,
-    colorToken: "#EC4899",
+    colorToken: MOOD_SWATCH.sakura,
   },
   {
     id: "cosmic",
@@ -43,7 +44,7 @@ export const STUDY_MOODS: {
     descEn: "Deep midnight nebula with twinkling stars",
     descAr: "سماء ليلية عميقة مع نجوم متلألئة",
     icon: Moon,
-    colorToken: "#8B5CF6",
+    colorToken: MOOD_SWATCH.cosmic,
   },
   {
     id: "aurora",
@@ -52,7 +53,7 @@ export const STUDY_MOODS: {
     descEn: "Calming breathing mint and cyan mesh",
     descAr: "تدرجات أورورا خضراء وسماوية هادئة",
     icon: Compass,
-    colorToken: "#10B981",
+    colorToken: MOOD_SWATCH.aurora,
   },
   {
     id: "sunset",
@@ -61,7 +62,7 @@ export const STUDY_MOODS: {
     descEn: "Warm amber dusk for focused inspiration",
     descAr: "أجواء غروب ذهبية محفزة للإلهام",
     icon: Coffee,
-    colorToken: "#F59E0B",
+    colorToken: MOOD_SWATCH.sunset,
   },
 ];
 

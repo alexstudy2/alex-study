@@ -36,6 +36,28 @@ export function moodFromEnum(value: string | null | undefined): StudyMood {
   return STUDY_MOOD_IDS.includes(mood) ? mood : "notebook";
 }
 
+/** The inverse, for the sign-up wizard: it holds the lower-case id (that is what `applyMood`
+ *  previews with) and has to post the enum the API expects. */
+export function moodToEnum(mood: StudyMood): StudyMoodEnum {
+  return MOOD_ENUM[mood];
+}
+
+/**
+ * The one swatch per mood, for anything that has to show the palettes side by side before
+ * one of them is applied: the mood cards, the ribbon on the auth pages.
+ *
+ * Here rather than in study-background-selector.tsx because that module is `"use client"`,
+ * and a Server Component importing a plain value across that boundary gets a client
+ * reference rather than the array itself. The selector reads these back out.
+ */
+export const MOOD_SWATCH: Record<StudyMood, string> = {
+  notebook: "#49B6E5",
+  sakura: "#EC4899",
+  cosmic: "#8B5CF6",
+  aurora: "#10B981",
+  sunset: "#F59E0B",
+};
+
 /**
  * Paint a mood everywhere it is read: the root attribute (which drives the whole palette),
  * localStorage, and a synthetic storage event. The synthetic event matters -- the real one

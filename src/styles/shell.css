@@ -157,8 +157,9 @@
      which is the opposite of the "never looks squeezed" goal. */
   font-size: clamp(1.8rem, 6vw, 2.5rem);
   line-height: 1.15;
-  /* Delius Swash Caps has generous side bearings; a touch of negative tracking stops the
-     display sizes reading as loose without affecting the 1.8rem floor much. */
+  /* Fraunces is a high-contrast serif with an opsz axis, so at display sizes it already sets
+     tighter than it does at label sizes; this last touch of negative tracking keeps the big
+     page titles from reading as loose without affecting the 1.8rem floor much. */
   letter-spacing: -0.01em;
   /* Two-line titles wrap evenly instead of leaving one orphaned word -- matters most for
      Arabic, which runs longer than the English for the same heading. */
@@ -856,7 +857,11 @@ body.mobile-sheet-open {
 .auth-shell {
   min-height: 100dvh;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(380px, 1fr);
+  /* The panel column is the one carrying the form, so it gets the larger floor; `0.9fr`
+     keeps the brand column the wider of the two on a desktop without letting the panel
+     drop below a comfortable field width. */
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 0.9fr);
+  /* Transparent on purpose: .study-ambient-canvas sits at z-index 0 behind this. */
   background: transparent;
   position: relative;
   z-index: 1;
@@ -865,6 +870,16 @@ body.mobile-sheet-open {
 @media (max-width: 860px) {
   .auth-shell {
     grid-template-columns: 1fr;
+    /* Notched phones: the panel is the last thing on the page, so its own padding is what
+       has to clear the home indicator. */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+/* Below the panel's own floor there is no room for two columns of anything. */
+@media (max-width: 480px) {
+  .auth-shell {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

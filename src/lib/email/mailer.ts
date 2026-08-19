@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { siteOrigin } from "@/lib/http/base-url";
 
 export async function sendPasswordResetEmail(to: string, resetUrl: string) {
   const user = process.env.SMTP_USER;
@@ -34,9 +35,10 @@ export async function sendNotificationEmail(
     secure: true,
     auth: { user, pass },
   });
-  const link = actionUrl
-    ? `\n\nOpen Alex Study: ${process.env.NEXTAUTH_URL ?? "http://localhost:3000"}${actionUrl}`
-    : "";
+  /* Notification sends also run from cron with no request in scope, so this goes through
+     the environment chain -- which deliberately refuses a localhost NEXTAUTH_URL in a
+     hosted deployment instead of mailing out links to the recipient's own machine. */
+  const link = actionUrl ? `\n\nOpen Alex Study: ${siteOrigin()}${actionUrl}` : "";
   await transport.sendMail({ from: `Alex Study <${user}>`, to, subject, text: `${body}${link}` });
   return { delivered: true } as const;
 }

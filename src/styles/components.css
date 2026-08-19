@@ -1009,12 +1009,31 @@
   gap: var(--space-2);
 }
 
+/* The ribbon stacks caption / chips+add / new-course form, so the middle band needs a box of its
+   own: the scroller and the pinned "New Course" button share a line, and the form that button
+   opens goes underneath both. */
+.subjects-ribbon-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Mobile only -- revealed in the 768px block, where the two captions it draws are the whole point.
+   Above the breakpoint each zone already has its controls in view beside it, and a caption for
+   each would be a label naming what the layout says on its own. */
+.notebook-zone-label { display: none; }
+
 .subjects-scroll {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   overflow-x: auto;
   padding-bottom: 2px;
+  /* Takes the room the add button leaves and shrinks past its content, rather than the other way
+     round: with the chips' intrinsic width as its basis, ten courses would push the button off the
+     end of the row -- exactly the disappearance moving it out of the scroller was meant to fix. */
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .subject-chip {
@@ -2038,10 +2057,14 @@
 .subjects-scroll > *:nth-child(3n + 1) { transform: rotate(-0.7deg); }
 .subjects-scroll > *:nth-child(3n + 2) { transform: rotate(0.5deg); }
 .subjects-scroll > *:nth-child(3n) { transform: rotate(-0.25deg); }
+/* The add button left the scroller, so the :nth-child cycle no longer reaches it -- and a single
+   un-tilted chip at the end of a row of tilted ones is the one position where the pattern shows.
+   Its own tilt, off true in the other direction from the chip it sits beside. */
+.subjects-ribbon-row > .subject-add-chip { transform: rotate(0.6deg); }
 /* Scoped past the tilts on both specificity (0,3,0 vs 0,2,0) and source order, so the chip
    really does straighten and lift instead of keeping whichever tilt its position handed it. */
 .subjects-scroll > .subject-chip:hover,
-.subjects-scroll > .subject-add-chip:hover { transform: translate(-1px, -1px) rotate(0deg); }
+.subjects-ribbon-row > .subject-add-chip:hover { transform: translate(-1px, -1px) rotate(0deg); }
 
 /* A tilted chip is still a scroll item, and rotation makes its box slightly taller and wider than
    its layout size -- enough for the corners of the first and last chip to sit under the ribbon's
@@ -2059,6 +2082,22 @@
   border-radius: var(--radius-md);
   background: var(--primary-subtle);
   box-shadow: var(--shadow-doodle-xs);
+}
+
+/* ---- Two beats for the tasks page's add flows ----
+   Both are applied inside the 768px block: on a phone each of these controls is answered by
+   something the tap does not visibly touch -- the course form unfolds under a button at the foot
+   of the ribbon, and the empty state's "Add a task" only moves the caret into a field further
+   down the page. A beat at the far end is what says the tap landed. */
+@keyframes course-form-unfold {
+  from { opacity: 0; transform: translateY(-6px) rotate(-0.6deg); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes quick-add-wake {
+  0% { transform: none; }
+  45% { transform: translate(-1px, -2px) rotate(-0.35deg); }
+  100% { transform: none; }
 }
 
 /* ================= Today's Tasks Sticky Note Card ================= */
@@ -2408,7 +2447,108 @@
      specificity as `.btn-sm`, declared later in this file. */
   .quick-add-submit { height: 2.75rem; }
 
-  .inline-new-course-popup { grid-template-columns: 1fr; }
+  /* --- Naming the two zones ---
+     The complaint this answers: on a phone you cannot tell where a task gets added and where a
+     course does. Both zones were already on screen -- they just arrived as three anonymous boxes
+     in a column (four numbers, a row of chips, an empty field), with the only labelled "add" in
+     the page header, where it makes tasks. Nothing here moves a zone; each one is simply named,
+     in the same drawn hand as everything around it, so reading down the page answers the
+     question instead of tapping things to find out.
+
+     No text-transform or letter-spacing, for the reason the vitals labels carry: half of these
+     render in Arabic, where uppercase is a no-op and added tracking breaks the cursive joins. */
+  .notebook-zone-label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-family: var(--font-label);
+    font-size: var(--text-sm);
+    font-weight: 800;
+    color: var(--foreground);
+  }
+
+  /* Only in the quick-add line, and only because that one is a *wrapping row*: basis 100% is what
+     keeps the input off the caption's line. Declared here rather than on the caption itself
+     because .subjects-ribbon is a column, where the same `flex: 1 1 100%` would read as "grow to
+     the full height of the ribbon" and stretch a one-line caption into a panel. */
+  .notebook-quick-add-line > .notebook-zone-label { flex: 1 1 100%; }
+
+  /* A drawn tally box around the glyph, the same shape family as .chip-count -- which is what
+     stops the caption reading as body copy that happens to start with an icon. */
+  .notebook-zone-label svg {
+    width: 1.05rem;
+    height: 1.05rem;
+    padding: 2px;
+    box-sizing: content-box;
+    border: 1.5px solid color-mix(in srgb, var(--secondary) 50%, transparent);
+    border-radius: 8px 4px 7px 5px / 5px 7px 4px 8px;
+    background: var(--primary-subtle);
+    color: var(--primary-strong);
+  }
+
+  /* --- Courses zone --- */
+  /* Full width under the chips rather than beside them. Sharing the line at 360px left it about
+     110px: enough to fit, not enough to notice, and it is the one control on this page that has
+     to be findable without scrolling anything. */
+  .subjects-ribbon-row { flex-wrap: wrap; }
+  .subjects-scroll { flex: 1 1 100%; }
+
+  .subjects-ribbon-row > .subject-add-chip {
+    flex: 1 1 100%;
+    justify-content: center;
+    min-height: 2.75rem;
+    /* Dashed still says "this makes a new one". --muted ink on transparent did not -- it read as
+       a disabled label rather than a button, which is the other half of why it went unfound.
+       Tinted paper and full-strength ink fix that without making it a second primary. */
+    background: var(--primary-subtle);
+    color: var(--foreground);
+    box-shadow: var(--shadow-doodle-xs);
+    /* Straight, because at full width the tilt shows as a crooked edge against the card rather
+       than as a pinned chip. */
+    transform: none;
+  }
+
+  /* Unfolds from under the button that opened it, which is directly above. */
+  .inline-new-course-popup {
+    grid-template-columns: 1fr;
+    animation: course-form-unfold 220ms var(--ease-out);
+  }
+
+  /* --- Task zone --- */
+  /* A wash across the quick-add row, so the place you type is a different colour from the list of
+     what you have already typed. Paired with the caption above it, this is what makes the row read
+     as the page's entry point rather than as the first sheet of the board. */
+  .notebook-quick-add-line {
+    background: color-mix(in srgb, var(--primary-subtle) 60%, var(--surface));
+  }
+
+  /* The empty state's primary action focuses this field instead of navigating, so on a phone --
+     where the field is below the fold of that button -- the tap looks like it did nothing. */
+  .quick-add-input:focus { animation: quick-add-wake 420ms var(--ease-out); }
+
+  /* The pen chip is decoration, and the caption above now carries the same pen at label size: two
+     of one drawing in one box, and the copy of it with no function was eating 48px of a 360px row.
+     It replaces the old 359px-only rule -- the sum in that comment is why the row was tight at
+     every width, not only the smallest one. */
+  .quick-add-left-icon { display: none; }
+
+  /* The third "+" on the page, and the one that misleads: it is a task control living in the
+     header, above and away from the zone now labelled "New task", so on a phone it is the first
+     add-looking thing you meet and it says nothing about what it makes. Its function is real
+     (due dates, estimates, subtasks), so it stays -- demoted to the outline tier instead, which
+     puts the hierarchy in the order the page reads: hero field, then New Course, then this.
+     Scoped through the header (0,3,0) to outrank .btn-secondary (0,1,0). */
+  .notebook-top-header .header-actions .btn-secondary {
+    background: transparent;
+    border-style: dashed;
+    color: var(--muted);
+    box-shadow: none;
+  }
+
+  .notebook-top-header .header-actions .btn-secondary:hover {
+    background: var(--surface-hover);
+    color: var(--foreground);
+  }
 
   /* --- Vitals strip --- */
   /* 2x2 instead of a single row. Four readouts across 360px leaves about 80px each, which is
@@ -2450,14 +2590,12 @@
   .task-vitals-ecg { display: none; }
 }
 
-/* The row is [pen 40][input][options 44][add 74] plus three 8px gaps and 2x16px of card
-   padding, so the input gets `viewport - 248`. That is 112px at 360px -- tight but typable --
-   and 72px at 320px, which is about six characters and not enough to see what you wrote.
-   The pen is the only part of that sum carrying no function, so below 360px it goes and the
-   input gets its 48px back. 359 rather than 360 because 360 itself is fine and is by far the
-   most common small Android width. */
-@media (max-width: 359px) {
-  .quick-add-left-icon { display: none; }
+/* Both of these fire on a tap and exist to say the tap landed, so with motion turned down the
+   thing they were confirming still has to be plainly there -- the form appears, the field is
+   focused, neither is animated to it. */
+@media (prefers-reduced-motion: reduce) {
+  .inline-new-course-popup,
+  .quick-add-input:focus { animation: none; }
 }
 
 /* ================= Focus Workspace & Fullscreen Zen Mode ================= */
