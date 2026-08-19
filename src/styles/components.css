@@ -627,7 +627,12 @@
 
 @media (max-width: 960px) {
   .dashboard-layout-grid {
-    grid-template-columns: 1fr;
+    /* `minmax(0, 1fr)`, never a bare `1fr`. A bare one is `minmax(auto, 1fr)`, and the auto
+       minimum is the min-content of everything in the track -- so one unbreakable card header
+       widened the track, the grid and the whole document, and a phone got a horizontal scrollbar
+       with the right-hand edge of every card past it. The two-column rule above already spells its
+       minimums out; this one used to be the exception. */
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-5);
   }
 }
@@ -644,6 +649,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  /* A heading and its trailing control cannot always share a line on a phone -- and with a
+     `minmax(0, …)` track the alternative to wrapping is not a wider page any more, it is a clipped
+     one. So they are allowed to break onto two rows, which costs nothing wherever there is room. */
+  flex-wrap: wrap;
+  gap: var(--space-2);
   border-bottom: 2px dashed var(--line);
   padding-bottom: var(--space-3);
   margin-bottom: var(--space-2);
@@ -2105,6 +2115,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  /* The widest unbreakable thing on the dashboard: the lettered title, the count, "Add Task" and
+     "View all" come to roughly 360px, against a card whose inside is about 285px on a 360px phone.
+     Wrapping is what keeps that out of the grid's min-content -- see `.dashboard-layout-grid`. */
+  flex-wrap: wrap;
   gap: var(--space-2);
   margin-bottom: var(--space-3);
 }
@@ -3477,6 +3491,18 @@
   display: none;
 }
 
+/* The footer is a sibling of the field stack, never the last item in it (see focus-workspace.tsx),
+   which in the sidebar just means "the last block of the panel". The divider lives here rather than
+   wrapped around the history button so that there is exactly one of it at both sizes -- and it is
+   the same 2px dashed line every other card in the app separates its sections with. */
+.focus-setup-footer {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 2px dashed var(--line);
+}
+
 @media (max-width: 860px) {
   .focus-setup-continue { display: inline-flex; }
 
@@ -3510,6 +3536,12 @@
      the same token every other bottom-fixed thing in the app uses, which is 0px at widths where
      the bar is not rendered, so this one calc is right at every size.
 
+     A column with one scrolling child rather than one long scrolling box: the fields scroll, the
+     footer sits underneath them and stays. The window itself must not scroll, and that is the
+     whole point -- anything held against the bottom edge from inside a scroller has to be lifted
+     there by `position: sticky`, and a lifted box is painted over whatever else is at that height,
+     which is how "Open focus timer" ended up printed across the break-length steppers.
+
      Every declaration here has to beat a plain `.focus-sidebar-card` rule somewhere below --
      the pastel background, the sticky position, the card shadow -- which the container class
      plus the attribute does on specificity alone, whatever the source order. */
@@ -3521,12 +3553,29 @@
     border: 0;
     border-radius: 0;
     box-shadow: none;
-    overflow-y: auto;
-    overscroll-behavior: contain;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     padding:
       calc(env(safe-area-inset-top, 0px) + var(--space-5))
       var(--space-4)
-      calc(var(--mobile-nav-total) + var(--space-6));
+      var(--mobile-nav-total);
+  }
+
+  /* The only scroller in the window. `min-height: 0` because a flex item's automatic minimum size
+     is its content, so without it the stack refuses to shrink and pushes the footer off screen
+     instead of scrolling -- the failure this arrangement exists to avoid. `0 1 auto` and not
+     `1 1 auto`: with room to spare the footer follows the last field rather than being stranded at
+     the bottom of a half-empty window. The 3px of inline padding, cancelled by the negative margin,
+     is room for a focus ring: `overflow-y: auto` makes overflow-x `auto` as well, and a 2px outline
+     offset on a full-width select would otherwise raise a sideways scrollbar inside the stack. */
+  .focus-workspace-container[data-setup="pending"] .focus-setup-body {
+    flex: 0 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-inline: 3px;
+    margin-inline: -3px;
   }
 
   /* The tape tab hangs off the card's top edge by a negative margin. In a full-bleed window
@@ -3551,22 +3600,11 @@
   .focus-stepper-btn { width: 2.6rem; height: 2.75rem; }
   .focus-stepper-input { width: 3rem; height: 2.75rem; }
 
-  /* The window is taller than a phone on a small screen, and the button that leaves it must not
-     be the thing you have to scroll to find. The offset is the window's own bottom padding, not
-     zero: the bottom nav is fixed at a higher z-index, so a footer flush with the viewport would
-     slide under the bar -- and matching the padding exactly means the footer sits in the same
-     place while floating as it does once you reach the end, with no last-scroll jump.
-     `inherit` for the background because its only job is to stop scrolled content showing
-     through; if the card's colour changes, this follows it. */
+  /* The way out of the window, in the flow underneath the scrolling stack -- so it is on screen
+     without being lifted anywhere, and the window's own bottom padding is what clears the fixed
+     nav bar. It must not shrink: the fields have somewhere to go, the footer does not. */
   .focus-workspace-container[data-setup="pending"] .focus-setup-footer {
-    position: sticky;
-    bottom: calc(var(--mobile-nav-total) + var(--space-6));
-    display: grid;
-    gap: var(--space-2);
-    margin-top: var(--space-1);
-    padding-top: var(--space-2);
-    background-color: inherit;
-    border-top: 2px dashed var(--line);
+    flex-shrink: 0;
   }
 }
 

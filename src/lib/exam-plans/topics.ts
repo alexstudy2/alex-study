@@ -19,11 +19,19 @@ export const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 export const TOPIC_WEIGHTS = ["LIGHT", "NORMAL", "HEAVY"] as const;
 export const TOPIC_CONFIDENCES = ["WEAK", "OK", "STRONG"] as const;
 export const QUESTION_STRATEGIES = ["DEDICATED_DAYS", "INTEGRATED"] as const;
+/**
+ * What the plan is for. Not a preference but a different plan: a student three weeks out wants to
+ * learn the material and then revise it, a student two days out wants passes over material already
+ * learned, and one who revises from their own notes wants the plan to stop at studying and leave the
+ * revision to them. Each answer forbids a kind of item outright, which `proposalShapeError` enforces.
+ */
+export const EXAM_STUDY_MODES = ["STUDY_AND_REVIEW", "STUDY_ONLY", "REVIEW_ONLY"] as const;
 export const EXAM_ITEM_KINDS = ["STUDY", "QUESTIONS", "REVIEW"] as const;
 
 export type TopicWeight = (typeof TOPIC_WEIGHTS)[number];
 export type TopicConfidence = (typeof TOPIC_CONFIDENCES)[number];
 export type QuestionStrategy = (typeof QUESTION_STRATEGIES)[number];
+export type ExamStudyMode = (typeof EXAM_STUDY_MODES)[number];
 export type ExamItemKind = (typeof EXAM_ITEM_KINDS)[number];
 
 /**
@@ -330,18 +338,33 @@ function readAsLines(cleaned: string): ExamTopic[] {
 /**
  * Did the model actually honour the brief?
  *
- * Three checks only, each one weak enough that any reasonable proposal passes and strong enough to
+ * Four checks only, each one weak enough that any reasonable proposal passes and strong enough to
  * catch a model that ignored the instruction outright. A failure is thrown as `invalid_ai_plan`,
  * which is retryable, so the usual outcome of a bad first draft is a good second one.
  *
  * The daily ceiling gets an hour of grace: refusing a plan because one day runs eleven minutes over
  * would throw away an otherwise fine proposal, and the student can still edit any day down.
+ *
+ * The study-mode checks are the strictest thing here, deliberately. "Review only" exists because the
+ * student has already studied the material; a plan that opens with a week of first-pass STUDY blocks
+ * is not a slightly-off plan, it is the wrong plan, and the same goes for revision days handed to
+ * someone who asked to be left at the studying.
  */
 export function proposalShapeError(
   items: Array<{ plannedDate: string; estimatedMinutes: number; kind: ExamItemKind }>,
-  strategy: QuestionStrategy,
-  dailyCapacityMinutes: number,
-): "daily_load_too_high" | "missing_question_day" | "missing_question_items" | null {
+  brief: {
+    questionStrategy: QuestionStrategy;
+    studyMode: ExamStudyMode;
+    dailyCapacityMinutes: number;
+  },
+):
+  | "daily_load_too_high"
+  | "unexpected_review_items"
+  | "unexpected_study_items"
+  | "missing_review_items"
+  | "missing_question_day"
+  | "missing_question_items"
+  | null {
   const byDay = new Map<string, { minutes: number; kinds: Set<ExamItemKind> }>();
   for (const item of items) {
     const day = byDay.get(item.plannedDate) ?? { minutes: 0, kinds: new Set<ExamItemKind>() };
@@ -349,10 +372,17 @@ export function proposalShapeError(
     day.kinds.add(item.kind);
     byDay.set(item.plannedDate, day);
   }
-  const ceiling = dailyCapacityMinutes + 60;
+  const ceiling = brief.dailyCapacityMinutes + 60;
   for (const day of byDay.values()) if (day.minutes > ceiling) return "daily_load_too_high";
 
-  if (strategy === "DEDICATED_DAYS") {
+  const kinds = new Set(items.map((item) => item.kind));
+  if (brief.studyMode === "STUDY_ONLY" && kinds.has("REVIEW")) return "unexpected_review_items";
+  if (brief.studyMode === "REVIEW_ONLY" && kinds.has("STUDY")) return "unexpected_study_items";
+  /* Both remaining modes revise: "study and review" ends in revision by definition, and a review-only
+     plan made entirely of question items is a question bank, not the revision that was asked for. */
+  if (brief.studyMode !== "STUDY_ONLY" && !kinds.has("REVIEW")) return "missing_review_items";
+
+  if (brief.questionStrategy === "DEDICATED_DAYS") {
     const hasQuestionOnlyDay = [...byDay.values()].some(
       (day) => day.kinds.size === 1 && day.kinds.has("QUESTIONS"),
     );

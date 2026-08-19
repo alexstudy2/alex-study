@@ -1013,7 +1013,7 @@ export function FocusWorkspace(props: Props) {
 
               <p className="focus-setup-hint">{t.setupHint}</p>
 
-              <div className="flex flex-col gap-3 mt-3">
+              <div className="focus-setup-body flex flex-col gap-3 mt-3">
                 {/* The gate. Native radios inside the labels rather than buttons with
                     aria-checked: arrow-key navigation, the required-one-of-two semantics and the
                     grouping all come free, and the chip styling is driven from React state via
@@ -1179,36 +1179,36 @@ export function FocusWorkspace(props: Props) {
                     <option value="brown">{t.soundBrown}</option>
                   </select>
                 </label>
+              </div>
 
-                {/* Plain wrapper in the sidebar; in the phone window the stylesheet makes it a
-                    sticky footer, so the way out is never a scroll away. */}
-                <div className="focus-setup-footer">
-                  {/* The way out of the setup window, and the gate's enforcement point on a
-                      phone: disabled until the session has been pointed at something. Always
-                      enabled while a timer exists, so opening this mid-run cannot trap you. */}
-                  <Button
-                    variant="primary"
-                    size="md"
-                    className="focus-setup-continue w-full justify-center"
-                    disabled={!timer && !canStart}
-                    onClick={() => setSetupPending(false)}
-                    leftIcon={<TimerIcon className="w-4 h-4" />}
-                  >
-                    {timer ? t.backToTimer : t.openTimer}
-                  </Button>
+              {/* Outside the field stack, deliberately. In the phone window that stack is the only
+                  thing that scrolls and this sits under it, always on screen: a footer *inside* the
+                  scroller can only be held down with `position: sticky`, which lifts it off its own
+                  place in the flow and prints it over whichever fields are at that height. */}
+              <div className="focus-setup-footer">
+                {/* The way out of the setup window, and the gate's enforcement point on a
+                    phone: disabled until the session has been pointed at something. Always
+                    enabled while a timer exists, so opening this mid-run cannot trap you. */}
+                <Button
+                  variant="primary"
+                  size="md"
+                  className="focus-setup-continue w-full justify-center"
+                  disabled={!timer && !canStart}
+                  onClick={() => setSetupPending(false)}
+                  leftIcon={<TimerIcon className="w-4 h-4" />}
+                >
+                  {timer ? t.backToTimer : t.openTimer}
+                </Button>
 
-                  <div className="pt-2 border-t border-line">
-                    <Button
-                      href="/sessions"
-                      variant="secondary"
-                      size="sm"
-                      className="w-full justify-center"
-                      leftIcon={<History className="w-4 h-4" />}
-                    >
-                      {t.sessions}
-                    </Button>
-                  </div>
-                </div>
+                <Button
+                  href="/sessions"
+                  variant="secondary"
+                  size="sm"
+                  className="w-full justify-center"
+                  leftIcon={<History className="w-4 h-4" />}
+                >
+                  {t.sessions}
+                </Button>
               </div>
             </aside>
           )}

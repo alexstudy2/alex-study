@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useState } from "react";
-import { ArrowLeft, ArrowRight, BookOpenCheck, CalendarClock, ListChecks, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpenCheck, CalendarClock, Layers, ListChecks, Sparkles } from "lucide-react";
 import { PageShell } from "@/components/ui/page-shell";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { MAX_PLAN_DAYS, addDayKey, dayKeySpan } from "@/lib/plan-forum/dates";
 import {
   MAX_TOPICS,
   formatLoad,
+  type ExamStudyMode,
   type ExamTopic,
   type QuestionStrategy,
 } from "@/lib/exam-plans/topics";
@@ -53,12 +54,51 @@ function cairoTodayKey() {
 
 const STEPS = [1, 2, 3, 4] as const;
 
+/**
+ * The three plan shapes, in the order a student meets them: the whole thing, then each half on its
+ * own. Written as data rather than three near-identical labels because the same wording has to appear
+ * on the card in step 3 and in the summary in step 4, and the two drifting apart is how a student
+ * ends up generating a plan they did not choose.
+ */
+const STUDY_MODE_CARDS: Array<{
+  mode: ExamStudyMode;
+  title: { en: string; ar: string };
+  hint: { en: string; ar: string };
+}> = [
+  {
+    mode: "STUDY_AND_REVIEW",
+    title: { en: "Study + review", ar: "دراسة ومراجعة" },
+    hint: {
+      en: "Learn every topic, then come back over it before the exam.",
+      ar: "تدرس كل موضوع ثم تعود لمراجعته قبل الامتحان.",
+    },
+  },
+  {
+    mode: "STUDY_ONLY",
+    title: { en: "Study only", ar: "دراسة فقط" },
+    hint: {
+      en: "First pass only. No revision blocks, so every minute goes on new material.",
+      ar: "دراسة أولى فقط، بلا مراجعة، فيذهب كل الوقت للمادة الجديدة.",
+    },
+  },
+  {
+    mode: "REVIEW_ONLY",
+    title: { en: "Review only", ar: "مراجعة فقط" },
+    hint: {
+      en: "You have studied it already. Passes over the whole syllabus, weakest topics first.",
+      ar: "درستَ المادة بالفعل. جولات مراجعة على المنهج كله تبدأ بأضعف الموضوعات.",
+    },
+  },
+];
+
 /** Which step owns each field, so a 400 reopens the step that can fix it instead of just complaining. */
 const FIELD_STEP: Record<string, number> = {
   title: 1,
   examAt: 1,
   topics: 2,
   syllabusText: 2,
+  studyMode: 3,
+  questionStrategy: 3,
   dailyCapacityMinutes: 3,
   restDays: 3,
 };
@@ -84,6 +124,7 @@ export function ExamPlanCreateForm({
   const [examAt, setExamAt] = useState(addDayKey(today, 21));
   const [rows, setRows] = useState<TopicRow[]>([newTopicRow()]);
   const [strategy, setStrategy] = useState<QuestionStrategy>("INTEGRATED");
+  const [studyMode, setStudyMode] = useState<ExamStudyMode>("STUDY_AND_REVIEW");
   const [capacity, setCapacity] = useState(180);
   const [restDays, setRestDays] = useState<number[]>([]);
 
@@ -97,6 +138,7 @@ export function ExamPlanCreateForm({
   const labels = weekdayLabels(locale);
   const order = weekdayOrder(weekStartsOn);
   const strategyIsDedicated = strategy === "DEDICATED_DAYS";
+  const chosenMode = STUDY_MODE_CARDS.find((card) => card.mode === studyMode) ?? STUDY_MODE_CARDS[0];
 
   function appendTopics(incoming: ExamTopic[]) {
     setRows((current) => {
@@ -128,6 +170,7 @@ export function ExamPlanCreateForm({
           examAt,
           topics,
           questionStrategy: strategy,
+          studyMode,
           dailyCapacityMinutes: capacity,
           restDays,
         }),
@@ -281,8 +324,8 @@ export function ExamPlanCreateForm({
                   <p className="wizard-step-hint">
                     <ListChecks aria-hidden="true" className="w-4 h-4" />
                     {ar
-                      ? "اكتب الموضوعات، أو صوّر فهرس الكتاب ودعنا نقرأه."
-                      : "Write your topics, or photograph the book's index and let us read it."}
+                      ? "اكتب الموضوعات، أو ارفع صورة فهرس الكتاب ودعنا نقرأه."
+                      : "Write your topics, or upload a photo of the book's index and let us read it."}
                   </p>
                   <SyllabusScanner
                     ar={ar}
@@ -301,6 +344,34 @@ export function ExamPlanCreateForm({
 
               {step === 3 && (
                 <div className="wizard-step-content">
+                  <p className="wizard-step-hint">
+                    <Layers aria-hidden="true" className="w-4 h-4" />
+                    {ar ? "ماذا تريد أن تغطي الخطة؟" : "What should the plan cover?"}
+                  </p>
+                  <div
+                    className="exam-strategy-grid"
+                    role="radiogroup"
+                    aria-label={ar ? "شكل الخطة" : "Plan shape"}
+                  >
+                    {STUDY_MODE_CARDS.map((card) => (
+                      <label
+                        key={card.mode}
+                        className="exam-strategy-card"
+                        data-selected={studyMode === card.mode ? "yes" : undefined}
+                      >
+                        <input
+                          type="radio"
+                          name="studyMode"
+                          className="sr-only"
+                          checked={studyMode === card.mode}
+                          onChange={() => setStudyMode(card.mode)}
+                        />
+                        <strong>{ar ? card.title.ar : card.title.en}</strong>
+                        <span>{ar ? card.hint.ar : card.hint.en}</span>
+                      </label>
+                    ))}
+                  </div>
+
                   <p className="wizard-step-hint">
                     <BookOpenCheck aria-hidden="true" className="w-4 h-4" />
                     {ar ? "كيف تريد حل الأسئلة؟" : "How do you want to solve questions?"}
@@ -418,6 +489,10 @@ export function ExamPlanCreateForm({
                             ? `${topics.length} موضوعًا`
                             : `${topics.length} topic${topics.length === 1 ? "" : "s"}`}
                         </dd>
+                      </div>
+                      <div>
+                        <dt>{ar ? "شكل الخطة" : "Plan"}</dt>
+                        <dd>{ar ? chosenMode.title.ar : chosenMode.title.en}</dd>
                       </div>
                       <div>
                         <dt>{ar ? "الأسئلة" : "Questions"}</dt>

@@ -52,6 +52,15 @@ const SECTIONS = [
   // positioned off its corner on purpose, which reads as an overflow to the scan below. Its
   // geometry is checked directly in the sticky probe instead, against the card it sits in.
   ["fx-stickyadd", "dashboard quick-add + empty scene", [".today-tasks-sticky-card", ".sticky-tasks-header", ".sticky-inline-add-form", ".sticky-input-row", ".sticky-meta-row", ".sticky-field", ".sticky-tasks-list", ".ui-empty-state", ".ui-empty-description", ".empty-actions"]],
+  // The page the card above lives on. Listed separately because the defect was never in the card:
+  // `.dashboard-layout-grid` is what set the width, and only a fixture with both columns and both
+  // full headers in it can show that.
+  ["fx-dashboard", "/dashboard two-column page", [".dashboard-hero-card", ".dashboard-hero-content", ".dashboard-hero-actions", ".dashboard-layout-grid", ".dashboard-left-col", ".dashboard-right-col", ".today-tasks-sticky-card", ".sticky-tasks-header", ".sticky-tasks-list", ".dashboard-memo-card", ".dashboard-card", ".dashboard-card-header", ".study-rhythm-body", ".dashboard-progress", ".dashboard-goals-list", ".goal-item-card"]],
+  // The phone setup window. `.focus-sidebar-card` is `position: fixed` here, so its own rect is the
+  // viewport by construction and the interesting geometry is inside it -- which the setup probe
+  // below measures directly. What the sweep is for is the fields: a window is not an excuse for a
+  // stepper row that cannot shrink.
+  ["fx-focussetup", "/focus setup window", [".focus-setup-body", ".focus-field", ".focus-assign-options", ".focus-assign-option", ".focus-assign-copy", ".focus-durations", ".focus-duration-row", ".focus-stepper", ".focus-setup-footer", ".focus-setup-hint"]],
   ["fx-timer", "/focus timer card", [".focus-main-grid", ".doodle-timer-card", ".timer-chart-head", ".timer-mode-segmented-tabs", ".timer-mode-tab", ".timer-status-row", ".timer-dial", ".timer-dial-inner", ".giant-timer-digits", ".timer-ecg", ".timer-vitals", ".timer-action-buttons", ".doodle-distraction-btn", ".focus-sidebar-card"]],
   ["fx-sidebar", "desktop sidebar", [".app-sidebar", ".sidebar-nav", ".sidebar-group", ".app-sidebar-footer", ".study-mood-sidebar-btn"]],
   // `.plan-note-watermark` and `.plan-card-watermark` are absolutely positioned off their note's
@@ -803,6 +812,130 @@ for (const [mood, dir] of RUNS) {
           };
         }
 
+        // ---- /dashboard: the page that would not fit a phone ----
+        /* The sweep above already reports the symptom (a document wider than the viewport), but not
+           which of the two mechanisms produced it, and they are fixed in different places. So both
+           are measured: whether the grid track is wider than the column it was given -- `1fr` is
+           `minmax(auto, 1fr)`, so one nowrap row anywhere inside can widen the track, the grid and
+           the page -- and whether the two card headers that supply that min-content are allowed to
+           wrap. `rows` is the readable form of "did it wrap": one row on a desktop, more than one
+           on a phone, where the title, the count, "Add Task" and "View all" cannot share a line. */
+        const dash = document.getElementById("fx-dashboard");
+        const dgrid = dash?.querySelector(".dashboard-layout-grid");
+        if (dash && dgrid) {
+          const gr = dgrid.getBoundingClientRect();
+          const parentW = dash.getBoundingClientRect().width;
+          const cols = [...dgrid.querySelectorAll(":scope > section")];
+          /* "Did the header wrap." Counted on the header's own clusters -- the title group and the
+             controls group -- by vertical centre, because they are centred against each other and
+             have different heights, so their tops never agree even on one line. */
+          const headerRows = (el) => {
+            const mids = [...el.children]
+              .map((c) => {
+                const r = c.getBoundingClientRect();
+                return r.top + r.height / 2;
+              })
+              .sort((a, b) => a - b);
+            return mids.reduce((n, m, i) => (i && m - mids[i - 1] > 8 ? n + 1 : n), 1);
+          };
+          const sHead = dash.querySelector(".sticky-tasks-header");
+          const cHeads = [...dash.querySelectorAll(".dashboard-card-header")];
+          out.dash = {
+            // Against the column it was handed, not the viewport: a grid that overflows its own
+            // parent is the fault, and it is measurable before anything reaches the page edge.
+            gridOver: Math.round(gr.width - parentW),
+            // One column below 960px, two above it.
+            colTops: new Set(cols.map((c) => Math.round(c.getBoundingClientRect().top))).size,
+            colCount: cols.length,
+            stickyRows: sHead ? headerRows(sHead) : -1,
+            cardRows: cHeads.map(headerRows),
+            // The mechanism, checked at every width: a header that may not wrap contributes its
+            // whole single-line width as min-content, and `1fr` is `minmax(auto, 1fr)`.
+            wrap: [sHead, ...cHeads].map((el) => getComputedStyle(el).flexWrap),
+            headOver: Math.max(
+              ...[sHead, ...cHeads].map((el) => Math.round(el.scrollWidth - el.clientWidth)),
+              0,
+            ),
+            // The right column's stat tiles were cut off on the phone even though nothing in them
+            // is unbreakable -- they were riding a track widened by the left column's header.
+            tileHidden: Math.max(
+              ...[...dash.querySelectorAll(".grid.grid-cols-3")].map((g) =>
+                Math.round(g.scrollWidth - g.clientWidth),
+              ),
+              0,
+            ),
+          };
+        }
+
+        // ---- /focus session setup, as a phone window ----
+        /* The claim is "every control is reachable and nothing is printed over anything else".
+           Neither half is a stylesheet read. What makes the overlap possible is that the card is
+           both the window and the scroller, so a `position: sticky` footer inside it is lifted off
+           its own place in the flow and lands on top of the fields at that height; the fix makes
+           the field stack the only scroller and puts the footer back in the flow underneath it.
+           So: which element scrolls, whether the footer is still positioned, and -- the finding
+           that actually matters -- the largest vertical overlap between the footer and any field. */
+        const setup = document.getElementById("fx-focussetup");
+        const setupCard = setup?.querySelector(".focus-sidebar-card");
+        const setupBody = setup?.querySelector(".focus-setup-body");
+        const setupFoot = setup?.querySelector(".focus-setup-footer");
+        if (setupCard && setupBody && setupFoot) {
+          // The bar's own height, resolved the same way the page resolves it: 0px above the
+          // breakpoint, 60px + safe area below it. Read off a throwaway node so the token is
+          // measured rather than assumed.
+          const rule = document.createElement("div");
+          rule.style.cssText = "position:absolute;visibility:hidden;height:var(--mobile-nav-total)";
+          document.body.append(rule);
+          const navTotal = Math.round(rule.getBoundingClientRect().height);
+          rule.remove();
+          const cardS = getComputedStyle(setupCard);
+          const bodyS = getComputedStyle(setupBody);
+          const footS = getComputedStyle(setupFoot);
+          const fr = setupFoot.getBoundingClientRect();
+          const br = setupBody.getBoundingClientRect();
+          const cr = setupCard.getBoundingClientRect();
+          const vh = window.innerHeight;
+          out.setup = {
+            fixed: cardS.position === "fixed",
+            footPos: footS.position,
+            // Exactly one of these may be a scroller. Two scrollers is the arrangement that
+            // lifts the footer; none means the tail of a tall stack is unreachable.
+            cardScrolls: Math.round(setupCard.scrollHeight - setupCard.clientHeight),
+            bodyScrolls: Math.round(setupBody.scrollHeight - setupBody.clientHeight),
+            bodyOverflow: bodyS.overflowY,
+            fields: setup.querySelectorAll(".focus-field").length,
+            /* Both boxes are full-width children of one column, so a vertical overlap is a visual
+               one -- but only for the part of a field that is actually on screen. Each field is
+               clipped to its scroll container first (the window's box and the stack's box, which
+               are the same box before the stack becomes the scroller), because a field scrolled
+               past the bottom edge of the stack has a rect that continues into the footer's band
+               and is painted nowhere. Measured at the panel's resting scroll position, which is
+               where a student first sees it. */
+            overlap: Math.max(
+              0,
+              ...[...setupBody.querySelectorAll(".focus-field")].map((f) => {
+                const r = f.getBoundingClientRect();
+                const top = Math.max(r.top, br.top, cr.top);
+                const bottom = Math.min(r.bottom, br.bottom, cr.bottom);
+                if (bottom <= top) return 0;
+                return Math.round(Math.min(bottom, fr.bottom) - Math.max(top, fr.top));
+              }),
+            ),
+            // A footer painted onto the fields is still wrong if it happens not to overlap the
+            // rect of a field -- text can print through a transparent background either way.
+            footOpaque: !/(,|\/)\s*0(\.\d+)?\)$/.test(footS.backgroundColor.replace(/\s/g, "")),
+            footBg: footS.backgroundColor,
+            // The way out has to be on screen and clear of the bottom bar, without floating so
+            // far up the window that it looks detached from the panel it belongs to.
+            footGap: Math.round(vh - fr.bottom),
+            footTop: Math.round(fr.top),
+            navTotal,
+            // A window that scrolls its own last child out of reach is the other half of the
+            // failure: the footer must sit inside the card's box, not below it.
+            footBelowCard: Math.round(fr.bottom - cr.bottom),
+          };
+        }
+
         return out;
       },
       { SECTIONS, TAP, DECO_SELECTORS },
@@ -1100,6 +1233,81 @@ for (const [mood, dir] of RUNS) {
       detailBad.push("an empty feedback slot is still in the shell's grid, so it still collects a gap");
     if (!det.rejectFramed) detailBad.push("the reject zone has no dashed frame");
 
+    if (!res.dash) throw new Error("dashboard page probe found nothing -- fixture drifted");
+    const dashBad = [];
+    if (res.dash.colCount !== 2)
+      dashBad.push(`expected two dashboard columns in the fixture, found ${res.dash.colCount}`);
+    if (res.dash.gridOver > 1)
+      dashBad.push(`the layout grid is ${res.dash.gridOver}px wider than the page column it sits in`);
+    if (res.dash.tileHidden > 1)
+      dashBad.push(`the stat tiles hide ${res.dash.tileHidden}px of themselves`);
+    // One column below 960px, side by side above it. The single-column case is where the overflow
+    // lived, because every row then shares one track: the left column's header set the width the
+    // right column's tiles were cut to.
+    const wantStacked = w <= 960;
+    if ((res.dash.colTops === 2) !== wantStacked)
+      dashBad.push(
+        `the columns are ${res.dash.colTops === 2 ? "stacked" : "side by side"} at ${w}px, expected the ${wantStacked ? "stacked" : "side by side"} layout`,
+      );
+    /* The headers are the min-content the grid was sizing to, so what is asserted is that they are
+       allowed to break -- at every width, because with room to spare a wrapping header still
+       renders on one line, and it is the permission that stops the track from being widened.
+       Then the two ends of the range: below 480px "Today's Tasks (3)" plus "Add Task" plus
+       "View all" is about 360px of content in a card whose inside is roughly 285px, so it has to
+       be on two rows; from 768px up there is room for all of it on one, and a header that wraps
+       there has simply lost its alignment. */
+    for (const [i, wrap] of res.dash.wrap.entries()) {
+      if (!wrap.includes("wrap"))
+        dashBad.push(`${i ? `dashboard card header ${i}` : "the Today's Tasks header"} is flex-wrap: ${wrap}`);
+    }
+    if (res.dash.headOver > 1)
+      dashBad.push(`a card header hides ${res.dash.headOver}px of itself`);
+    if (w <= 480 && res.dash.stickyRows !== 2)
+      dashBad.push(`the Today's Tasks header is on ${res.dash.stickyRows} row(s) at ${w}px, expected 2`);
+    if (w >= 768) {
+      if (res.dash.stickyRows !== 1)
+        dashBad.push(`the Today's Tasks header wrapped to ${res.dash.stickyRows} rows at ${w}px`);
+      for (const [i, rows] of res.dash.cardRows.entries()) {
+        if (rows !== 1) dashBad.push(`dashboard card header ${i + 1} wrapped to ${rows} rows at ${w}px`);
+      }
+    }
+
+    if (!res.setup) throw new Error("focus setup probe found nothing -- fixture drifted");
+    const setupBad = [];
+    const st = res.setup;
+    if (st.fields !== 5) setupBad.push(`matched ${st.fields} setup fields, expected 5`);
+    // The one finding that describes what the page looked like: a control printed over a control.
+    if (st.overlap > 0)
+      setupBad.push(`the footer is printed over a field for ${st.overlap}px of its height`);
+    // Only meaningful where something can pass underneath it, which after the fix is nowhere --
+    // so this is the guard on the arrangement, not on the colour.
+    if ((st.cardScrolls > 1 || st.footPos !== "static") && !st.footOpaque)
+      setupBad.push(`the footer background is ${st.footBg} -- the fields print straight through it`);
+    if (st.footBelowCard > 1)
+      setupBad.push(`the footer hangs ${st.footBelowCard}px below the panel's own box`);
+    if (w <= 860) {
+      if (!st.fixed) setupBad.push("the setup panel is not the full-bleed window below 860px");
+      // Two scrollers is what lifts the footer; the field stack must be the only one.
+      if (st.cardScrolls > 1)
+        setupBad.push(`the window itself scrolls ${st.cardScrolls}px -- the field stack should be the scroller`);
+      if (st.footPos !== "static" && st.footPos !== "relative")
+        setupBad.push(`the footer is position: ${st.footPos}, so it is lifted off its place in the stack`);
+      if (st.bodyOverflow !== "auto" && st.bodyOverflow !== "scroll")
+        setupBad.push(`the field stack is overflow-y: ${st.bodyOverflow}, so a tall stack has nowhere to go`);
+      // "The way out is never a scroll away": on screen and clear of the bottom bar. The upper
+      // bound only applies once the stack is actually scrolling -- with a short stack in a tall
+      // window the footer follows the last field, which is where it belongs.
+      if (st.footGap < st.navTotal)
+        setupBad.push(`the footer's bottom is ${st.footGap}px off the screen edge, inside the ${st.navTotal}px bottom bar`);
+      if (st.bodyScrolls > 1 && st.footGap > st.navTotal + 40)
+        setupBad.push(`the fields scroll but the footer floats ${st.footGap - st.navTotal}px above the bottom bar`);
+      if (st.footTop < 0) setupBad.push(`the footer starts ${-st.footTop}px above the top of the screen`);
+    } else {
+      if (st.fixed) setupBad.push("the desktop sidebar is still the phone window");
+      if (st.bodyScrolls > 1)
+        setupBad.push(`the desktop field stack scrolls ${st.bodyScrolls}px inside a sidebar that should grow`);
+    }
+
     const bad =
       res.doc > 1 ||
       res.clipped.length ||
@@ -1113,7 +1321,9 @@ for (const [mood, dir] of RUNS) {
       doodleBad.length ||
       timerBad.length ||
       analyticsBad.length ||
-      detailBad.length;
+      detailBad.length ||
+      dashBad.length ||
+      setupBad.length;
     if (bad) fail++;
     console.log(
       `\n[${tag}] doc=+${res.doc} clipped=${res.clipped.length} tiny=${res.tiny.length} spill=${res.spill.length}` +
@@ -1127,7 +1337,9 @@ for (const [mood, dir] of RUNS) {
         ` fs=${res.timer.fs.plateR}<=${res.timer.fs.ringInnerR}/digits${res.timer.fs.digitsW}` +
         ` art=${res.timer.fs.art.map((a) => (a.shown ? `${a.w}px` : "off")).join("+")}` +
         ` ana=${ana.panelBorder}px/${ana.panelMarks === "none" ? "nomarks" : "marks"}/sel${ana.selH}px/${ana.step1Shown ? "24h" : "4h"}/${distinct(ana.toneInks)}tone` +
-        ` plan=${det.fields}field/${det.factRows}factrow/nav${det.navGap}px`,
+        ` plan=${det.fields}field/${det.factRows}factrow/nav${det.navGap}px` +
+        ` dash=${res.dash.colTops}col/head${res.dash.stickyRows}+${res.dash.cardRows.join("+")}row/over${res.dash.gridOver}px` +
+        ` setup=${st.fixed ? "window" : "sidebar"}/scroll${st.cardScrolls}:${st.bodyScrolls}/over${st.overlap}px/gap${st.footGap}px`,
     );
     for (const c of res.clipped)
       console.log(
@@ -1149,6 +1361,8 @@ for (const [mood, dir] of RUNS) {
     for (const m of timerBad) console.log(`    TIMER ${m}`);
     for (const m of analyticsBad) console.log(`    ANALYTICS ${m}`);
     for (const m of detailBad) console.log(`    PLAN  ${m}`);
+    for (const m of dashBad) console.log(`    DASH  ${m}`);
+    for (const m of setupBad) console.log(`    SETUP ${m}`);
     for (const t of res.viaLabel)
       console.log(`    ok(label) ${t.sel} ${t.w}x${t.h} -> clickable label ${t.lw}x${t.lh}`);
     await ctx.close();

@@ -3,7 +3,9 @@ import { MAX_PLAN_DAYS, addDayKey, dayKeySpan } from "@/lib/plan-forum/dates";
 import { forumPeriodForItems, planWindow, restDatesInWindow } from "@/lib/exam-plans/days";
 import {
   type ExamItemKind,
+  type ExamStudyMode,
   type ExamTopic,
+  type QuestionStrategy,
   MAX_TOPICS,
   formatLoad,
   parseVisionTopics,
@@ -76,6 +78,8 @@ describe("examPlanGenerateSchema", () => {
     expect(parsed.syllabusText).toBe(syllabusText);
     expect(parsed.topics).toEqual([]);
     expect(parsed.questionStrategy).toBe("INTEGRATED");
+    // The shape a plan had before the option existed: study each topic, then revise it.
+    expect(parsed.studyMode).toBe("STUDY_AND_REVIEW");
     expect(parsed.dailyCapacityMinutes).toBe(180);
     expect(parsed.restDays).toEqual([]);
     // A date-only input is the exam day's 23:59 in Cairo, which is +03:00 in September.
@@ -91,6 +95,7 @@ describe("examPlanGenerateSchema", () => {
         { title: "Arrhythmias", chapter: "Cardiology" },
       ],
       questionStrategy: "DEDICATED_DAYS",
+      studyMode: "REVIEW_ONLY",
       dailyCapacityMinutes: "240",
       restDays: [5, 1, 5],
     });
@@ -98,6 +103,7 @@ describe("examPlanGenerateSchema", () => {
     expect(parsed.topics[1].chapter).toBe("Cardiology");
     expect(parsed.topics[0].confidence).toBe("OK");
     expect(parsed.questionStrategy).toBe("DEDICATED_DAYS");
+    expect(parsed.studyMode).toBe("REVIEW_ONLY");
     expect(parsed.dailyCapacityMinutes).toBe(240);
     // Deduplicated and sorted, so the prompt gets one clean list of weekdays.
     expect(parsed.restDays).toEqual([1, 5]);
@@ -290,19 +296,67 @@ describe("proposalShapeError", () => {
     kind,
   });
 
+  /* STUDY_ONLY unless a test says otherwise: it is the one shape that demands no REVIEW item, which
+     keeps a test about the question rhythm a test about the question rhythm. */
+  const brief = (
+    over: Partial<{
+      questionStrategy: QuestionStrategy;
+      studyMode: ExamStudyMode;
+      dailyCapacityMinutes: number;
+    }> = {},
+  ) => ({
+    questionStrategy: "INTEGRATED" as QuestionStrategy,
+    studyMode: "STUDY_ONLY" as ExamStudyMode,
+    dailyCapacityMinutes: 180,
+    ...over,
+  });
+
   it("insists dedicated question days are actually days with nothing else on them", () => {
     const mixed = [item("2026-08-20", 90, "STUDY"), item("2026-08-20", 45, "QUESTIONS")];
-    expect(proposalShapeError(mixed, "DEDICATED_DAYS", 180)).toBe("missing_question_day");
-    expect(
-      proposalShapeError([...mixed, item("2026-08-21", 90, "QUESTIONS")], "DEDICATED_DAYS", 180),
-    ).toBe(null);
+    const dedicated = brief({ questionStrategy: "DEDICATED_DAYS" });
+    expect(proposalShapeError(mixed, dedicated)).toBe("missing_question_day");
+    expect(proposalShapeError([...mixed, item("2026-08-21", 90, "QUESTIONS")], dedicated)).toBe(null);
   });
 
   it("insists an integrated plan practises at all", () => {
     const study = [item("2026-08-20", 90, "STUDY"), item("2026-08-21", 60, "REVIEW")];
-    expect(proposalShapeError(study, "INTEGRATED", 180)).toBe("missing_question_items");
-    expect(proposalShapeError([...study, item("2026-08-21", 30, "QUESTIONS")], "INTEGRATED", 180)).toBe(
-      null,
+    const both = brief({ studyMode: "STUDY_AND_REVIEW" });
+    expect(proposalShapeError(study, both)).toBe("missing_question_items");
+    expect(proposalShapeError([...study, item("2026-08-21", 30, "QUESTIONS")], both)).toBe(null);
+  });
+
+  /* The point of the option: a review-only plan that opens with a first-pass study block is not a
+     slightly-off plan for this student, it is the plan for a different one. Same in reverse for the
+     student who asked to be left at the studying and revises from their own notes. */
+  it("holds a plan to the item kinds its shape asked for", () => {
+    const studied = [item("2026-08-20", 90, "STUDY"), item("2026-08-20", 30, "QUESTIONS")];
+    const revised = [item("2026-08-20", 60, "REVIEW"), item("2026-08-20", 30, "QUESTIONS")];
+    const revision = item("2026-08-21", 45, "REVIEW");
+
+    expect(proposalShapeError(studied, brief({ studyMode: "STUDY_ONLY" }))).toBe(null);
+    expect(proposalShapeError([...studied, revision], brief({ studyMode: "STUDY_ONLY" }))).toBe(
+      "unexpected_review_items",
+    );
+
+    expect(proposalShapeError(revised, brief({ studyMode: "REVIEW_ONLY" }))).toBe(null);
+    expect(
+      proposalShapeError([...revised, item("2026-08-21", 90, "STUDY")], brief({ studyMode: "REVIEW_ONLY" })),
+    ).toBe("unexpected_study_items");
+
+    const both = brief({ studyMode: "STUDY_AND_REVIEW" });
+    expect(proposalShapeError([...studied, revision], both)).toBe(null);
+    // Studying every topic once and calling it a study-and-review plan is the common near miss.
+    expect(proposalShapeError(studied, both)).toBe("missing_review_items");
+  });
+
+  /* A day of question practice is not the revision that was asked for, in either revising shape. */
+  it("wants real revision in a plan that revises", () => {
+    const questionsOnly = [item("2026-08-20", 60, "QUESTIONS")];
+    expect(proposalShapeError(questionsOnly, brief({ studyMode: "REVIEW_ONLY" }))).toBe(
+      "missing_review_items",
+    );
+    expect(proposalShapeError(questionsOnly, brief({ studyMode: "STUDY_AND_REVIEW" }))).toBe(
+      "missing_review_items",
     );
   });
 
@@ -313,12 +367,15 @@ describe("proposalShapeError", () => {
       item("2026-08-20", 120, "STUDY"),
       item("2026-08-20", minutes, "QUESTIONS"),
     ];
-    expect(proposalShapeError(load(120), "INTEGRATED", 180)).toBe(null);
-    expect(proposalShapeError(load(121), "INTEGRATED", 180)).toBe("daily_load_too_high");
-    // The load is checked first, so an overloaded day is reported even when the rhythm is wrong too.
-    expect(proposalShapeError([item("2026-08-20", 400, "STUDY")], "DEDICATED_DAYS", 180)).toBe(
-      "daily_load_too_high",
-    );
+    expect(proposalShapeError(load(120), brief())).toBe(null);
+    expect(proposalShapeError(load(121), brief())).toBe("daily_load_too_high");
+    // The load is checked first, so an overloaded day is reported even when the shape is wrong too.
+    expect(
+      proposalShapeError(
+        [item("2026-08-20", 400, "REVIEW")],
+        brief({ questionStrategy: "DEDICATED_DAYS", studyMode: "STUDY_ONLY" }),
+      ),
+    ).toBe("daily_load_too_high");
   });
 });
 

@@ -166,15 +166,17 @@ export function SyllabusScanner({
                   ? "أضف صفحة أخرى"
                   : "Add another page"
                 : ar
-                  ? "صوّر الفهرس"
-                  : "Photograph the index"}
+                  ? "صوّر الفهرس أو ارفع صورته"
+                  : "Photograph or upload the index"}
           </span>
           <input
             ref={inputRef}
             type="file"
             accept="image/*"
-            /* Opens the camera directly on a phone, which is where a book index gets photographed. */
-            capture="environment"
+            /* No `capture` attribute, deliberately. `capture="environment"` opened the camera and
+               nothing else, so a student who had already photographed the فهرس -- or screenshotted a
+               PDF one -- could not reach the picture at all. Without it the phone offers its camera
+               and its gallery together, and the desktop file dialogue keeps working as it did. */
             className="sr-only"
             disabled={disabled || pending || full}
             onChange={(event) => {

@@ -29,6 +29,7 @@ export const examPlanSelect = {
   model: true,
   promptVersion: true,
   questionStrategy: true,
+  studyMode: true,
   dailyCapacityMinutes: true,
   /** Non-null once the proposal has been published to the Plan Forum. Drives the header buttons. */
   studyPlanId: true,
@@ -109,10 +110,11 @@ export async function generateExamPlan(
     title: input.title,
     examAt: examAt.toISOString(),
     syllabusText: input.syllabusText,
-    /* In the hash, not just the metadata: the same topics with the other question strategy are a
-       different plan, and without these three the 15-minute re-use cache below would hand back the
-       plan the student just decided against. */
+    /* In the hash, not just the metadata: the same topics asked for as revision instead of study,
+       or with the other question rhythm, are a different plan -- and without these the 15-minute
+       re-use cache below would hand back the plan the student just decided against. */
     questionStrategy: input.questionStrategy,
+    studyMode: input.studyMode,
     dailyCapacityMinutes: input.dailyCapacityMinutes,
     restDays: input.restDays,
     locale,
@@ -140,6 +142,7 @@ export async function generateExamPlan(
       syllabusCharacters: input.syllabusText.length,
       topicCount: input.topics.length,
       questionStrategy: input.questionStrategy,
+      studyMode: input.studyMode,
       dailyCapacityMinutes: input.dailyCapacityMinutes,
       subjectCount: subjects.length,
     },
@@ -151,6 +154,7 @@ export async function generateExamPlan(
           examAt,
           syllabusText: input.syllabusText,
           questionStrategy: input.questionStrategy,
+          studyMode: input.studyMode,
           dailyCapacityMinutes: input.dailyCapacityMinutes,
           restDays: input.restDays,
           locale,
@@ -172,6 +176,7 @@ export async function generateExamPlan(
           examAt,
           syllabusText: input.syllabusText,
           questionStrategy: input.questionStrategy,
+          studyMode: input.studyMode,
           dailyCapacityMinutes: input.dailyCapacityMinutes,
           status: "PROPOSED",
           locale: locale === "ar" ? "AR" : "EN",

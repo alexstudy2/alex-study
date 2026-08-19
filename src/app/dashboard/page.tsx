@@ -10,7 +10,6 @@ import { TodayTasksSticky } from "@/components/dashboard/today-tasks-sticky";
 import { TodayStudyCard } from "@/components/dashboard/today-study-card";
 import {
   CalendarDays,
-  CheckCircle2,
   Play,
   Plus,
   Sparkles,
@@ -18,7 +17,6 @@ import {
   Timer as TimerIcon,
   ArrowRight,
   ArrowLeft,
-  ListTodo,
 } from "lucide-react";
 
 export default async function DashboardPage() {

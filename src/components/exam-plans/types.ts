@@ -1,4 +1,4 @@
-import type { ExamItemKind, QuestionStrategy } from "@/lib/exam-plans/topics";
+import type { ExamItemKind, ExamStudyMode, QuestionStrategy } from "@/lib/exam-plans/topics";
 
 export type ExamPlanStatus =
   "GENERATING" | "PROPOSED" | "PARTIALLY_ACCEPTED" | "ACCEPTED" | "REJECTED";
@@ -34,6 +34,7 @@ export type ExamPlan = {
   model: string;
   promptVersion: string;
   questionStrategy: QuestionStrategy;
+  studyMode: ExamStudyMode;
   dailyCapacityMinutes: number;
   /** The Plan Forum copy, once published. Null until the student presses Publish. */
   studyPlanId: string | null;

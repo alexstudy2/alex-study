@@ -3,6 +3,7 @@ import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { DEFAULT_TIMEZONE } from "@/lib/tasks/dates";
 import {
   EXAM_ITEM_KINDS,
+  EXAM_STUDY_MODES,
   MAX_IMAGE_BYTES,
   MAX_TOPICS,
   QUESTION_STRATEGIES,
@@ -64,6 +65,8 @@ export const examPlanGenerateSchema = z
     syllabusText: z.string().trim().min(20).max(12_000).optional(),
     topics: z.array(examTopicSchema).max(MAX_TOPICS).default([]),
     questionStrategy: z.enum(QUESTION_STRATEGIES).default("INTEGRATED"),
+    /** Defaulted so every request written before this option existed still means what it meant. */
+    studyMode: z.enum(EXAM_STUDY_MODES).default("STUDY_AND_REVIEW"),
     dailyCapacityMinutes: z.coerce.number().int().min(30).max(600).default(180),
     /**
      * Weekday numbers (0 = Sunday, matching `Date#getDay`) the student wants left clear. Seven rest

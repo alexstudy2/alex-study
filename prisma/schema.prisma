@@ -186,6 +186,16 @@ enum ExamQuestionStrategy {
   INTEGRATED
 }
 
+/// What an AI exam plan is made of. STUDY_AND_REVIEW learns each topic then returns to revise it;
+/// STUDY_ONLY stops at the first pass for a student who revises their own way; REVIEW_ONLY is passes
+/// over material already learned, which is the plan a student wants in the last days before an exam.
+/// Kept on the plan because it is the brief, not a preference: it decides which item kinds may appear.
+enum ExamStudyMode {
+  STUDY_AND_REVIEW
+  STUDY_ONLY
+  REVIEW_ONLY
+}
+
 /// What one plan item asks of the student. Only used for display and for checking that the model
 /// honoured the chosen strategy -- an accepted item becomes a plain Task either way.
 enum ExamPlanItemKind {
@@ -819,9 +829,10 @@ model ExamPlan {
   overview        String?
   examAt          DateTime
   syllabusText    String?
-  /// The two intake answers that shape the whole proposal, kept so the board can explain what it
-  /// was built from and so a later regeneration starts from the same brief.
+  /// The intake answers that shape the whole proposal, kept so the board can explain what it was
+  /// built from and so a later regeneration starts from the same brief.
   questionStrategy     ExamQuestionStrategy @default(INTEGRATED)
+  studyMode            ExamStudyMode        @default(STUDY_AND_REVIEW)
   dailyCapacityMinutes Int                  @default(180)
   /// Set once the student publishes the finished plan to the Plan Forum. The link lives here rather
   /// than on StudyPlan so the forum feature stays unaware of exam plans; SetNull means deleting the

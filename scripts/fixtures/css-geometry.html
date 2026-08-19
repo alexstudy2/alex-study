@@ -1499,6 +1499,27 @@
                 <!-- Step 3 and step 4, rendered together: they are separate branches in the
                      component, but the widths they have to survive are identical. -->
                 <div class="wizard-step-content">
+                  <p class="wizard-step-hint"><svg viewBox="0 0 24 24"></svg>What should the plan cover?</p>
+                  <!-- Three cards in the same auto-fit grid as the two below it: the shape choice is
+                       the one place where a third card has to survive the panel's width. -->
+                  <div class="exam-strategy-grid" role="radiogroup" aria-label="Plan shape">
+                    <label class="exam-strategy-card" data-selected="yes">
+                      <input type="radio" name="fx-mode" class="sr-only" checked />
+                      <strong>Study + review</strong>
+                      <span>Learn every topic, then come back over it before the exam.</span>
+                    </label>
+                    <label class="exam-strategy-card">
+                      <input type="radio" name="fx-mode" class="sr-only" />
+                      <strong>Study only</strong>
+                      <span>First pass only. No revision blocks, so every minute goes on new material.</span>
+                    </label>
+                    <label class="exam-strategy-card">
+                      <input type="radio" name="fx-mode" class="sr-only" />
+                      <strong>Review only</strong>
+                      <span>You have studied it already. Passes over the whole syllabus, weakest topics first.</span>
+                    </label>
+                  </div>
+
                   <p class="wizard-step-hint"><svg viewBox="0 0 24 24"></svg>How do you want to solve questions?</p>
                   <div class="exam-strategy-grid" role="radiogroup" aria-label="Question rhythm">
                     <label class="exam-strategy-card" data-selected="yes">
@@ -1539,6 +1560,7 @@
                       <div><dt>Course</dt><dd>Final Internal Medicine Exam</dd></div>
                       <div><dt>Exam</dt><dd>Saturday, 22 August 2026</dd></div>
                       <div><dt>Topics</dt><dd>12 topics</dd></div>
+                      <div><dt>Plan</dt><dd>Study + review</dd></div>
                       <div><dt>Questions</dt><dd>Dedicated days</dd></div>
                       <div><dt>Daily</dt><dd>3h</dd></div>
                       <div><dt>Rest</dt><dd>Friday</dd></div>
@@ -1753,6 +1775,302 @@
               </div>
               <button type="button" class="text-button danger">Reject remaining</button>
             </section>
+          </section>
+
+          <!-- ============ 15. /dashboard, the whole two-column page ============ -->
+          <!-- Why the page rather than one more card: #fx-stickyadd measures the sticky note on
+               its own, and on its own it fits. What did not fit on a phone was the *column*.
+               `.dashboard-layout-grid` falls to a single `1fr` track below 960px, and `1fr` is
+               `minmax(auto, 1fr)` -- so the widest min-content in either column sets the width of
+               the whole grid, and a track wider than the viewport takes the page sideways with it.
+               Both card headers are that min-content: a nowrap flex row carrying a lettered
+               heading, a count and two controls. So this fixture keeps the headers in full --
+               "Add Task" included, which #fx-stickyadd omits -- and both columns, because a
+               one-column fixture cannot show a track being pushed. -->
+          <section id="fx-dashboard">
+            <section class="dashboard-hero-card mb-6">
+              <div class="dashboard-hero-content">
+                <div class="flex flex-col gap-1.5">
+                  <span class="eyebrow flex items-center gap-1.5">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24"></svg>Wednesday 19 August
+                  </span>
+                  <h1 class="dashboard-hero-title">Welcome, Abdelrahman</h1>
+                  <p class="dashboard-hero-sub">
+                    Set your daily priorities and start a focused session to make steady progress.
+                  </p>
+                </div>
+                <div class="dashboard-hero-actions">
+                  <button type="button" class="btn btn-primary btn-md">
+                    <span class="btn-icon-left"><svg class="w-4 h-4" viewBox="0 0 24 24"></svg></span>Start Focus
+                  </button>
+                  <button type="button" class="btn btn-secondary btn-md">
+                    <span class="btn-icon-left"><svg class="w-4 h-4" viewBox="0 0 24 24"></svg></span>Manage Tasks
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <div class="dashboard-layout-grid">
+              <section class="dashboard-left-col flex flex-col gap-6">
+                <div class="today-tasks-sticky-card">
+                  <div class="sticky-tape-top" aria-hidden="true"></div>
+                  <!-- The header in its resting state: the quick-add closed, so "Add Task" is on
+                       screen next to "View all". That pair plus the lettered title and the count
+                       is the widest unbreakable thing on the page. -->
+                  <div class="sticky-tasks-header">
+                    <div class="flex items-center gap-2">
+                      <svg class="w-5 h-5" viewBox="0 0 24 24"></svg>
+                      <h2 class="sticky-tasks-title">Today's Tasks</h2>
+                      <span class="counter-pill font-mono">3</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <button type="button" class="sticky-add-btn" title="Add new task">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24"></svg>
+                        <span class="text-xs font-bold">Add Task</span>
+                      </button>
+                      <a href="#" class="sticky-view-all-link">View all<svg class="w-3.5 h-3.5" viewBox="0 0 24 24"></svg></a>
+                    </div>
+                  </div>
+
+                  <div class="sticky-tasks-list">
+                    <div class="dashboard-task-card" data-color="teal">
+                      <button type="button" class="task-checkbox-btn" aria-label="Mark as completed">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24"></svg>
+                      </button>
+                      <a href="#" class="dashboard-task-content flex-1 flex items-center justify-between gap-3 text-inherit no-underline">
+                        <div class="flex flex-col gap-1 min-w-0">
+                          <strong class="dashboard-task-title truncate">Underfive health care</strong>
+                          <span class="dashboard-task-subject">
+                            <span class="subject-dot shrink-0"></span>
+                            <span class="truncate">community</span>
+                          </span>
+                        </div>
+                      </a>
+                    </div>
+                    <!-- The long unbroken title is the point: `truncate` only helps if the row is
+                         allowed to shrink, and on the real page it was not. -->
+                    <div class="dashboard-task-card">
+                      <button type="button" class="task-checkbox-btn" aria-label="Mark as completed">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24"></svg>
+                      </button>
+                      <a href="#" class="dashboard-task-content flex-1 flex items-center justify-between gap-3 text-inherit no-underline">
+                        <div class="flex flex-col gap-1 min-w-0">
+                          <strong class="dashboard-task-title truncate">Questions on Introduction &amp; Legal Procedure</strong>
+                        </div>
+                        <span class="task-pill flex items-center gap-1 px-2 py-0.5 shrink-0">
+                          <svg class="w-3 h-3" viewBox="0 0 24 24"></svg>45 m
+                        </span>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                <aside class="dashboard-memo-card">
+                  <div class="flex items-center justify-between gap-2 mb-2">
+                    <span class="ai-label flex items-center gap-1">
+                      <svg class="w-3 h-3" viewBox="0 0 24 24"></svg>AI Note
+                    </span>
+                    <a href="#" class="text-xs font-bold text-secondary hover:underline flex items-center gap-1">
+                      All notes<svg class="w-3 h-3" viewBox="0 0 24 24"></svg>
+                    </a>
+                  </div>
+                  <h3 class="text-base font-bold text-secondary mb-1">Steady Progress, Small Steps Forward</h3>
+                  <p class="text-sm text-foreground leading-relaxed">
+                    You've logged 134 minutes of study and completed 2 tasks across 3 active
+                    days&mdash;great start! To get closer to your 240-minute target, try adding a
+                    short, focused session on your top subject each day.
+                  </p>
+                </aside>
+              </section>
+
+              <section class="dashboard-right-col flex flex-col gap-6">
+                <div class="dashboard-card">
+                  <!-- The live badge is rendered whenever a focus timer exists, which is exactly
+                       when this page is being looked at, so it belongs in the measured header. -->
+                  <div class="dashboard-card-header">
+                    <div class="flex items-center gap-2">
+                      <svg class="w-5 h-5" viewBox="0 0 24 24"></svg>
+                      <h2 class="text-lg font-bold">Today's Study</h2>
+                    </div>
+                    <span class="dashboard-live-time running">
+                      <svg viewBox="0 0 24 24"></svg>Updating live
+                    </span>
+                  </div>
+                  <div class="study-rhythm-body mt-3">
+                    <div class="flex items-baseline justify-between mb-2">
+                      <div class="flex items-baseline gap-1">
+                        <strong class="text-3xl font-mono font-extrabold text-foreground">53:56</strong>
+                        <span class="text-xs text-muted">/ 210 min</span>
+                      </div>
+                      <span class="text-xs font-bold font-mono text-primary">25%</span>
+                    </div>
+                    <div class="dashboard-progress mb-4"><span style="width: 25%"></span></div>
+                    <div class="grid grid-cols-3 gap-2 text-center pt-3 border-t border-line">
+                      <div class="p-2 rounded-md bg-surface-sunken border border-line">
+                        <span class="text-[11px] text-muted block font-semibold">Week</span>
+                        <strong class="text-sm font-mono font-bold text-foreground">114m</strong>
+                      </div>
+                      <div class="p-2 rounded-md bg-surface-sunken border border-line">
+                        <span class="text-[11px] text-muted block font-semibold">Tasks</span>
+                        <strong class="text-sm font-mono font-bold text-foreground">2</strong>
+                      </div>
+                      <div class="p-2 rounded-md bg-surface-sunken border border-line">
+                        <span class="text-[11px] text-muted block font-semibold">Focus</span>
+                        <strong class="text-sm font-mono font-bold text-primary">86</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="dashboard-card">
+                  <div class="dashboard-card-header">
+                    <div class="flex items-center gap-2">
+                      <svg class="w-5 h-5" viewBox="0 0 24 24"></svg>
+                      <h2 class="text-lg font-bold">Active Goals</h2>
+                    </div>
+                    <a href="#" class="text-xs font-bold text-accent-strong hover:underline flex items-center gap-1">
+                      All goals<svg class="w-3.5 h-3.5" viewBox="0 0 24 24"></svg>
+                    </a>
+                  </div>
+                  <div class="dashboard-goals-list mt-3 flex flex-col gap-2">
+                    <a href="#" class="goal-item-card flex flex-col gap-1.5 p-3 rounded-md border border-secondary bg-surface text-inherit no-underline">
+                      <div class="flex items-center justify-between text-xs">
+                        <strong class="truncate font-bold text-foreground">1000 Study Minutes</strong>
+                        <span class="font-mono text-muted text-[11px] shrink-0">134 / 1000</span>
+                      </div>
+                      <div class="dashboard-progress mb-0 h-1.5"><span style="width: 13%"></span></div>
+                    </a>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </section>
+
+          <!-- ============ 16. /focus session setup, as it renders on a phone ============ -->
+          <!-- `[data-setup="pending"]` turns the sidebar into a full-bleed window below 860px, and
+               that window is the one place in the app where a control can be printed over another
+               control: the card itself is the scroller, and "the way out must not be a scroll
+               away" was implemented by lifting the footer off the bottom of that stack with
+               `position: sticky`. A sticky footer inside the scroller floats over whichever fields
+               happen to be at that height -- and in the component it also sat inside the plain
+               flex wrapper holding the fields, so its `background-color: inherit` resolved to that
+               transparent wrapper and the fields printed straight through it.
+
+               The nesting here is the one the component ends up with: the footer is a sibling of
+               the scrolling `.focus-setup-body`, not the last item in it. Every field the real
+               panel has is present, because the overlap is a function of how tall the stack is
+               against the viewport, and the setup probe measures field-against-footer directly. -->
+          <section id="fx-focussetup">
+            <div class="focus-workspace-container" data-setup="pending">
+              <section class="focus-main-grid">
+                <aside class="focus-sidebar-card" aria-label="Session Setup">
+                  <div class="sidebar-section-header pb-2 border-b-2 border-dashed border-line">
+                    <span class="font-extrabold text-sm text-foreground">Session Setup</span>
+                  </div>
+                  <p class="focus-setup-hint">
+                    Pick what this session is for and how long it runs, then open the timer.
+                  </p>
+                  <div class="focus-setup-body flex flex-col gap-3 mt-3">
+                    <div class="focus-field" role="radiogroup" aria-label="Session assignment">
+                      <span class="focus-field-label">Session assignment</span>
+                      <div class="focus-assign-options">
+                        <label class="focus-assign-option" data-selected="true">
+                          <input type="radio" name="fx-focus-assignment" checked />
+                          <svg viewBox="0 0 24 24"></svg>
+                          <span class="focus-assign-copy">
+                            <strong>Assign to a task</strong>
+                            <small>Log this focus time against one task</small>
+                          </span>
+                        </label>
+                        <label class="focus-assign-option" data-selected="false">
+                          <input type="radio" name="fx-focus-assignment" />
+                          <svg viewBox="0 0 24 24"></svg>
+                          <span class="focus-assign-copy">
+                            <strong>Independent session</strong>
+                            <small>Study without linking a task</small>
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <label class="focus-field">
+                      <span class="focus-field-label">Associated Task</span>
+                      <select class="focus-select">
+                        <option>Questions on Introduction &amp; Legal Procedure</option>
+                      </select>
+                    </label>
+
+                    <label class="focus-field">
+                      <span class="focus-field-label">Study Course</span>
+                      <select class="focus-select"><option>None</option></select>
+                    </label>
+
+                    <div class="focus-field">
+                      <span class="focus-field-label flex items-center gap-1.5">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24"></svg>Session &amp; break length
+                      </span>
+                      <div class="focus-durations">
+                        <div class="focus-duration-row">
+                          <span class="focus-duration-name">Focus</span>
+                          <div class="focus-stepper">
+                            <button type="button" class="focus-stepper-btn" aria-label="Decrease: Focus">
+                              <svg viewBox="0 0 24 24"></svg>
+                            </button>
+                            <input type="number" class="focus-stepper-input" value="60" aria-label="Focus (min)" />
+                            <span class="focus-stepper-unit" aria-hidden="true">m</span>
+                            <button type="button" class="focus-stepper-btn" aria-label="Increase: Focus">
+                              <svg viewBox="0 0 24 24"></svg>
+                            </button>
+                          </div>
+                        </div>
+                        <div class="focus-duration-row">
+                          <span class="focus-duration-name">Short break</span>
+                          <div class="focus-stepper">
+                            <button type="button" class="focus-stepper-btn" aria-label="Decrease: Short break">
+                              <svg viewBox="0 0 24 24"></svg>
+                            </button>
+                            <input type="number" class="focus-stepper-input" value="5" aria-label="Short break (min)" />
+                            <span class="focus-stepper-unit" aria-hidden="true">m</span>
+                            <button type="button" class="focus-stepper-btn" aria-label="Increase: Short break">
+                              <svg viewBox="0 0 24 24"></svg>
+                            </button>
+                          </div>
+                        </div>
+                        <div class="focus-duration-row">
+                          <span class="focus-duration-name">Long break</span>
+                          <div class="focus-stepper">
+                            <button type="button" class="focus-stepper-btn" aria-label="Decrease: Long break">
+                              <svg viewBox="0 0 24 24"></svg>
+                            </button>
+                            <input type="number" class="focus-stepper-input" value="15" aria-label="Long break (min)" />
+                            <span class="focus-stepper-unit" aria-hidden="true">m</span>
+                            <button type="button" class="focus-stepper-btn" aria-label="Increase: Long break">
+                              <svg viewBox="0 0 24 24"></svg>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <label class="focus-field">
+                      <span class="focus-field-label flex items-center gap-1.5">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24"></svg>Ambient sound
+                      </span>
+                      <select class="focus-select"><option>Off (Silent)</option></select>
+                    </label>
+                  </div>
+
+                  <div class="focus-setup-footer">
+                    <button type="button" class="btn btn-primary btn-md focus-setup-continue w-full justify-center">
+                      <span class="btn-icon-left"><svg class="w-4 h-4" viewBox="0 0 24 24"></svg></span>Open focus timer
+                    </button>
+                    <a href="#" class="btn btn-secondary btn-sm w-full justify-center">
+                      <span class="btn-icon-left"><svg class="w-4 h-4" viewBox="0 0 24 24"></svg></span>Session history
+                    </a>
+                  </div>
+                </aside>
+              </section>
+            </div>
           </section>
         </main>
       </div>
