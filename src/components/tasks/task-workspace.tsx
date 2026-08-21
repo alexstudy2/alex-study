@@ -101,8 +101,17 @@ function TaskRowItem({
         transition,
         /* `--subject-*`, not `--${colorToken}`. The bare form named tokens that do not exist,
            which made --note-color guaranteed-invalid and took the whole color-mix() down with
-           it -- every note rendered with no paper at all. See tokens.css. */
-        "--note-color": `var(--subject-${task.subject?.colorToken ?? "teal"})`,
+           it -- every note rendered with no paper at all. See tokens.css.
+
+           A task with no course falls back to `--primary`, not to `--subject-teal`. Teal is the
+           first entry in the colour enum and it was standing in for "no colour", which meant
+           every loose task -- and every task at all, for anyone who never opened the course
+           picker, since the picker's first option is also teal -- came out the same green on all
+           five palettes. `--primary` is redeclared by each mood, so an uncoloured note now takes
+           the paper it is sitting on: blue on notebook, rose on sakura, amber on sunset. */
+        "--note-color": task.subject?.colorToken
+          ? `var(--subject-${task.subject.colorToken})`
+          : "var(--primary)",
       } as React.CSSProperties}
       className={`notebook-task-row sticky-task-note ${isDragging ? "dragging" : ""} ${isCompleted ? "completed" : ""}`}
       data-priority={task.priority.toLowerCase()}
@@ -215,8 +224,7 @@ function TaskRowItem({
 
           {/* Due date and estimate are one fact -- when, and for how long -- so they share a
               single pill instead of two. `<time>` only wraps the date part; the estimate is
-              a duration, not a datetime, and mislabelling it would be worse than no markup. */}
-          {(task.dueAt || minutes) && (
+              a duration, not a datetime, and mislabelling it would be worse than no markup. */}          {(task.dueAt || minutes) && (
             <span className="task-meta-pill">
               {task.dueAt ? (
                 <Calendar className="w-3 h-3 text-muted" />
@@ -239,6 +247,21 @@ function TaskRowItem({
                 </span>
               )}
             </span>
+          )}
+
+          {/* One tap from a task to a timer aimed at it: /focus?task=<id> pre-answers the
+              assignment gate with this task. Hidden on completed tasks -- you do not focus on
+              finished work. Lives in the badges row so it is visible at every width, unlike the
+              manage-only actions column. */}
+          {!isCompleted && (
+            <Link
+              href={`/focus?task=${task.id}`}
+              className="enter-focus-btn"
+              title={ar ? "ابدأ جلسة تركيز لهذه المهمة" : "Start a focus session for this task"}
+            >
+              <Timer className="w-3 h-3" aria-hidden="true" />
+              {ar ? "ادخل التركيز" : "Enter focus"}
+            </Link>
           )}
         </div>
 
@@ -787,8 +810,8 @@ export function TaskWorkspace({
             aria-label={ar ? "عنوان المهمة الجديدة" : "New task title"}
             placeholder={
               ar
-                ? "اكتب مهمتك الدراسية هنا... واضغط Enter"
-                : "Write your study task here... and press Enter"
+                ? "اكتب مهمتك الدراسية هنا...  "
+                : "Write your study task here..."
             }
             className="quick-add-input"
             disabled={isSubmittingQuick}

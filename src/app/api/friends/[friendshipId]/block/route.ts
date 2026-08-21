@@ -11,14 +11,29 @@ export async function POST(
     where: { id: friendshipId, OR: [{ requesterId: user.id }, { addresseeId: user.id }] },
   });
   if (!friendship) return notFound();
+  const now = new Date();
+  const [userAId, userBId] = [friendship.requesterId, friendship.addresseeId];
   await prisma.$transaction([
     prisma.friendship.update({
       where: { id: friendship.id },
-      data: { status: "BLOCKED", blockedById: user.id, respondedAt: new Date() },
+      data: { status: "BLOCKED", blockedById: user.id, respondedAt: now },
     }),
     prisma.accountabilityPair.updateMany({
       where: { pairKey: friendship.pairKey, status: { in: ["PENDING", "ACTIVE", "PAUSED"] } },
-      data: { status: "ENDED", endedAt: new Date() },
+      data: { status: "ENDED", endedAt: now },
+    }),
+    /* Block is meant to stop contact, and an open challenge is contact: it keeps tracking both
+       users' progress and keeps sending each of them the other's result notifications. Ending the
+       accountability pair while leaving the challenge running was half a block. */
+    prisma.challenge.updateMany({
+      where: {
+        status: { in: ["PENDING", "SCHEDULED", "ACTIVE"] },
+        OR: [
+          { creatorId: userAId, opponentId: userBId },
+          { creatorId: userBId, opponentId: userAId },
+        ],
+      },
+      data: { status: "CANCELLED", cancelledAt: now, resolvedAt: now },
     }),
   ]);
   return Response.json({ blocked: true });

@@ -260,6 +260,15 @@
   text-transform: uppercase;
 }
 
+/* Arabic is cursive: tracking pulls the letters apart at the joins, so a word stops reading as a
+   word. `text-transform: uppercase` is a no-op on Arabic but costs nothing to drop with it. This
+   selector also has to out-rank the `uppercase tracking-wider` utilities that `PageHeader` puts on
+   every eyebrow in the app -- (0,2,0) against Tailwind's (0,1,0). */
+[dir="rtl"] .eyebrow {
+  letter-spacing: normal;
+  text-transform: none;
+}
+
 .auth-content h2 {
   font-family: var(--font-display-fancy);
   font-size: clamp(1.6rem, 3.5vw, 2.2rem);
@@ -659,8 +668,12 @@
    The native checkbox is the accessible control and stays in the label -- it is what the row
    toggles, what the keyboard reaches and what a screen reader announces -- but it is taken out
    of the visual flow with the standard visually-hidden recipe (still focusable, unlike
-   display:none). The drawn track + sliding knob next to it is the visible control. */
-.auth-switch-input {
+   display:none). The drawn track + sliding knob next to it is the visible control.
+   The second selector exists because the toggle list sits inside .auth-form, whose
+   `input { width: 100% }` is (0,1,1) and beat this recipe's (0,1,0): the "hidden" box rendered
+   one containing-block wide and dragged the document wider with it. */
+.auth-switch-input,
+.auth-form .auth-switch-input {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -966,4 +979,161 @@
   .auth-content .primary-button:not(:disabled):active {
     transform: none;
   }
+}
+
+/* ==========================================================================
+   Atlas skin — auth
+   ==========================================================================
+   The front door gets the same liquid-glass pass as every other route, with the
+   two doodle signatures it owns handled the same way the rest of the app handles
+   them: the pen-drawn flourish SVGs go (drawing has no place on glass), and the
+   stippled dot paper goes with them -- what replaces both is the aurora showing
+   through a frosted column. Everything colour-derived (the stipple's inks, the
+   wavy accent underline) was already mood-aware and would have worked on glass;
+   what leaves is the drawing, not the palette.
+
+   `.auth-content` is a comfort-block member, so no box-shadow is declared below
+   -- its `--shadow-doodle-lg` already remaps to elevation-3, and the mobile step-
+   down keeps reaching it. Focus rings become the house idiom: solid primary rim,
+   no dash; each one needs its own :focus/:focus-visible companion because the
+   base rules re-declare outline at equal specificity earlier in this file. */
+
+/* The brand column: frosted sheet instead of stippled paper, hairline divider
+   instead of 2px ink. The doodles are display:none'd rather than restyled -- same
+   call as every pen line and tape strip before them. */
+[data-skin="atlas"] .auth-brand {
+  background-color: var(--glass-bg);
+  background-image: none;
+  -webkit-backdrop-filter: blur(var(--glass-blur-heavy));
+  backdrop-filter: blur(var(--glass-blur-heavy));
+  border-inline-end: var(--stroke-default);
+}
+
+[data-skin="atlas"] .auth-brand-doodle {
+  display: none;
+}
+
+/* The base responsive block swaps the divider at ≤860px: inline-end goes away, a 2px ink
+   bottom border takes over. Mirror that swap with the rim -- without this the phone layout
+   keeps a 2px ink line under the column, the one edge this skin never draws. */
+@media (max-width: 860px) {
+  [data-skin="atlas"] .auth-brand {
+    border-inline-end: 0;
+    border-bottom: var(--stroke-default);
+  }
+}
+
+[data-skin="atlas"] .wordmark:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--primary) 60%, transparent);
+  outline-offset: 4px;
+}
+
+[data-skin="atlas"] .auth-mood-ribbon {
+  border-top: 1px solid var(--glass-rim-strong);
+}
+
+[data-skin="atlas"] .auth-mood-ribbon-dot {
+  border-color: var(--glass-rim-strong);
+  box-shadow: none;
+}
+
+/* Graph paper behind the form card stays: with .auth-content frosted, the grid is
+   what the glass actually shows -- texture through frost rather than ink on paper. */
+
+[data-skin="atlas"] .auth-content {
+  background-color: var(--glass-bg-raised);
+  -webkit-backdrop-filter: blur(var(--glass-blur-heavy));
+  backdrop-filter: blur(var(--glass-blur-heavy));
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .auth-subtitle {
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+}
+
+/* Fields: sunken tier, caret preserved (background-color, never the shorthand),
+   focus ring converted from dashed ink to the primary rim. */
+[data-skin="atlas"] .auth-form input,
+[data-skin="atlas"] .auth-form select,
+[data-skin="atlas"] .auth-form textarea {
+  background-color: var(--glass-bg-sunken);
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .auth-form input:focus,
+[data-skin="atlas"] .auth-form select:focus,
+[data-skin="atlas"] .auth-form textarea:focus {
+  outline: 2px solid color-mix(in srgb, var(--primary) 60%, transparent);
+  outline-offset: 2px;
+  border-color: color-mix(in srgb, var(--primary) 70%, transparent);
+}
+
+[data-skin="atlas"] .auth-reveal-btn:focus-visible,
+[data-skin="atlas"] .auth-stepper-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--primary) 60%, transparent);
+  outline-offset: -2px;
+}
+
+[data-skin="atlas"] .auth-strength-tick {
+  border-color: var(--glass-rim-strong);
+}
+
+[data-skin="atlas"] .auth-stepper-row {
+  background-color: var(--glass-bg-raised);
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .auth-stepper-btn {
+  border-color: var(--glass-rim-strong);
+}
+
+[data-skin="atlas"] .auth-preset-btn {
+  background-color: var(--glass-bg-raised);
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .auth-preset-btn[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--primary) 55%, transparent);
+}
+
+[data-skin="atlas"] .auth-toggle-list {
+  background-color: var(--glass-bg-raised);
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .auth-toggle-row {
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+}
+
+[data-skin="atlas"] .auth-toggle-icon {
+  border-color: var(--glass-rim-strong);
+}
+
+[data-skin="atlas"] .auth-switch {
+  border-color: var(--glass-rim-strong);
+}
+
+[data-skin="atlas"] .auth-switch-knob {
+  border-color: var(--glass-rim-strong);
+}
+
+[data-skin="atlas"] .auth-switch-input:focus-visible + .auth-switch {
+  outline: 2px solid color-mix(in srgb, var(--primary) 60%, transparent);
+  outline-offset: 3px;
+}
+
+[data-skin="atlas"] .auth-review-list {
+  background-color: var(--glass-bg-sunken);
+  border: var(--stroke-muted);
+}
+
+[data-skin="atlas"] .auth-links {
+  border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+}
+
+/* Notice band: mood tint over glass, hairline rim; the danger variant keeps its
+   own colours -- only the drawn weight drops, which the rule above already did. */
+[data-skin="atlas"] .auth-notice {
+  background-color: color-mix(in srgb, var(--primary) 10%, var(--glass-bg));
+  border: var(--stroke-muted);
 }

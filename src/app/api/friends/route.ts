@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import { friendshipInclude } from "@/lib/social/queries";
 import { apiUser, unauthorized } from "@/lib/tasks/response";
 
 export async function GET() {
@@ -6,10 +7,7 @@ export async function GET() {
   if (!user) return unauthorized();
   const friendships = await prisma.friendship.findMany({
     where: { status: "ACCEPTED", OR: [{ requesterId: user.id }, { addresseeId: user.id }] },
-    include: {
-      requester: { select: { id: true, name: true, academicYear: true } },
-      addressee: { select: { id: true, name: true, academicYear: true } },
-    },
+    include: friendshipInclude,
     orderBy: { respondedAt: "desc" },
   });
   return Response.json({ friendships });

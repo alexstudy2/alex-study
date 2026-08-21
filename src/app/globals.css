@@ -315,6 +315,24 @@
    timer dial, which Phase 7 redesigns. */
 
 @media (max-width: 768px) {
+  /* How much border the step-down leaves, per skin. Doodle's base card border is 2px of ink,
+     so 1.5px is the half-pixel thinning this block is named for. Atlas's is already a 1px
+     hairline -- handing it 1.5px would make phones *heavier* than desktop, which is the exact
+     opposite of the intent, and no assertion downstream would catch it because 1.5px still
+     passes a "thinner than 2px" test.
+
+     Declared here rather than in tokens.css because it means nothing outside this media
+     query, and declared before the selector list because scripts/css-geometry-check.mjs
+     parses that list by slicing from the `--- 1.` marker to the first `box-shadow`. Anything
+     added between those two points is inside the parser's window. */
+  :root {
+    --comfort-card-border: 1.5px;
+  }
+
+  :root[data-skin="atlas"] {
+    --comfort-card-border: 1px;
+  }
+
   /* --- 1. One step down the shadow scale, 0.5px off the border --- */
   /* `border-width` rather than `border`, so the dashed cards stay dashed. Cards with
      `border-style: none` are unaffected by a width change, which is why they can sit
@@ -384,7 +402,7 @@
   .room-sidebar,
   .room-timer {
     box-shadow: var(--shadow-doodle-xs);
-    border-width: 1.5px;
+    border-width: var(--comfort-card-border);
   }
 
   /* --- 2. Visual priority: let the secondary action recede --- */

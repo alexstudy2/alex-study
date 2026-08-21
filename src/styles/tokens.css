@@ -54,7 +54,11 @@
      Anything lighter dies as a dot; anything darker stops reading as tinted paper. The seven
      are spaced around the wheel far enough to stay tellable apart at dot size -- coral, amber
      and rose are the close trio, so they are pushed to salmon / yellow-orange / crimson-pink
-     rather than three neighbouring oranges. */
+     rather than three neighbouring oranges.
+
+     All four other moods override all seven -- see the sakura block for why. This copy is
+     notebook's, and it is also the fallback for a document with no `data-mood` attribute at
+     all, which is why it stays in the shared selector rather than moving into a mood block. */
   --subject-teal: #0D9488;
   --subject-coral: #F26B4E;
   --subject-amber: #D97706;
@@ -124,16 +128,22 @@
      This replaced the hand-lettered Delius pair that used to fill every one of these tokens, and
      also retired IBM Plex Sans Arabic (the previous --font-arabic) in favour of Cairo/Amiri.
      Delius carried exactly one weight (400), so the many `font-weight: 800` rules across the app
-     were all synthesised; Fraunces, Plex and Cairo all have real weights to hit instead. */
-  --font-primary: var(--font-plex), "IBM Plex Sans", var(--font-arabic), system-ui, sans-serif;
+     were all synthesised; Fraunces, Jakarta and Cairo all have real weights to hit instead.
+
+     The Latin sans is Plus Jakarta Sans, not IBM Plex Sans. Plex's variable wght axis stops at
+     700 and a variable font clamps rather than synthesising, so the 156 `font-weight: 800` and 34
+     `font-weight: 900` rules in these stylesheets were all rendering at 700 -- body and label text
+     came out visibly lighter than it asked for, next to Fraunces headings that do reach 900.
+     Jakarta runs 200-800: every 800 is real now, and only the 900s clamp (to 800). */
+  --font-primary: var(--font-jakarta), "Plus Jakarta Sans", var(--font-arabic), system-ui, sans-serif;
   --font-display: var(--font-fraunces), "Fraunces", var(--font-arabic-display), var(--font-arabic), Georgia, serif;
   --font-heading: var(--font-fraunces), "Fraunces", var(--font-arabic-display), var(--font-arabic), Georgia, serif;
-  --font-sans: var(--font-plex), "IBM Plex Sans", var(--font-arabic), system-ui, -apple-system, sans-serif;
-  --font-mono: var(--font-mono), "JetBrains Mono", ui-monospace, monospace;
+  --font-sans: var(--font-jakarta), "Plus Jakarta Sans", var(--font-arabic), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-jetbrains), "JetBrains Mono", ui-monospace, monospace;
   /* Small UI labels and form controls: course chips, the quick-add field, the selects. The same
      chain as --font-sans today, kept as its own token so label tracking or family can be tuned
      later without repainting every paragraph in the app. */
-  --font-label: var(--font-plex), "IBM Plex Sans", var(--font-arabic), system-ui, sans-serif;
+  --font-label: var(--font-jakarta), "Plus Jakarta Sans", var(--font-arabic), system-ui, sans-serif;
   /* The auth pages' headline face. Deliberately the same chain as --font-heading -- the front
      door is set apart by the variation axes (SOFT/WONK, see .auth-headline in auth.css) rather
      than by a fifth family download, and an Arabic headline still resolves to Amiri. */
@@ -221,6 +231,102 @@
      drift apart. Safe as a bare `:root` because no mood block declares it -- unlike
      --shadow-doodle, which they all override. */
   --page-header-shadow: var(--shadow-doodle);
+  /* Same trick for the one card whose shadow is written as a literal rather than through a
+     --shadow-doodle* token: `4px 4px 0px var(--secondary)`. It cannot be swapped for
+     --shadow-doodle-lg, which is byte-identical on notebook but a translucent tint on the
+     other four moods, so that swap would quietly restyle doodle on 4 of 5 palettes.
+
+     A token instead of a `[data-skin]` rule on the card, because the card is also in the
+     mobile comfort pass's selector list in globals.css -- and that list only wins on source
+     order at equal specificity, so any `[data-skin="atlas"] .public-challenge-card` rule
+     carrying a box-shadow (0,2,0) outranks it and silently cancels the mobile step-down.
+     Routing the value through a custom property keeps the card's own rule at (0,1,0) where
+     the comfort pass can still reach it. */
+  --public-card-shadow: 4px 4px 0px var(--secondary);
+}
+
+/* ================= Atlas glass materials =================
+   The vocabulary the Atlas skin is built from: translucency, a hairline rim, soft
+   elevation, and the bento rhythm. Declared here rather than inside the skin block below
+   so both skins can read them (the doodle skin ignores them, but a component that wants a
+   glass sheet regardless of skin does not have to duplicate the recipe).
+
+   Safe in a bare `:root`, specificity (0,1,0), for the same reason --page-header-shadow is:
+   no mood block declares any of these, so there is nothing at (0,1,1) to lose to. What
+   makes them mood-aware anyway is that they are composed out of palette tokens -- a custom
+   property resolves var() at use time against the element's own computed values, so
+   --glass-bg picks up whichever --surface the active mood installed. One declaration,
+   five correct palettes.
+
+   The rim is mixed from --secondary on purpose. That token is "the contrast ink" in every
+   mood: dark navy on the four light papers, near-white on cosmic. Mixing the rim from it
+   yields a dark hairline on light moods and a light one on cosmic automatically, which is
+   exactly what a glass edge should do, with no per-mood override.
+
+   Shadows deliberately do NOT follow --secondary -- a near-white shadow on cosmic would be
+   a glow, not a shadow. They stay a fixed dark ink, which means they fade to almost nothing
+   on cosmic's dark ground. That is correct: dark UIs read elevation from lighter surfaces
+   and brighter rims, not from shadows, and the rim above already goes light there. */
+:root {
+  --glass-bg: color-mix(in srgb, var(--surface) 62%, transparent);
+  --glass-bg-raised: color-mix(in srgb, var(--surface-elevated) 78%, transparent);
+  --glass-bg-sunken: color-mix(in srgb, var(--surface-sunken) 55%, transparent);
+  /* The hairline edge, and the brighter top-edge catch of light above it. */
+  --glass-rim: color-mix(in srgb, var(--secondary) 16%, transparent);
+  --glass-rim-strong: color-mix(in srgb, var(--secondary) 26%, transparent);
+  --glass-sheen: color-mix(in srgb, #ffffff 55%, transparent);
+  --glass-blur: 20px;
+  --glass-blur-heavy: 36px;
+
+  /* Soft elevation. Each step pairs a diffuse drop shadow with the 1px rim, so a single
+     token gives a surface both its lift and its edge. */
+  --elevation-1: 0 1px 2px rgba(15, 23, 42, 0.06), 0 0 0 1px var(--glass-rim);
+  --elevation-2: 0 4px 12px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.06),
+    0 0 0 1px var(--glass-rim);
+  --elevation-3: 0 12px 28px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(15, 23, 42, 0.07),
+    0 0 0 1px var(--glass-rim);
+  --elevation-4: 0 24px 56px rgba(15, 23, 42, 0.16), 0 4px 10px rgba(15, 23, 42, 0.08),
+    0 0 0 1px var(--glass-rim-strong);
+
+  /* Borders as tokens, because the doodle system wrote its borders literally and there is
+     no existing token to remap. Anything that opts into these flips with the skin. */
+  --stroke-default: 1px solid var(--glass-rim);
+  --stroke-strong: 1px solid var(--glass-rim-strong);
+  --stroke-muted: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+
+  /* Bento rhythm */
+  --bento-gap: 16px;
+  --bento-radius: 20px;
+  --bento-radius-inner: 14px;
+
+  /* Ambient aurora. Duration is long on purpose -- this is background weather, not a UI
+     transition, so the sub-300ms UI rule does not apply to it. */
+  --aurora-duration: 14s;
+  --aurora-scale: 1.35;
+}
+
+/* Translucency is only legible when something blurs what is behind it. Without
+   backdrop-filter, a 62%-opaque sheet sitting over a drifting aurora is not "slightly
+   glassy" -- it is body text over a moving gradient, which is the one outcome worse than
+   having no glass at all.
+
+   So the fallback is applied to the three fill tokens themselves rather than to each
+   surface that uses them: every glass sheet in the app, in this phase and every later one,
+   degrades to its opaque parent colour from this one block. The alternative -- a parallel
+   set of "safe" token names -- means every new component has to remember to reach for the
+   right one of two near-synonyms, and the failure mode of forgetting is invisible on the
+   dev machine.
+
+   Both the unprefixed and the -webkit- form are tested. Unprefixed only landed in Safari
+   18 (Sept 2024); iOS 15-17 are still very much in the field and support the prefix, so
+   testing only the modern spelling would strip the glass from a large slice of iPhones
+   that render it perfectly well. The use sites declare both properties for the same reason. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root {
+    --glass-bg: var(--surface);
+    --glass-bg-raised: var(--surface-elevated);
+    --glass-bg-sunken: var(--surface-sunken);
+  }
 }
 
 @media (max-width: 768px) {
@@ -388,6 +494,32 @@
   --shadow-doodle-md: 3px 3px 0px rgba(107, 33, 168, 0.45);
   --shadow-doodle-lg: 4px 4px 0px rgba(107, 33, 168, 0.5);
   --shadow-doodle-xl: 6px 6px 0px rgba(107, 33, 168, 0.55);
+
+  /* ================= Course identity colours, tuned to this paper =================
+     Declared per mood for the reason the palette above is: without it, sakura, aurora and
+     sunset all fell through to the bare-`:root` ramp, and since the colour enum's first entry
+     is `teal`, every course a student had not hand-coloured came out the same #0D9488 green on
+     a pink page, a mint page and a cream page alike. "Change the theme, nothing changes" was
+     the complaint, and this is where it lived.
+
+     The seven names are the database enum (subjectInputSchema.colorToken) and cannot move, so
+     each mood keeps every name in its own hue family and only shifts lightness, chroma and a
+     few degrees of hue to suit its surface. A student who chose "amber" still gets an amber
+     dot in every theme -- it is the *same* amber that stops being right, not the name.
+
+     Sakura's paper is #FFF5F7, a warm near-white pink, so the base ramp's lighter entries lose
+     separation against it and every one of these is pushed deeper. Coral and rose are the pair
+     that has to be watched here: on a pink ground two red-pinks collapse into one at 10px, so
+     coral is held on the orange side of red and rose is taken to a deep pink well clear of it. */
+  --subject-teal: #0F766E;
+  --subject-coral: #E14D33;
+  --subject-amber: #C2740A;
+  --subject-violet: #7E22CE;
+  --subject-sky: #0369A1;
+  --subject-rose: #BE185D;
+  /* The neutral is the one that should not stay neutral: a true grey dot on pink paper reads as
+     a dead pixel, so slate carries a little of the mood's mauve. */
+  --subject-slate: #6D5A6B;
 }
 
 /* ================= Zen Aurora (calm mint & cyan) ================= */
@@ -461,6 +593,24 @@
   --shadow-doodle-md: 3px 3px 0px rgba(6, 95, 70, 0.45);
   --shadow-doodle-lg: 4px 4px 0px rgba(6, 95, 70, 0.5);
   --shadow-doodle-xl: 6px 6px 0px rgba(6, 95, 70, 0.55);
+
+  /* Course identity colours on mint paper -- see the sakura block for why these are per-mood.
+     Aurora is the awkward one: its own `--primary` is #047857, which is very nearly what `teal`
+     wants to be, and a course colour is not allowed to land on `--primary` here. That is not a
+     taste rule -- `.dashboard-task-card::before` falls back to `var(--primary)` when a task has no
+     course at all, so a `teal` course whose spine is #047857 becomes indistinguishable from a loose
+     task, and "which of these belongs to a subject" stops being answerable. (The geometry harness
+     asserts exactly this: three cards, three spines.) So teal is taken deeper and bluer instead,
+     which also opens a gap to `sky`. Coral and amber carry the warmth this palette otherwise has
+     none of, which is what keeps a board of courses from reading as one green wash. */
+  --subject-teal: #115E59;
+  --subject-coral: #DC5237;
+  --subject-amber: #B45309;
+  --subject-violet: #6D28D9;
+  --subject-sky: #0369A1;
+  --subject-rose: #BE185D;
+  /* Green-grey, so the neutral belongs to the page rather than sitting on top of it. */
+  --subject-slate: #4C6B5C;
 }
 
 /* ================= Sunset Cafe (warm amber) ================= */
@@ -534,22 +684,139 @@
   --shadow-doodle-md: 3px 3px 0px rgba(120, 53, 15, 0.45);
   --shadow-doodle-lg: 4px 4px 0px rgba(120, 53, 15, 0.5);
   --shadow-doodle-xl: 6px 6px 0px rgba(120, 53, 15, 0.55);
+
+  /* Course identity colours on cream paper -- see the sakura block for why these are per-mood.
+     Sunset's own primary is #D97706, so `amber` is deliberately NOT that value: a course dot the
+     same colour as every button on the page stops reading as an identity and starts reading as a
+     control. It drops to the burnt #B45309 instead, and coral sits a clear step to the red side
+     of it. Teal, violet and sky stay cool on purpose -- on a page this warm they are the only
+     thing that gives the seven any spread at all. */
+  --subject-teal: #0F766E;
+  --subject-coral: #D14425;
+  --subject-amber: #B45309;
+  --subject-violet: #6D28D9;
+  --subject-sky: #0369A1;
+  --subject-rose: #BE185D;
+  /* Warm stone rather than blue-grey, which on cream reads as a smudge. */
+  --subject-slate: #7A6A55;
+}
+
+/* ================= Skins: the material axis =================
+   `data-mood` decides which colours; `data-skin` decides what the surfaces are made of.
+   Two independent axes on the same <html> element, both server-rendered in layout.tsx so
+   the first paint is already correct.
+
+   ORDER IS LOAD-BEARING. `:root[data-skin="atlas"]` and `:root[data-mood="sunset"]` are
+   both specificity (0,1,1), so the cascade falls back to source order for any property
+   they both declare -- and every mood block above redeclares --border-doodle* and
+   --shadow-doodle*. This block therefore has to stay BELOW the last mood block. Move it
+   above them and the skin silently loses its borders and shadows on every mood except
+   notebook, which is the same trap the bare `:root` comment further up describes.
+
+   The leverage here: components.css routes materials through the doodle token *names* in
+   314 places (122 radius, 192 shadow). Redefining the names rather than the rules reskins
+   roughly 8,500 lines of CSS without touching a single component selector -- and leaves the
+   doodle values completely intact for anyone who picks that skin back up in Settings. */
+:root[data-skin="atlas"] {
+  /* Wobbly multi-value radii collapse to one calm bento radius. The `chip` step keeps its
+     job of being rounder than the button step -- it just becomes a true pill. */
+  --radius-doodle: var(--bento-radius);
+  --radius-doodle-card: var(--bento-radius);
+  --radius-doodle-btn: 12px;
+  --radius-doodle-chip: var(--radius-full);
+
+  /* 2px ink outlines become hairline rims. `dashed` becomes solid: a dashed edge is a
+     doodle signature, and there is no glass equivalent of it. */
+  --border-doodle: var(--stroke-default);
+  --border-doodle-thin: var(--stroke-muted);
+  --border-doodle-dashed: var(--stroke-muted);
+
+  /* Hard offset shadows become soft elevation. The five steps keep their relative order,
+     so anything that deliberately reached for `xl` over `xs` still reads as more lifted.
+     --shadow-doodle-sm and --shadow-xs..xl alias off these, so they follow automatically. */
+  --shadow-doodle-xs: var(--elevation-1);
+  --shadow-doodle: var(--elevation-1);
+  --shadow-doodle-md: var(--elevation-2);
+  --shadow-doodle-lg: var(--elevation-3);
+  --shadow-doodle-xl: var(--elevation-4);
+
+  /* The public challenge card's hardcoded 4px ink offset -- see --public-card-shadow above. */
+  --public-card-shadow: var(--elevation-3);
+
+  /* The focus ring loses its dashes but keeps its 2px weight and its palette colour, so it
+     still clears the 3:1 contrast the WCAG focus-appearance rule wants. */
+  --focus-outline: 2px solid var(--focus);
+
+  /* A clean geometric chevron in place of the two hand-drawn pen strokes. Still a whole
+     url() for the same reason the doodle one is: nothing can interpolate a var() into a
+     data URI, and background-image cannot read currentColor. currentColor is unavailable,
+     so this uses the same #263D5B ink that covers the four light moods; cosmic overrides
+     it below, exactly as it does for --doodle-caret. */
+  --doodle-caret: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%23263D5B' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1.5 2 L6 6.2 L10.5 2'/%3E%3C/svg%3E");
+}
+
+/* Cosmic is the one dark mood, so it needs the light-ink chevron under Atlas too. Two
+   attributes on one element, specificity (0,1,2) -- above both single-attribute blocks. */
+:root[data-mood="cosmic"][data-skin="atlas"] {
+  --doodle-caret: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%23E2E8F0' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1.5 2 L6 6.2 L10.5 2'/%3E%3C/svg%3E");
+}
+
+/* The classic skin. Intentionally empty: every doodle value IS the `:root` default, so
+   there is nothing to restore. The block exists so that `data-skin="doodle"` is a real,
+   greppable thing rather than "the absence of atlas", and so the next person looking for
+   where doodle is defined finds this pointer instead of concluding it was deleted. */
+:root[data-skin="doodle"] {
+  /* see the palette block at the top of this file */
 }
 
 
 
+/* ================= Tailwind bridge =================
+   Only what is declared here becomes a Tailwind utility. A class that looks plausible but
+   has no key below compiles to nothing at all and fails silently -- `text-accent-strong`
+   and `shadow-doodle-xs` were both live in the app while doing absolutely nothing. When you
+   reach for a `bg-`/`text-`/`shadow-` utility on a semantic token, check that its key is
+   here first, and add it if not.
+
+   `inline` matters: it substitutes each value straight into the utility instead of emitting
+   a second copy of the variable at :root. That is what keeps the same-name entries below
+   (--shadow-doodle-xs: var(--shadow-doodle-xs)) from becoming self-referential, which would
+   be a dependency cycle and compute to the guaranteed-invalid value. */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-hover: var(--surface-hover);
   --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
   --color-line: var(--line);
   --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-strong);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-subtle: var(--primary-subtle);
   --color-secondary: var(--secondary);
   --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
   --color-danger: var(--danger);
+  --color-danger-subtle: var(--danger-subtle);
   --color-success: var(--success);
   --color-warning: var(--warning);
+
+  /* Materials. These follow the active skin, because the values they point at are what the
+     skin block redefines -- `shadow-doodle-xs` is a soft elevation under Atlas and a hard
+     offset under Doodle, from one unchanged class name in the markup. */
+  --shadow-doodle-xs: var(--shadow-doodle-xs);
+  --shadow-doodle: var(--shadow-doodle);
+  --shadow-doodle-md: var(--shadow-doodle-md);
+  --shadow-elevation-1: var(--elevation-1);
+  --shadow-elevation-2: var(--elevation-2);
+  --shadow-elevation-3: var(--elevation-3);
+  --radius-bento: var(--bento-radius);
+  --radius-doodle-card: var(--radius-doodle-card);
+  --blur-glass: var(--glass-blur);
+
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
   --font-heading: var(--font-heading);

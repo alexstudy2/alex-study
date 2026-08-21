@@ -892,8 +892,6 @@ body.mobile-sheet-open {
 
 .social-header,
 .panel-heading,
-.social-panel > article,
-.social-list > article,
 .notification-list > article,
 .inline-actions {
   display: flex;
@@ -907,9 +905,7 @@ body.mobile-sheet-open {
 
 /* Let the text block take the row and push the actions onto their own line rather than
    squeezing both. */
-.social-list > article > div:first-child,
 .notification-list > article > div:first-child,
-.social-panel > article > div:first-child,
 .panel-heading > div:first-child {
   min-width: 0;
   flex: 1 1 12rem;
@@ -940,7 +936,10 @@ body.mobile-sheet-open {
   border: 2px solid var(--secondary);
   border-radius: var(--radius-doodle-card);
   padding: var(--space-6);
-  box-shadow: 4px 4px 0px var(--secondary);
+  /* Was the literal `4px 4px 0px var(--secondary)`. The token's default IS that literal, so
+     doodle is unchanged on every mood; see --public-card-shadow in tokens.css for why the
+     skin cannot swap this from a `[data-skin]` rule without cancelling the mobile step-down. */
+  box-shadow: var(--public-card-shadow);
 }
 
 .public-challenge-card > header,
@@ -950,4 +949,306 @@ body.mobile-sheet-open {
   align-items: flex-start;
   gap: var(--space-4);
   flex-wrap: wrap;
+}
+
+/* =====================================================================
+   Atlas skin — shell chrome
+   =====================================================================
+   Everything above this line is the doodle shell and stays exactly as it is; a user who
+   picks Doodle in Settings gets it untouched, because `data-skin` is absent from every
+   selector up there and present in every selector down here.
+
+   Specificity, not source order, is what makes these land: `[data-skin="atlas"] .app-sidebar`
+   is (0,2,0) against a bare `.app-sidebar` at (0,1,0), so these win from anywhere in the
+   cascade -- including against the base rules that live inside @media blocks, since a media
+   query contributes no specificity of its own. That is why the mobile bar and the top sheet
+   are restyled here without repeating their breakpoints: above 768px both are
+   `display: none`, so an unconditional colour is unobservable rather than wrong, and one
+   rule is easier to keep true than two.
+
+   The material vocabulary is tokens.css's (--glass-*, --stroke-*, --elevation-*). All of it
+   is composed out of palette tokens, so this single block is correct in all five moods --
+   the rim mixes from --secondary, which is dark navy on the four light papers and near-white
+   on cosmic, so a glass edge darkens or lightens to suit its ground with no per-mood override.
+
+   Not restyled here, on purpose:
+   - `.app-content` stays transparent. It is the page canvas, and the aurora is behind it;
+     glassing it would frost the entire background and leave the cards floating on a flat
+     wash, which is the opposite of the effect. The cards are the glass, the canvas is the
+     view. Its padding rules are load-bearing (bottom-nav clearance) and are left alone.
+   - `.skip-link` keeps its solid high-contrast fill. It exists to be unmissable for a
+     keyboard user; translucency is a downgrade with no upside.
+   - `.sidebar-rule`'s height and margins. scripts/css-geometry-check.mjs pins them at 2px
+     and 8/8 because that rule was once declared twice with different values, so only its
+     colour is skin-dependent. */
+
+/* ---- Page header card ---- */
+/* No box-shadow here, deliberately. The header's elevation comes from --page-header-shadow,
+   which is `var(--shadow-doodle)` on desktop and `var(--shadow-doodle-xs)` below 768px --
+   both already remapped to soft elevation by the skin block in tokens.css. The harness
+   compares this element's computed shadow against those two tokens exactly, so a shadow
+   declared here would break the step-down check while looking fine. */
+[data-skin="atlas"] .page-header-container,
+[data-skin="atlas"] .dashboard-header,
+[data-skin="atlas"] .tasks-header,
+[data-skin="atlas"] .focus-header,
+[data-skin="atlas"] .calendar-header,
+[data-skin="atlas"] .goals-header,
+[data-skin="atlas"] .lobbies-header,
+[data-skin="atlas"] .room-header,
+[data-skin="atlas"] .analytics-header,
+[data-skin="atlas"] .insights-header,
+[data-skin="atlas"] .exam-plan-header,
+[data-skin="atlas"] .exam-plan-detail-header,
+[data-skin="atlas"] .settings-header,
+[data-skin="atlas"] .sessions-header,
+[data-skin="atlas"] .session-detail-header,
+[data-skin="atlas"] .goal-detail-header,
+[data-skin="atlas"] .detail-header,
+[data-skin="atlas"] .challenge-header,
+[data-skin="atlas"] .challenge-form-header,
+[data-skin="atlas"] .challenge-detail-header,
+[data-skin="atlas"] .result-header,
+[data-skin="atlas"] .leaderboard-header {
+  border: var(--stroke-default);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+/* The h1 clamp is deliberately unchanged. The plan called for --text-2xl here on the
+   assumption it was around 1.5rem; it is 2.5rem, which is already the top of the existing
+   `clamp(1.8rem, 6vw, 2.5rem)` ramp, so there was nothing to shrink -- and the 28.8px floor
+   is asserted by the harness with a documented rationale ("never looks squeezed" at 360px).
+   What Atlas changes instead is the thing that actually separates a premium display setting
+   from a default one: optical sizing. Fraunces has an opsz axis, and pinning it near the top
+   of its range at title sizes is what sharpens the serifs and thins the hairlines. The
+   negative tracking goes a little further than doodle's because glass has no ink outline
+   competing for the same visual weight. */
+[data-skin="atlas"] .page-header-container h1,
+[data-skin="atlas"] .dashboard-header h1,
+[data-skin="atlas"] .tasks-header h1,
+[data-skin="atlas"] .focus-header h1,
+[data-skin="atlas"] .calendar-header h1,
+[data-skin="atlas"] .goals-header h1,
+[data-skin="atlas"] .lobbies-header h1,
+[data-skin="atlas"] .room-header h1,
+[data-skin="atlas"] .analytics-header h1,
+[data-skin="atlas"] .insights-header h1,
+[data-skin="atlas"] .exam-plan-header h1,
+[data-skin="atlas"] .exam-plan-detail-header h1,
+[data-skin="atlas"] .settings-header h1,
+[data-skin="atlas"] .sessions-header h1,
+[data-skin="atlas"] .session-detail-header h1,
+[data-skin="atlas"] .goal-detail-header h1,
+[data-skin="atlas"] .detail-header h1,
+[data-skin="atlas"] .challenge-header h1,
+[data-skin="atlas"] .challenge-form-header h1,
+[data-skin="atlas"] .challenge-detail-header h1,
+[data-skin="atlas"] .result-header h1,
+[data-skin="atlas"] .leaderboard-header h1 {
+  letter-spacing: -0.022em;
+  /* wght is left out so `font-weight: 700` from the Heading Typography block above stays the
+     one place the weight is set -- naming it here would fork that decision in two files. */
+  font-variation-settings: "opsz" 40, "SOFT" 0, "WONK" 0;
+}
+
+/* ---- Desktop rail ---- */
+/* A directional shadow rather than one of the --elevation-* steps: those each carry a
+   `0 0 0 1px` ring on all four sides, which on a full-height rail pinned to the viewport
+   edge means three of the four are either off-screen or drawn over by the content. The rim
+   this rail actually needs is the one border-inline-end already provides. */
+[data-skin="atlas"] .app-sidebar {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(var(--glass-blur-heavy));
+  backdrop-filter: blur(var(--glass-blur-heavy));
+  border-inline-end: var(--stroke-default);
+  box-shadow: 1px 0 24px rgba(15, 23, 42, 0.05);
+}
+
+[data-skin="atlas"] .sidebar-group-title {
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--muted-foreground);
+}
+
+/* Colour only -- see the section note about the pinned 2px/8/8 geometry. Mixed from the
+   contrast ink at 16% instead of 25%-of-secondary-via-opacity, so the divider gets the same
+   mood-awareness as every other Atlas edge from the same token as the rest of them. */
+[data-skin="atlas"] .sidebar-rule {
+  background: var(--glass-rim);
+  opacity: 1;
+}
+
+/* 2px of reserved transparent border becomes 1px. Both the resting and the active state read
+   their width from this one declaration -- the active rule only sets `border-color` -- which
+   is what keeps the harness's active-page drift check at 0: swapping which link is current
+   must not move the stack by so much as a pixel. */
+[data-skin="atlas"] .app-sidebar nav a,
+[data-skin="atlas"] .app-sidebar-footer > a,
+[data-skin="atlas"] .app-sidebar-footer > button,
+[data-skin="atlas"] .mobile-navigation a,
+[data-skin="atlas"] .mobile-more-trigger {
+  border-width: 1px;
+  font-weight: 600;
+}
+
+/* Doodle's hover is a sticker peeling off the page: a 1px diagonal nudge plus a hard offset
+   shadow. Glass does not lift, it catches light -- so the transform goes and the state is
+   carried by fill and rim instead. That also drops a reduced-motion question and a subpixel
+   text reflow on every hover, neither of which was buying anything on a nav link. */
+[data-skin="atlas"] .app-sidebar nav a:hover,
+[data-skin="atlas"] .app-sidebar-footer > a:hover,
+[data-skin="atlas"] .app-sidebar-footer > button:hover,
+[data-skin="atlas"] .mobile-navigation a:hover,
+[data-skin="atlas"] .mobile-more-trigger:hover {
+  background: var(--glass-bg-raised);
+  border-color: var(--glass-rim);
+  transform: none;
+  box-shadow: var(--elevation-1);
+}
+
+/* The active pill keeps --primary/--primary-foreground: that pair is contrast-matched by
+   definition in every mood, which is why it needs no per-mood override. What changes is how
+   it sits on the rail -- the ink outline and hard offset become a coloured bloom of the
+   primary itself, so the current page reads as lit rather than stamped. */
+[data-skin="atlas"] .app-sidebar a[aria-current="page"],
+[data-skin="atlas"] .mobile-navigation a[aria-current="page"],
+[data-skin="atlas"] .mobile-more-trigger[aria-expanded="true"] {
+  border-color: transparent;
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--primary) 32%, transparent);
+}
+
+/* 2.2 is a doodle weight -- it reads as hand-drawn at 20px, which is the point there. A
+   finer stroke is what makes the same Lucide set read as precise instead of chunky. */
+[data-skin="atlas"] .app-sidebar svg,
+[data-skin="atlas"] .mobile-navigation svg {
+  stroke-width: 1.9;
+}
+
+[data-skin="atlas"] .app-sidebar-footer {
+  border-top: var(--stroke-default);
+}
+
+[data-skin="atlas"] .shell-profile {
+  border: var(--stroke-default);
+  background: var(--glass-bg-sunken);
+}
+
+[data-skin="atlas"] .shell-profile span,
+[data-skin="atlas"] .mobile-more-profile > span {
+  border: 1px solid var(--glass-rim-strong);
+}
+
+/* The count is already a saturated danger fill; an ink outline around it is doodle's way of
+   seating a colour on paper, and on glass it just muddies the edge. */
+[data-skin="atlas"] .notification-badge {
+  border-color: transparent;
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--danger) 40%, transparent);
+}
+
+/* ---- Mobile bottom bar ---- */
+/* --glass-bg-raised (78%) rather than --glass-bg (62%) here and on the sheet below. These two
+   are the only chrome that sits over arbitrary scrolling page content rather than over the
+   ambient canvas, so they need enough body to keep their labels legible against whatever
+   happens to be underneath -- a card, a chart, a photo. The upward shadow replaces doodle's
+   `0 -2px 0` ink line: with a hairline border already drawing the edge, the shadow's job is
+   to say the bar floats, which a hard offset cannot do. */
+[data-skin="atlas"] .mobile-navigation {
+  background: var(--glass-bg-raised);
+  -webkit-backdrop-filter: blur(var(--glass-blur-heavy));
+  backdrop-filter: blur(var(--glass-blur-heavy));
+  border-top: var(--stroke-default);
+  box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.08);
+}
+
+/* ---- Mobile top sheet ---- */
+/* A blurred backdrop is doing real work rather than decoration: it is the signal that the
+   layer behind is dismissible, which is exactly the case blur is for. The scrim lightens to
+   compensate -- 45% black over an already-blurred page is heavier than it needs to be to
+   separate the two layers. */
+[data-skin="atlas"] .mobile-more-backdrop {
+  background: rgba(2, 6, 23, 0.32);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+/* The wobbly asymmetric bottom corners (`0 0 20px 26px / 0 0 22px 18px`) are a doodle
+   signature and one of the 46 hardcoded radii the token remap cannot reach, so this is a
+   literal override rather than a token swap. Only the bottom pair is rounded either way --
+   the sheet is flush with the top of the viewport. */
+[data-skin="atlas"] .mobile-more-sheet {
+  background: var(--glass-bg-raised);
+  -webkit-backdrop-filter: blur(var(--glass-blur-heavy));
+  backdrop-filter: blur(var(--glass-blur-heavy));
+  border: var(--stroke-default);
+  border-top: none;
+  border-radius: 0 0 var(--bento-radius) var(--bento-radius);
+}
+
+/* Transparent, not --surface: the header has to let the sheet's own glass show through or it
+   reads as an opaque strip pasted onto a translucent panel. */
+[data-skin="atlas"] .mobile-more-header {
+  border-bottom: var(--stroke-default);
+  background: transparent;
+}
+
+[data-skin="atlas"] .mobile-more-close,
+[data-skin="atlas"] .mobile-more-tile {
+  border: var(--stroke-default);
+  background: var(--glass-bg-raised);
+}
+
+[data-skin="atlas"] .mobile-more-profile {
+  border: var(--stroke-default);
+  background: var(--glass-bg-sunken);
+}
+
+[data-skin="atlas"] .mobile-more-tile[aria-current="page"] {
+  border-color: transparent;
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--primary) 32%, transparent);
+}
+
+[data-skin="atlas"] .mobile-more-tile svg,
+[data-skin="atlas"] .mobile-more-row svg,
+[data-skin="atlas"] .mobile-more-section-icon {
+  stroke-width: 1.9;
+}
+
+[data-skin="atlas"] .mobile-more-row {
+  border-width: 1px;
+}
+
+/* The base rule seats the current row on an ink outline. On glass the same job is done by the
+   rim, so the row keeps its --primary-subtle wash and loses the hard edge. */
+[data-skin="atlas"] .mobile-more-row[aria-current="page"] {
+  border-color: var(--glass-rim-strong);
+}
+
+[data-skin="atlas"] .mobile-more-utility {
+  border-top: var(--stroke-default);
+}
+
+/* ---- Public challenge card ---- */
+/* Pulled forward from Phase 5's auth/public batch. Its border is written as a literal
+   (`2px solid var(--secondary)`), so the token remap does not reach it -- and leaving one hard
+   ink card in the file being reskinned would have shipped a visibly doodle route on an
+   otherwise Atlas app for the sake of a phase boundary.
+
+   No box-shadow here: it travels through --public-card-shadow instead, which is the only way
+   to reskin it without outranking the mobile comfort pass. */
+[data-skin="atlas"] .public-challenge-card {
+  border: var(--stroke-default);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+/* And the shell behind it stops painting `var(--background)`. That fill was harmless when the
+   card on top of it was opaque; with a glass card there is now a flat 48rem-wide column of
+   flat colour showing through it and blocking the aurora, which is worse than either extreme.
+   (components.css declares this class a second time, later, and narrows it to `max-width:
+   48rem` -- which is where the "column" rather than "full page" comes from.) */
+[data-skin="atlas"] .public-challenge-shell {
+  background: transparent;
 }

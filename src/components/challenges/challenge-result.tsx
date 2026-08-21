@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ArrowLeft, ArrowRight, RotateCcw, ScrollText, Trophy } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { Challenge } from "@/components/challenges/types";
 import {
   badgeCopy,
@@ -37,6 +39,7 @@ export function ChallengeResult({
     : null;
   const acceptedTerminal =
     Boolean(challenge.acceptedAt) && ["COMPLETED", "EXPIRED"].includes(challenge.status);
+  const BackIcon = ar ? ArrowRight : ArrowLeft;
 
   async function share(enabled: boolean) {
     setBusy(true);
@@ -110,25 +113,53 @@ export function ChallengeResult({
   return (
     <main className="challenge-result-shell" dir={ar ? "rtl" : "ltr"}>
       <header className="result-header">
-        <div className="page-header-text">
-          <Link className="wordmark" href="/challenges">
-            Alex Study
-          </Link>
-          <p className="eyebrow">{ar ? "نتيجة التحدي" : "Challenge result"}</p>
-          <h1>{resultHeading(challenge, winner?.id ?? null, userId, locale)}</h1>
-          <p>{resultSummary(challenge, winner?.name ?? null, locale)}</p>
+        <div className="page-header-main">
+          <span className="header-icon-box" aria-hidden="true">
+            <Trophy className="w-5 h-5" />
+          </span>
+          <div className="page-header-text">
+            {/* This used to be a second `.wordmark` reading "Alex Study". The root layout already
+                wraps every page in AppShell, so the product name was printed twice -- once in the
+                real nav, once here. A breadcrumb is what the header actually needed. */}
+            <Link
+              href="/challenges"
+              className="inline-flex items-center gap-1.5 min-h-6 text-xs text-muted font-bold mb-1.5 hover:text-foreground transition-colors"
+            >
+              <BackIcon className="w-4 h-4" />
+              <span>{ar ? "كل التحديات" : "All challenges"}</span>
+            </Link>
+            <p className="eyebrow">{ar ? "نتيجة التحدي" : "Challenge result"}</p>
+            <h1>{resultHeading(challenge, winner?.id ?? null, userId, locale)}</h1>
+            <p>{resultSummary(challenge, winner?.name ?? null, locale)}</p>
+          </div>
         </div>
-        <nav
-          className="page-header"
+        {/* Both controls used to live in a `.page-header` nav pill, where `.page-header a` and
+            `.page-header button` (border: 0; background: transparent; color: var(--muted)) outrank
+            `.btn-primary` -- so the page's two actions, Rematch included, rendered as muted ghost
+            text. `.page-header-actions` is the slot for real buttons. */}
+        <div
+          className="page-header-actions"
+          role="group"
           aria-label={ar ? "إجراءات النتيجة" : "Result actions"}
         >
-          <Link className="secondary-button" href={`/challenges/${challenge.id}`}>
+          <Button
+            href={`/challenges/${challenge.id}`}
+            variant="secondary"
+            size="sm"
+            leftIcon={<ScrollText className="w-4 h-4" />}
+          >
             {ar ? "سجل التقدم" : "Progress log"}
-          </Link>
-          <button className="primary-button" disabled={busy} onClick={rematch}>
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            disabled={busy}
+            onClick={rematch}
+            leftIcon={<RotateCcw className="w-4 h-4" />}
+          >
             {ar ? "إعادة التحدي" : "Rematch"}
-          </button>
-        </nav>
+          </Button>
+        </div>
       </header>
 
       {message && (

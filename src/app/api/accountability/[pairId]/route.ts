@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db/prisma";
 import { canManagePair } from "@/lib/social/pairs";
+import { accountabilityPairInclude } from "@/lib/social/queries";
 import { accountabilityPatchSchema } from "@/lib/social/validation";
 import { apiUser, invalid, notFound, unauthorized } from "@/lib/tasks/response";
 export async function PATCH(request: Request, context: { params: Promise<{ pairId: string }> }) {
@@ -15,6 +16,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ pairI
     pair: await prisma.accountabilityPair.update({
       where: { id: pair.id },
       data: { status: parsed.data.status },
+      include: accountabilityPairInclude,
     }),
   });
 }

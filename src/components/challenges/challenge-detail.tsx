@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ArrowLeft, ArrowRight, Swords } from "lucide-react";
 import type { Challenge, ChallengeEvent } from "@/components/challenges/types";
 import {
   challengeTypeLabel,
@@ -96,31 +97,46 @@ export function ChallengeDetail({
   }, [challenge.endsAt, challenge.startsAt, challenge.status, now, offset]);
   const creatorPending = challenge.status === "PENDING" && challenge.creatorId === userId;
   const opponentPending = challenge.status === "PENDING" && challenge.opponentId === userId;
+  const BackIcon = ar ? ArrowRight : ArrowLeft;
 
   return (
     <main className="challenge-detail-shell" dir={ar ? "rtl" : "ltr"}>
       <header className="challenge-detail-header">
-        <div className="page-header-text">
-          <Link className="wordmark" href="/challenges">
-            Alex Study
-          </Link>
-          <p className="eyebrow">{challengeTypeLabel(challenge.type, locale)}</p>
-          <h1>
-            {challenge.creator.name} <span>{ar ? "ضد" : "vs"}</span> {challenge.opponent.name}
-          </h1>
-          <p>
-            {challenge.subjectLabel ? `${challenge.subjectLabel} · ` : ""}
-            {challenge.targetValue} {challengeUnit(challenge.type, challenge.targetValue, locale)} ·{" "}
-            {resolutionLabel(challenge.resolutionType, locale)}
-          </p>
+        <div className="page-header-main">
+          <span className="header-icon-box" aria-hidden="true">
+            <Swords className="w-5 h-5" />
+          </span>
+          <div className="page-header-text">
+            {/* This used to be a second `.wordmark` reading "Alex Study" -- the root layout already
+                wraps every page in AppShell, so it printed the product name twice, once in the real
+                nav and once here. It is the breadcrumb the header actually needed. */}
+            <Link
+              href="/challenges"
+              className="inline-flex items-center gap-1.5 min-h-6 text-xs text-muted font-bold mb-1.5 hover:text-foreground transition-colors"
+            >
+              <BackIcon className="w-4 h-4" />
+              <span>{ar ? "كل التحديات" : "All challenges"}</span>
+            </Link>
+            <p className="eyebrow">{challengeTypeLabel(challenge.type, locale)}</p>
+            <h1>
+              {challenge.creator.name} <span>{ar ? "ضد" : "vs"}</span> {challenge.opponent.name}
+            </h1>
+            <p>
+              {challenge.subjectLabel ? `${challenge.subjectLabel} · ` : ""}
+              {challenge.targetValue}{" "}
+              {challengeUnit(challenge.type, challenge.targetValue, locale)} ·{" "}
+              {resolutionLabel(challenge.resolutionType, locale)}
+            </p>
+          </div>
         </div>
-        <div className="page-header">
+        {/* The status chip used to sit in a `.page-header` nav pill next to a duplicate
+            "All challenges" link, where `.page-header a` (border: 0; background: transparent;
+            color: var(--muted)) outranks `.btn-secondary` and stripped that link back to muted
+            text. The breadcrumb above covers the link; the chip belongs in the actions slot. */}
+        <div className="page-header-actions">
           <span className="challenge-status" data-status={challenge.status}>
             {statusLabel(challenge.status, locale)}
           </span>
-          <Link className="secondary-button" href="/challenges">
-            {ar ? "كل التحديات" : "All challenges"}
-          </Link>
         </div>
       </header>
 

@@ -7,8 +7,12 @@ import { PageShell } from "@/components/ui/page-shell";
 import { PageHeader } from "@/components/ui/page-header";
 import { Timer } from "lucide-react";
 
-export default async function FocusPage() {
-  const user = await requireUser();
+export default async function FocusPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ task?: string }>;
+}) {
+  const [user, query] = await Promise.all([requireUser(), searchParams]);
   const [preference, tasks, subjects, timer] = await Promise.all([
     prisma.userPreference.findUnique({ where: { userId: user.id } }),
     prisma.task.findMany({
@@ -32,6 +36,11 @@ export default async function FocusPage() {
       orderBy: { createdAt: "desc" },
     }),
   ]);
+  /* The task card's "Enter focus" lands here with ?task=<id>. Only an id that is really one of
+     this user's open tasks pre-answers the assignment gate -- anything else (stale link, another
+     account's task, completed work) falls through to the unanswered setup step. */
+  const preselectedTaskId =
+    query.task && tasks.some((task) => task.id === query.task) ? query.task : null;
   const locale = user.locale === "AR" ? "ar" : "en";
   const ar = locale === "ar";
 
@@ -73,6 +82,7 @@ export default async function FocusPage() {
         subjects={subjects}
         initialTimer={timer}
         initialServerNow={new Date().toISOString()}
+        preselectedTaskId={preselectedTaskId}
       />
     </PageShell>
   );

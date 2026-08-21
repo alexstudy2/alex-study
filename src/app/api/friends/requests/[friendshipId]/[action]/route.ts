@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { createNotification } from "@/lib/notifications/service";
 import { canAcceptFriendship } from "@/lib/social/pairs";
+import { friendshipInclude } from "@/lib/social/queries";
 import { apiUser, invalid, notFound, unauthorized } from "@/lib/tasks/response";
 
 export async function POST(
@@ -16,6 +17,8 @@ export async function POST(
   const updated = await prisma.friendship.update({
     where: { id: friendship.id },
     data: { status: action === "accept" ? "ACCEPTED" : "DECLINED", respondedAt: new Date() },
+    // The accepted row is what the client moves into its friends list and renders immediately.
+    include: friendshipInclude,
   });
   if (action === "accept")
     await createNotification({

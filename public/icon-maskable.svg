@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="Alex Study">
+  <!--
+    Maskable variant of the Alex Study mark, referenced from src/app/manifest.ts with
+    `purpose: "maskable"`.
+
+    Two things make it different from src/app/icon.svg, and both are required by the maskable
+    spec rather than aesthetic choices:
+
+      1. The tile bleeds to all four edges with no corner radius. The platform applies its own
+         shape -- a circle on some Android launchers, a squircle on others -- so any radius baked
+         in here would show up as a pale sliver inside the crop.
+      2. The glyph is scaled to 0.86 about the centre so every painted pixel sits inside the
+         "safe zone": the centred circle of 80% of the canvas (radius 19.2 here) that is the only
+         region guaranteed to survive every mask. At full size the beacon tip reaches 17.6 from
+         centre and the leg caps 17.1, which clears the circle but leaves nothing for a launcher
+         that crops slightly tighter than spec.
+
+    No clipPath is needed for the beam: the root viewBox already clips it.
+
+    Palette literals and their token sources are documented in src/app/icon.svg.
+  -->
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6AC3EA"/>
+      <stop offset="100%" stop-color="#49B6E5"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="48" height="48" fill="url(#tile)"/>
+
+  <path d="M -8 22 L 32 -10 L 48 -10 L 6 32 Z" fill="#ffffff" opacity="0.16"/>
+
+  <g transform="translate(24 24) scale(0.86) translate(-24 -24)">
+    <g stroke="#111827" stroke-linecap="round" fill="none">
+      <path d="M14.5 36 L24 15" stroke-width="3.6"/>
+      <path d="M33.5 36 L24 15" stroke-width="3.6"/>
+      <path d="M17.9 29.5 L30.1 29.5" stroke-width="3.2"/>
+    </g>
+    <path d="M24 6.4 L27.7 12.2 L24 18 L20.3 12.2 Z" fill="#D97706"/>
+  </g>
+</svg>

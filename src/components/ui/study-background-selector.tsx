@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Sparkles, BookOpen, Moon, Compass, Coffee, Heart, Check, ChevronDown } from "lucide-react";
 import {
   MOOD_STORAGE_KEY,
@@ -78,6 +79,7 @@ export function StudyBackgroundSelector({
   const [currentMood, setCurrentMood] = useState<StudyMood>(initialMood);
   const [isOpen, setIsOpen] = useState(false);
   const [, startTransition] = useTransition();
+  const router = useRouter();
 
   /* Sync only. The starting mood is server-rendered (both as this prop and as `data-mood`
      on <html>), so there is no localStorage read on mount to flash the palette. */
@@ -100,10 +102,17 @@ export function StudyBackgroundSelector({
     });
     /* Optimistic: the palette has already switched. Undo the whole thing if the write
        fails, so the UI never shows a preference the server did not accept. */
-    void saveMood(mood).catch(() => {
-      setCurrentMood(previous);
-      applyMood(previous);
-    });
+    void saveMood(mood).then(
+      /* Then pull the new value into the cached RSC payload. Without this the payload keeps
+         emitting <html data-mood="old"> from layout.tsx, and the next server render on this
+         page -- a navigation, a revalidation, any other refresh -- puts the old palette back
+         under a sidebar that still shows the new one selected. */
+      () => router.refresh(),
+      () => {
+        setCurrentMood(previous);
+        applyMood(previous);
+      }
+    );
   };
 
   const isAr = locale === "ar";

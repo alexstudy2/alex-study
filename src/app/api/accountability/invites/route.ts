@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { createNotification } from "@/lib/notifications/service";
 import { canonicalPair } from "@/lib/social/pairs";
+import { accountabilityPairInclude } from "@/lib/social/queries";
 import { accountabilityInviteSchema } from "@/lib/social/validation";
 import { apiUser, invalid, notFound, unauthorized } from "@/lib/tasks/response";
 export async function POST(request: Request) {
@@ -26,9 +27,12 @@ export async function POST(request: Request) {
     ? await prisma.accountabilityPair.update({
         where: { id: existing.id },
         data: { createdById: user.id, status: "PENDING", respondedAt: null, endedAt: null },
+        include: accountabilityPairInclude,
       })
     : await prisma.accountabilityPair.create({
         data: { userAId, userBId, createdById: user.id, pairKey },
+        // The client prepends this to the partner list and reads `userA`/`userB` off it.
+        include: accountabilityPairInclude,
       });
   await createNotification({
     userId: otherId,

@@ -674,15 +674,23 @@
   border: 1.5px solid var(--secondary);
 }
 
-/* Dashboard Task Items -- the /tasks pinboard's "paper = course, spine = course colour" idea
+/* Dashboard Task Items -- the /tasks pinboard's "paper = the mood, spine = the course" idea
    compressed into one row, so the two pages read as the same system rather than as a designed
    board and a list of grey strips.
 
-   The color-mix fallback is `var(--surface)`, not `transparent`: a task with no course has no
-   --subject-color, and mixing an *unresolvable* var() inside color-mix() invalidates the whole
-   declaration and drops the background to transparent -- the exact bug that left every sticky
-   note unpainted (see the course-colour block above). Mixing surface into surface is a no-op,
-   which is what "no course" should look like. */
+   PAPER IS THE MOOD, NOT THE COURSE, and that is a deliberate reversal of what this rule used
+   to do. Mixing `--subject-color` into the surface meant a card's background was decided by
+   whichever colour token its course happened to be stored with, so a board of teal courses --
+   teal being the first entry in the colour enum, and therefore what everyone who never opened
+   the picker gets -- came out green on all five palettes. Making the *shade* of teal per-mood
+   did not fix that: green is green on rose paper. So the paper now takes `--primary`, which
+   every `:root[data-mood]` block redeclares, and the card belongs to the palette it is sitting
+   on. Course identity did not go anywhere -- it moved down onto the spine below, where it is
+   spent at full strength instead of at 12%, plus the subject tag beside the title.
+
+   12%, not 14%: at full strength `--primary` is a saturated brand colour rather than one of the
+   seven muted course tokens, and the extra two points read as a filled state on a row that is
+   not selected. */
 .dashboard-task-card {
   position: relative;
   display: flex;
@@ -693,15 +701,18 @@
   padding-inline: calc(var(--space-4) + 5px) var(--space-4);
   border: 2px solid var(--secondary);
   border-radius: var(--radius-doodle-btn);
-  background: color-mix(in srgb, var(--subject-color, var(--surface)) 14%, var(--surface));
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface));
   box-shadow: var(--shadow-doodle);
   /* Clips the spine to the wobbly corners; nothing inside is meant to escape the card. */
   overflow: hidden;
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-/* The course spine. 14% tint is legible as paper but too faint to name a course from across a
-   dashboard, so the same colour is also spent at full strength on one hard edge. */
+/* The course spine, and now the only place on the row where the course is a colour rather than
+   a word. Full strength on one hard edge, which is what makes a course nameable from across a
+   dashboard -- a 12% wash never was. The fallback is `var(--primary)`, so a task with no course
+   draws the spine in the mood as well: the paper and the edge agree, which is what "no course"
+   should look like. */
 .dashboard-task-card::before {
   content: "";
   position: absolute;
@@ -872,6 +883,479 @@
   transition: width 0.3s ease;
 }
 
+/* ================= Weekly hours chart =================
+   One continuous curve over seven samples -- see components/dashboard/week-hours-chart.tsx for
+   the path arithmetic. No charting library and no client JavaScript: the `d` attribute is computed
+   on the server and everything below is presentation.
+
+   The colour is the mood, not a chart palette. Every stroke, fill and dot here resolves to
+   `--primary` or `--accent`, both of which each `:root[data-mood]` block redeclares, so the graph
+   is rose on Sakura paper and amber on Sunset the same way the buttons are. That is also why the
+   gradient stops are set here rather than as `stop-color` attributes on the `<stop>` elements:
+   `var()` inside a presentation attribute is not reliably resolved, while `stop-color` set from a
+   stylesheet is, and the indirection is what lets one drawing follow five palettes.
+
+   `--week-chart-h` is the one number the whole thing is built on. The SVG stretches to fill the
+   plot (`preserveAspectRatio="none"`), and the dots are placed at `top: calc(var(--y) * 1%)` of
+   that same box, so a height that stops being definite would collapse both layers at once. */
+.week-chart {
+  --week-chart-h: 128px;
+  margin-top: var(--space-3);
+}
+
+.week-chart-plot {
+  position: relative;
+  height: var(--week-chart-h);
+}
+
+.week-chart-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* The horizontal and vertical scales differ, so anything that must keep its shape has to opt
+     out of the transform -- `vector-effect` on the line, HTML for the dots. */
+  overflow: visible;
+}
+
+.week-chart-area-from {
+  stop-color: var(--primary);
+  stop-opacity: 0.34;
+}
+
+.week-chart-area-to {
+  stop-color: var(--primary);
+  /* Not `transparent`: in some engines that interpolates through black and leaves a grey cast
+     across the bottom of the fill. Same hue, zero alpha, so the ramp stays in the palette. */
+  stop-opacity: 0;
+}
+
+.week-chart-line-from {
+  stop-color: var(--primary);
+}
+
+/* The far end of the line leans on the accent, which is the pairing the rest of the app already
+   uses for "this is the live one". A single flat stroke reads as a border; two related hues read
+   as a graph. */
+.week-chart-line-to {
+  stop-color: var(--accent);
+}
+
+.week-chart-line {
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.week-chart-grid,
+.week-chart-axis-line {
+  stroke: var(--line);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.week-chart-grid {
+  stroke-dasharray: 3 5;
+  opacity: 0.7;
+}
+
+/* One dot per elapsed day. `inset-inline-start` rather than `left` so the dots travel with the
+   axis labels when the page flips -- see the RTL block below, which mirrors the curve to match. */
+.week-chart-dot {
+  position: absolute;
+  inset-inline-start: calc(var(--x, 0) * 1%);
+  top: calc(var(--y, 0) * 1%);
+  translate: -50% -50%;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--primary);
+  /* The dots sit on the line, which the SVG draws underneath them; nothing here is clickable and
+     a stray hover target over the graph would only steal the axis items' tooltips. */
+  pointer-events: none;
+}
+
+/* Today is the one point a student is looking for, so it is the one that is filled rather than
+   outlined, and it carries the halo the rest of the app uses for "now". */
+.week-chart-dot[data-today="yes"] {
+  width: 11px;
+  height: 11px;
+  background: var(--primary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
+/* In RTL the axis grid below flips on its own -- grid placement follows the inline direction --
+   but SVG contents do not, so without this the curve would run Sunday-to-Saturday left to right
+   under labels running right to left. Mirroring the whole drawing is the cheapest correct fix:
+   the gradient, the curve and the hairlines all flip together, and the dots are already on a
+   logical property. */
+[dir="rtl"] .week-chart-svg {
+  scale: -1 1;
+}
+
+.week-chart-axis {
+  display: grid;
+  /* Seven equal tracks, which is what puts each label under its own column centre and therefore
+     under its own point -- the curve is drawn at those same centres. */
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--space-1);
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+}
+
+.week-chart-axis > li {
+  min-width: 0;
+  text-align: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--muted);
+  /* Every item is `title`d with its day and total, and the cursor should not promise a link. */
+  cursor: default;
+  /* Narrow weekday names repeat (S/M/T/W/T/F/S), so the visible label is a position marker, not
+     an identifier -- the accessible name comes from the sr-only span beside it. */
+}
+
+/* A day that has not happened yet is unknown, not zero. The curve simply stops before it; the
+   label stays so the week keeps its full shape, faded so it reads as ahead rather than as
+   missed. */
+.week-chart-axis > li[data-future="yes"] {
+  opacity: 0.45;
+}
+
+.week-chart-axis > li[data-today="yes"] {
+  color: var(--primary);
+}
+
+.week-chart-total {
+  font-size: 0.95rem;
+  color: var(--primary);
+}
+
+.week-chart-hint {
+  margin: var(--space-3) 0 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* Shorter on a phone, where this card is one of four stacked in a single column and 128px of
+   graph plus a header is a lot of scroll for one number. The curve is unchanged -- it is drawn in
+   a stretched viewBox, so a shorter plot is the same shape, flatter. */
+@media (max-width: 768px) {
+  .week-chart {
+    --week-chart-h: 92px;
+  }
+}
+
+/* ================= Atlas skin -- dashboard bento =================
+   Everything above this line is doodle and is not touched. `[data-skin="atlas"] .foo` is
+   (0,2,0) against a bare `.foo` at (0,1,0), so these win without !important and without
+   repeating any of the base geometry.
+
+   The bento is built WITHOUT touching the markup, which is the whole point of the two-axis
+   design: the page ships one DOM and each skin arranges it. `.dashboard-left-col` and
+   `.dashboard-right-col` are the two tracks in both skins; Atlas only retunes the split and
+   the gutter.
+
+   These wrappers were `display: contents` under Atlas, which erased their boxes and promoted
+   the four cards to grid items of a 12-column track. It looked like the more flexible
+   arrangement and it was the wrong one, because grid items line up in ROWS: the tall
+   sticky-tasks card and the short rhythm card shared row 1, that row was sized to the taller
+   of the two, and `align-items: start` left the rhythm card floating at the top of it with
+   ~170px of dead air underneath -- then the same again in row 2 under the goals card. Every
+   right-hand card was positioned by the height of its left-hand neighbour instead of by the
+   card above it, which is exactly the "floaty, not organized" look. Two real column boxes
+   cannot do that: each stack packs its own children at `--bento-gap` and neither knows how
+   tall the other one's cards are, so the vertical rhythm is uniform and content-driven. The
+   12-column track bought nothing back -- every tile spanned either 1/8 or 8/-1, i.e. exactly
+   the two widths two columns already give.
+
+   Selectors are unchanged either way: `.dashboard-right-col > *` reads the DOM, and the DOM
+   never moved. */
+[data-skin="atlas"] .dashboard-layout-grid {
+  /* 7/5 rather than 6/6: the sticky tasks card is the surface the page exists for, and an
+     even split makes the day's work look like a sidebar to its own statistics. */
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: var(--bento-gap);
+  align-items: start;
+}
+
+/* Beats Tailwind's own `gap-6` on these same elements -- (0,2,0) against (0,1,0) -- because a
+   column's vertical rhythm has to be the same 16px as the grid's gutter or the bento reads as
+   two loose lists. `min-width: 0` because a grid item's automatic minimum size is its
+   min-content: without it one unbreakable card header widens the track past its `7fr` share,
+   and with it the track math is honoured no matter what lands inside. */
+[data-skin="atlas"] .dashboard-left-col,
+[data-skin="atlas"] .dashboard-right-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bento-gap);
+  min-width: 0;
+}
+
+/* Same 960px breakpoint the doodle grid collapses at, so the two skins change shape at the
+   same width and the page never has two different ideas of "narrow". One column, and the two
+   stacks fall into DOM order -- which is the order they already had. */
+@media (max-width: 960px) {
+  [data-skin="atlas"] .dashboard-layout-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* The hero is a sibling above the grid, not a tile in it, and it stays that way: a full-bleed
+   banner and a 12-column span render identically, and promoting it into the grid would mean
+   restructuring the markup that doodle also renders. Its `mb-6` (24px) is retuned to the
+   bento gutter so the vertical rhythm below it is uniform. */
+[data-skin="atlas"] .dashboard-hero-card.mb-6 {
+  margin-bottom: var(--bento-gap);
+}
+
+/* --- The glass ---------------------------------------------------------------------------
+   Four tiles, three elevation tiers, deliberately not one flat sheet: the hero carries the
+   page so it sits highest, and the working cards sit at 1. `--glass-bg-*` already degrades to
+   an opaque surface where backdrop-filter is unsupported -- see the @supports block in
+   tokens.css -- so none of these need a fallback of their own. Radius and the 2px ink border
+   are inherited from the skin's token remap; what is restated here is only what the tokens
+   cannot reach. */
+[data-skin="atlas"] .dashboard-hero-card {
+  background: var(--glass-bg-raised);
+  -webkit-backdrop-filter: blur(var(--glass-blur-heavy));
+  backdrop-filter: blur(var(--glass-blur-heavy));
+  border: var(--stroke-default);
+  border-radius: var(--bento-radius);
+}
+
+[data-skin="atlas"] .dashboard-card,
+[data-skin="atlas"] .today-tasks-sticky-card {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  border: var(--stroke-default);
+  border-radius: var(--bento-radius);
+}
+
+/* Elevation is desktop-only, and that is not a stylistic choice -- it is the only place it can
+   go. The mobile comfort block at the end of globals.css steps every card's shadow down one
+   notch below 769px, and it does that with bare `.dashboard-card`-style selectors at (0,1,0)
+   which lose outright to the `[data-skin="atlas"] .dashboard-card` ones above at (0,2,0), no
+   matter the source order. Declaring the tiers unconditionally therefore did not merely differ
+   from that pass, it silently opted the entire dashboard out of it: four drop-shadowed sheets
+   stacked in one column on a phone, which is the exact clutter that block exists to remove.
+   Above the breakpoint there is nothing to respect and the tiers apply in full.
+
+   Tiers are also worth less on a phone than on a desktop. Stacked in one column, "which card
+   is above which" is answered by reading order; side by side, the shadow is what answers it. */
+@media (min-width: 769px) {
+  [data-skin="atlas"] .dashboard-hero-card {
+    box-shadow: var(--elevation-2);
+  }
+
+  [data-skin="atlas"] .dashboard-card,
+  [data-skin="atlas"] .today-tasks-sticky-card {
+    box-shadow: var(--elevation-1);
+  }
+}
+
+/* The sticky note's paper tape is a doodle conceit -- it is what makes the card read as a
+   sticky note rather than a panel -- so Atlas drops it rather than restyling it. */
+[data-skin="atlas"] .today-tasks-sticky-card .sticky-tape-top {
+  display: none;
+}
+
+/* A dashed ink rule under a card header is doodle's grammar; glass wants a hairline. */
+[data-skin="atlas"] .dashboard-card-header {
+  border-bottom: var(--stroke-muted);
+}
+
+/* --- Hover lift -------------------------------------------------------------------------
+   Scoped to `.dashboard-layout-grid` on purpose: `.dashboard-card` is a shared class used on
+   several other routes, and a page-wide lift is a Phase 5 decision, not something to leak out
+   of the dashboard by accident. The tiles are reached through the column wrappers rather than
+   listed by name, so a new card added to either stack is lifted without touching this rule.
+
+   `(hover: hover) and (pointer: fine)` because a lift bound to :hover on a touch device
+   sticks after the tap -- the finger leaves, the state does not. Scale is 1.02, the value
+   fixed when the style was chosen: enough to read as "this is pressable", small enough that
+   the 1px rim does not visibly soften. Transform and box-shadow only, so this stays on the
+   compositor and never triggers layout.
+
+   `var(--transition-base)` carries its own cubic-bezier, so it is used bare. Appending
+   `var(--ease-out)` after it puts two timing functions in one transition component, which is
+   a parse error for the whole shorthand -- the declaration is dropped and the lift snaps. */
+@media (hover: hover) and (pointer: fine) {
+  [data-skin="atlas"] .dashboard-layout-grid > .dashboard-card,
+  [data-skin="atlas"] .dashboard-layout-grid .dashboard-left-col > *,
+  [data-skin="atlas"] .dashboard-layout-grid .dashboard-right-col > * {
+    transition: transform var(--transition-base), box-shadow var(--transition-base);
+  }
+
+  [data-skin="atlas"] .dashboard-layout-grid .dashboard-left-col > *:hover,
+  [data-skin="atlas"] .dashboard-layout-grid .dashboard-right-col > *:hover {
+    transform: scale(1.02) translateY(-2px);
+    box-shadow: var(--elevation-3);
+    /* A lifted tile has to win the stacking order or its shadow prints under its neighbour. */
+    position: relative;
+    z-index: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-skin="atlas"] .dashboard-layout-grid .dashboard-left-col > *:hover,
+  [data-skin="atlas"] .dashboard-layout-grid .dashboard-right-col > *:hover {
+    /* The elevation change stays -- it is the actual affordance, and it is not motion. */
+    transform: none;
+  }
+}
+
+/* --- Generative goal rings ---------------------------------------------------------------
+   The "generative progress visual": a conic-gradient arc drawn from one number, with no SVG,
+   no canvas and no extra DOM. `--goal-pct` is set as an inline custom property on the card in
+   dashboard/page.tsx, so the arc is a direct function of the goal's real percentage.
+
+   Why conic-gradient and a mask rather than an SVG circle with stroke-dasharray: dasharray
+   needs the circumference in the markup (2*pi*r), which means the geometry lives in two
+   places and drifts the moment the size changes. `mask` cuts the disc into a ring at whatever
+   size the tile ends up, so the ring is defined once, by its stroke width.
+
+   The mask is two stops 1px apart rather than a hard edge: a single hard stop aliases badly
+   on a curve at fractional device pixel ratios, and the 1px ramp is the standard fix.
+   `-webkit-mask` ships alongside because iOS did not unprefix `mask` until 15.4, and the
+   unprefixed-only version renders a filled disc -- a solid dot where a ring belongs, which is
+   worse than no ring. Both spellings, same value. */
+[data-skin="atlas"] .goal-item-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  /* One explicit row, declared rather than left implicit, because `grid-row: 1 / -1` on the
+     ring below counts -1 back from the end of the *explicit* grid. With `grid-template-rows:
+     none` that end is line 1, the two lines collapse to the same line, and the span silently
+     degrades to `span 1` -- which happens to render correctly here only because the bar is
+     hidden and there is exactly one row. Declaring the row makes -1 mean line 2 and the span
+     mean what it reads as. */
+  grid-template-rows: minmax(0, auto);
+  align-items: center;
+  gap: var(--space-3);
+  border: var(--stroke-default);
+  border-radius: var(--bento-radius-inner);
+  background: var(--glass-bg-sunken);
+}
+
+/* Every real child into the content column. Without this, auto-placement would put the first
+   child beside the ring and the second one *under* it in column 1 -- so the card would break
+   the moment it grew a third line, which is a thing goal cards do. */
+[data-skin="atlas"] .goal-item-card > * {
+  grid-column: 2;
+}
+
+[data-skin="atlas"] .goal-item-card::before {
+  content: "";
+  grid-column: 1;
+  grid-row: 1 / -1;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  /* `calc(var(--goal-pct, 0) * 1%)` -- the property carries a bare number so it can be
+     multiplied here. A percentage stored directly would make this calc invalid. */
+  background: conic-gradient(
+    var(--primary) calc(var(--goal-pct, 0) * 1%),
+    var(--glass-rim) 0
+  );
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+}
+
+/* The linear bar and the ring are the same number twice, so the bar goes. It stays in the DOM
+   because doodle still draws it -- this hides it for one skin rather than deleting markup. */
+[data-skin="atlas"] .goal-item-card .dashboard-progress {
+  display: none;
+}
+
+/* --- Hero artwork -----------------------------------------------------------------------
+   `.dashboard-hero-art` is an inline SVG in the hero, `aria-hidden`, absolutely placed in the
+   trailing corner and behind the content. It is in the DOM for both skins and hidden for
+   doodle here, the same arrangement the two ambient background layers use: the dashboard is a
+   Server Component that never receives the skin, and hiding one small decorative node in CSS
+   is cheaper than threading the skin down or re-querying the preference to decide.
+
+   `inset-inline-end` rather than `right`, so it flips with Arabic instead of covering the
+   headline. Content is `position: relative` above it rather than the art being sent to a
+   negative z-index: a negative index would put it behind the card's own glass background and
+   the artwork would vanish entirely. */
+[data-skin="doodle"] .dashboard-hero-art {
+  display: none;
+}
+
+[data-skin="atlas"] .dashboard-hero-art {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: clamp(-2rem, -1vw, 0rem);
+  translate: 0 -50%;
+  width: clamp(160px, 22vw, 280px);
+  height: auto;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+[data-skin="atlas"] .dashboard-hero-content {
+  position: relative;
+}
+
+/* Below the two-column breakpoint the hero's content wraps to fill the card, so the artwork
+   would sit under the copy instead of beside it. Hidden rather than shrunk: at phone widths
+   there is no spare width for it to be decoration rather than clutter. */
+@media (max-width: 960px) {
+  [data-skin="atlas"] .dashboard-hero-art {
+    display: none;
+  }
+}
+
+/* --- The week chart, in glass ------------------------------------------------------------
+   Only the material changes -- the coordinate space, the curve and the seven-track axis are the
+   base rules above and are already correct for both skins. What differs is what a line is drawn
+   *on*: on paper the hairlines are ink and the plot is the page, and on glass the plot wants a
+   sunken well to be a graph inside rather than a drawing on top of. */
+[data-skin="atlas"] .week-chart-plot {
+  padding: var(--space-2);
+  background: var(--glass-bg-sunken);
+  border: 1px solid var(--glass-rim);
+  border-radius: var(--bento-radius-inner);
+  /* The padding is inside the box, so the plot's content height has to grow by it or the graph
+     shrinks by 16px relative to doodle for no reason a reader could name. */
+  height: calc(var(--week-chart-h) + 2 * var(--space-2));
+}
+
+[data-skin="atlas"] .week-chart-grid,
+[data-skin="atlas"] .week-chart-axis-line {
+  stroke: var(--glass-rim-strong);
+}
+
+/* Heavier fill and a wider stroke than doodle. Frosted glass is already carrying a blur and a
+   tint, so a 0.34-alpha wash over it reads as fog rather than as data; the extra weight is what
+   keeps the curve the brightest thing in the tile. */
+[data-skin="atlas"] .week-chart-area-from {
+  stop-opacity: 0.42;
+}
+
+[data-skin="atlas"] .week-chart-line {
+  stroke-width: 3;
+  /* The glow the rest of the atlas dashboard uses for a live value, spent here on the one line
+     that is the tile. `drop-shadow` takes a colour, so this follows the mood too. */
+  filter: drop-shadow(0 1px 6px color-mix(in srgb, var(--primary) 45%, transparent));
+}
+
+/* On glass the outlined dot loses its ring against the wash behind it, so the dot is filled and
+   the *surface* becomes the ring -- the same figure inverted. */
+[data-skin="atlas"] .week-chart-dot {
+  background: var(--primary);
+  border-color: var(--glass-bg-raised);
+}
+
+[data-skin="atlas"] .week-chart-dot[data-today="yes"] {
+  border-color: var(--surface);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--primary) 26%, transparent);
+}
+
 /* ================= Study Notebook Workspace ================= */
 .notebook-workspace {
   display: flex;
@@ -1002,11 +1486,21 @@
   box-shadow: 1px 1px 0px var(--secondary);
 }
 
-/* 2. Subjects Ribbon */
+/* 2. Subjects Ribbon
+   One rule, where this was two ~1050 lines apart: a layout half here and a material half down in
+   the pinboard block. They composed rather than conflicted, which is the worst version of that
+   split -- nothing was broken, so nothing pointed at the fact that changing the ribbon's paper
+   meant editing a rule a thousand lines from the one that shapes it. */
 .subjects-ribbon {
+  /* For the shared inner-line rule beside .notebook-top-header. */
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  padding: var(--space-3);
+  border: 2px dashed var(--secondary);
+  border-radius: var(--radius-doodle-card);
+  background: var(--surface);
 }
 
 /* The ribbon stacks caption / chips+add / new-course form, so the middle band needs a box of its
@@ -1123,44 +1617,37 @@
   background: var(--surface-hover);
 }
 
-.inline-new-course-popup {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  background: var(--surface-sunken);
+/* The new-course form. Every declaration this rule used to make here was already remade in the
+   pinboard block below -- the grid replaced the flex row, --primary-subtle replaced the sunken
+   paper -- so the pair read as two designs where only one shipped. One rule, at the pinboard. */
+
+/* Shared by the name field and the colour select: same box, and the only difference between them
+   is that the name field takes the leftover width. `font: inherit` and not a font-size of its
+   own, so a form field in a drawn ribbon is the same size as the text around it -- and it is a
+   shorthand, which is why neither of these declares font-size or weight anywhere. */
+.course-name-input,
+.course-color-select {
+  min-height: 2.6rem;
+  padding: 0.45rem 0.7rem;
   border: 2px solid var(--secondary);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-doodle-xs);
+  background: var(--surface);
+  color: var(--foreground);
+  font: inherit;
+  outline: none;
 }
 
 .course-name-input {
   flex: 1;
-  padding: 0.35rem 0.65rem;
-  border-radius: var(--radius-md);
-  border: 2px solid var(--secondary);
-  background: var(--surface);
-  color: var(--foreground);
-  font-size: var(--text-xs);
-  outline: none;
 }
 
-.course-color-select {
-  padding: 0.35rem 0.65rem;
-  border-radius: var(--radius-md);
-  border: 2px solid var(--secondary);
-  background: var(--surface);
-  color: var(--foreground);
-  font-size: var(--text-xs);
-  font-weight: 700;
-  outline: none;
-}
-
+/* --space-5 and plain --surface, both of which came from the override that used to sit ~1200 lines
+   down; this rule's own --space-4 and --surface-sunken never rendered. */
 .detailed-form-drawer {
-  padding: var(--space-4);
+  padding: var(--space-5);
   border: 2px solid var(--secondary);
   border-radius: var(--radius-doodle-card);
-  background: var(--surface-sunken);
+  background: var(--surface);
   box-shadow: var(--shadow-doodle);
 }
 
@@ -1473,7 +1960,10 @@
 .ecg-trace-line,
 .ecg-trace svg * {
   fill: none;
-  stroke: var(--ecg-color, var(--success-strong));
+  /* The mood's own accent, not a fixed green: the trace is a readout, and a readout should
+     re-ink itself with the palette the way every other stroke in the app does. Scopes that
+     need something else still override through --ecg-color (.empty-scene-ecg mutes it). */
+  stroke: var(--ecg-color, var(--primary));
   stroke-width: 2px;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -1625,7 +2115,13 @@
 }
 
 .dashboard-live-time svg { width: 0.8rem; height: 0.8rem; }
-.dashboard-live-time.running { color: var(--success); background: var(--success-subtle); }
+/* The accent is the mood's own primary, not a fixed green -- a live readout should re-ink
+   with the palette like every other accent chip in the app. Paused stays warning (semantic). */
+.dashboard-live-time.running {
+  color: var(--primary-strong);
+  background: var(--primary-subtle);
+  border-color: color-mix(in srgb, var(--primary) 45%, transparent);
+}
 .dashboard-live-time.running svg { animation: timer-pulse 1.5s ease-in-out infinite; }
 .dashboard-live-time.paused { color: var(--warning); background: var(--warning-subtle); }
 
@@ -1918,6 +2414,20 @@
   align-items: start;
 }
 
+/* The sticky note. --note-color is a *fallback*: the component sets it inline from the course's
+   colour token, and `--warning` is what a courseless task gets so the tape below still has
+   something to be.
+
+   The paper, though, is `--primary` and not the course -- see the long note on
+   `.dashboard-task-card` for why that reversal happened. Short version: the course token decides
+   the colour, the mood decides the shade of it, and "teal, in rose" is still green, so a board of
+   default-coloured courses came out green on all five palettes no matter how the ramps were
+   tuned. Paper is the palette now. The course keeps the tape, the triage spine keeps priority,
+   and the subject tag keeps the name.
+
+   14%, where the dashboard row uses 12%: a note is a sheet of coloured stock and wants to read as
+   one, whereas the row is a strip where the same tint over a much smaller area would look like a
+   selected state. */
 .notebook-task-row.sticky-task-note {
   --note-color: var(--warning);
   position: relative;
@@ -1929,7 +2439,7 @@
   padding: var(--space-5) var(--space-4) var(--space-4);
   border: 2px solid var(--secondary);
   border-radius: 4px 7px 5px 3px;
-  background: color-mix(in srgb, var(--note-color) 18%, var(--surface));
+  background: color-mix(in srgb, var(--primary) 14%, var(--surface));
   box-shadow: 4px 5px 0 color-mix(in srgb, var(--secondary) 86%, transparent);
   transform: rotate(-0.6deg);
   transition: transform var(--transition-fast), box-shadow var(--transition-fast), opacity var(--transition-fast);
@@ -1937,6 +2447,11 @@
 
 .notebook-task-row.sticky-task-note:nth-child(3n + 2) { transform: rotate(0.7deg); }
 .notebook-task-row.sticky-task-note:nth-child(3n) { transform: rotate(-0.2deg); }
+
+/* The paper tape, and the one surface still painted from the course. It works here in a way it
+   did not as the whole background: 42% against white on a 4.2rem strip is a colour *sample*, and
+   a sample is legible as identity next to its neighbours in a way a 14% wash over a whole note
+   never was. */
 .notebook-task-row.sticky-task-note::before {
   content: "";
   position: absolute;
@@ -2000,11 +2515,11 @@
   z-index: 1;
 }
 
-/* Late, and it should be obvious before the badge row is read. Only the ink moves: the paper
-   stays whatever colour the course is, because repainting it red would trade one axis of
-   information away to add another rather than adding one. Declared above the :hover and
-   .dragging rules on purpose -- those set box-shadow too, at the same specificity, and an
-   overdue card being dragged should still look like a card being dragged. */
+/* Late, and it should be obvious before the badge row is read. Only the ink moves: the paper stays
+   the mood, because repainting it red would trade one axis of information away to add another
+   rather than adding one. Declared above the :hover and .dragging rules on purpose -- those set
+   box-shadow too, at the same specificity, and an overdue card being dragged should still look
+   like a card being dragged. */
 .notebook-task-row.sticky-task-note[data-overdue="yes"] {
   border-color: var(--danger);
   box-shadow: 4px 5px 0 color-mix(in srgb, var(--danger) 50%, var(--secondary));
@@ -2016,7 +2531,7 @@
 @media (hover: hover) {
   .notebook-task-row.sticky-task-note:hover {
     z-index: 2;
-    background: color-mix(in srgb, var(--note-color) 25%, var(--surface));
+    background: color-mix(in srgb, var(--primary) 21%, var(--surface));
     box-shadow: 6px 7px 0 var(--secondary);
     transform: translateY(-3px) rotate(0deg);
   }
@@ -2035,15 +2550,6 @@
 .sticky-task-note .task-action-icon-btn:hover { border-color: var(--secondary); background: var(--surface); box-shadow: 1px 1px 0 var(--secondary); }
 .sticky-task-note button:disabled { opacity: 0.45; cursor: wait; }
 .sticky-task-note .notebook-subtasks-box { background: color-mix(in srgb, var(--surface) 75%, transparent); border-color: var(--secondary); }
-
-.subjects-ribbon {
-  /* For the shared inner-line rule beside .notebook-top-header. */
-  position: relative;
-  padding: var(--space-3);
-  border: 2px dashed var(--secondary);
-  border-radius: var(--radius-doodle-card);
-  background: var(--surface);
-}
 
 /* Only the min-height survives from the old override here: the border-radius it also set was
    --radius-md, which flattened the wobbly chip radius declared above back into an ordinary
@@ -2364,9 +2870,6 @@
   box-shadow: none;
 }
 
-.course-name-input, .course-color-select { min-height: 2.6rem; border: 2px solid var(--secondary); border-radius: var(--radius-md); background: var(--surface); color: var(--foreground); padding: 0.45rem 0.7rem; font: inherit; }
-.detailed-form-drawer { padding: var(--space-5); border: 2px solid var(--secondary); border-radius: var(--radius-doodle-card); background: var(--surface); box-shadow: var(--shadow-doodle); }
-
 /* ================= Tasks page: mobile layout =================
    768px, not the 720px this block used to use. Everything else that reacts to "this is a
    phone" -- the bottom nav, the Phase 4 comfort pass, the page-header step-down -- switches
@@ -2598,6 +3101,475 @@
   .quick-add-input:focus { animation: none; }
 }
 
+/* ================= Atlas skin -- task surfaces =================
+   Phase 4. Same markup and the same three-frame structure -- page header, courses ribbon,
+   notebook card -- rendered in a different material: drawn ink borders, hard offset shadows and
+   coloured paper become frosted glass over the aurora, hairline rims, and the elevation scale
+   from tokens.css.
+
+   Most of this page needs no override at all, and that is the token remap doing its job. Under
+   atlas `--radius-doodle-card` is `--bento-radius`, `--radius-doodle-btn` is 12px,
+   `--radius-doodle-chip` is a full pill, `--shadow-doodle-md` is `--elevation-2` and
+   `--doodle-caret` is a straight chevron -- so a doodle rule written as
+   `box-shadow: var(--shadow-doodle-md)` is *already* an atlas shadow. What is left for this block
+   is only the hardcoded values and the conceits: `2px solid var(--secondary)`, `4px 5px 0 ...`,
+   `border-radius: 4px 7px 5px 3px`, ruled paper, tape, and the pinned tilts.
+
+   Three cascade facts govern the whole block, and getting any of them wrong fails silently:
+
+   1. Box-shadow and the mobile comfort pass. That pass (end of globals.css) steps cards down to
+      --shadow-doodle-xs below 769px using bare (0,1,0)/(0,2,0) selectors, which lose to every
+      `[data-skin="atlas"] ...` selector here whatever the source order -- so an unconditional
+      atlas shadow would not merely differ from it, it would opt the surface out of it. It happens
+      that nothing here needs a media gate anyway: the token-driven shadows are left untouched, and
+      the one surface with hardcoded shadows -- the sticky note -- wants --elevation-1 at rest,
+      which is byte-identical to what the comfort pass sets under atlas (--shadow-doodle-xs:
+      var(--elevation-1), tokens.css). Where a value is declared unconditionally below, that
+      identity is why. Border *width* needs no care either: --comfort-card-border is 1px under
+      atlas, which is what --stroke-default already is.
+
+   2. Anything the phone layout already agrees with is safe unqualified. `transform: none` is the
+      example -- the tasks-page mobile block flattens the same tilts.
+
+   3. Where the doodle counterpart sits at (0,3,0) or higher, the atlas selector has to genuinely
+      outrank it rather than merely follow it. Each of those is called out at its own rule: the
+      overdue note, dragging, completed, both :hover states, `.priority-urgent`, and the cosmic
+      empty state. */
+
+/* --- The three frames -------------------------------------------------------------------------
+   Doodle draws these as three sheets of paper on a desk. Atlas makes them three panes of glass at
+   the elevation the dashboard tiles already sit at, so /tasks and / read as one surface system
+   rather than as two separately designed pages.
+
+   The notebook card's `background` is the load-bearing declaration: doodle builds it as a
+   shorthand with a ruled-line linear-gradient over --surface-sunken, and ruled paper is a paper
+   conceit. Restating `background` as a shorthand -- not `background-color` -- is what drops that
+   layer, since there is no separate longhand here to set it back from.
+
+   Only the ribbon gets an explicit shadow. The other two already carry `var(--shadow-doodle)` and
+   `var(--shadow-doodle-md)`, which the remap turns into elevation-1 and -2; the ribbon carried
+   none at all, and one flat frame between two lifted ones is the version that looks unfinished.
+   Safe to declare unconditionally because .subjects-ribbon is not in the comfort pass list. */
+[data-skin="atlas"] .notebook-top-header,
+[data-skin="atlas"] .subjects-ribbon,
+[data-skin="atlas"] .master-notebook-card {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  border: var(--stroke-default);
+  border-radius: var(--bento-radius);
+}
+
+[data-skin="atlas"] .subjects-ribbon {
+  box-shadow: var(--elevation-1);
+}
+
+/* The second pen line goes. It exists because an irregular border-radius is imperceptible on a
+   1000px frame, so the hand has to show in the stroke instead -- which is an argument about ink,
+   and there is no ink here. A dashed inset ring inside a glass pane reads as a stray border. */
+[data-skin="atlas"] .notebook-top-header::after,
+[data-skin="atlas"] .subjects-ribbon::after,
+[data-skin="atlas"] .master-notebook-card::after {
+  display: none;
+}
+
+/* --- Courses ribbon ---------------------------------------------------------------------------
+   Chips become glass pills. `--radius-doodle-chip` is already `--radius-full` under atlas, so the
+   shape arrives for free and only the 2px ink border and the paper need replacing. */
+[data-skin="atlas"] .subject-chip,
+[data-skin="atlas"] .subject-add-chip {
+  background: var(--glass-bg-raised);
+  border: var(--stroke-default);
+}
+
+/* The active chip stays solid --primary: it is the one thing on the ribbon that has to be
+   unmistakable, and a frosted version of a selected state is a contradiction. Only its ink border
+   is retired. */
+[data-skin="atlas"] .subject-chip.active {
+  border-color: color-mix(in srgb, var(--primary) 60%, transparent);
+}
+
+/* Pinned-by-hand tilts, off. (0,2,0) against the `.subjects-scroll > *:nth-child()` rules at the
+   same weight, won on source order -- this block is ~600 lines below them. The add chip's own tilt
+   is a separate rule at (0,2,0) and needs the same treatment. */
+[data-skin="atlas"] .subjects-scroll > *,
+[data-skin="atlas"] .subjects-ribbon-row > .subject-add-chip {
+  transform: none;
+}
+
+/* (0,4,0), because the doodle hover that straightens and nudges the chip is itself scoped through
+   the scroller at (0,3,0) -- see the comment on that rule for why it had to be. A lift, not a
+   diagonal nudge, which is the hover grammar the whole skin uses. */
+[data-skin="atlas"] .subjects-scroll > .subject-chip:hover,
+[data-skin="atlas"] .subjects-ribbon-row > .subject-add-chip:hover {
+  transform: translateY(-1px);
+}
+
+/* --- Quick add --------------------------------------------------------------------------------
+   The row keeps being visibly the place you type: doodle separates it with a dashed rule and
+   opaque paper, atlas with a sunken pane and a hairline. That also covers the phone case the
+   mobile block handles with a --primary-subtle wash -- this rule outranks it at (0,2,0), and
+   glass-bg-sunken against the card's glass-bg is the same "different colour from the list below"
+   distinction by other means. */
+[data-skin="atlas"] .notebook-quick-add-line {
+  background: var(--glass-bg-sunken);
+  border-bottom: var(--stroke-muted);
+}
+
+[data-skin="atlas"] .quick-add-left-icon {
+  background: color-mix(in srgb, var(--primary) 14%, var(--glass-bg-raised));
+  border: var(--stroke-default);
+  box-shadow: none;
+}
+
+/* `background-color`, not `background`, on the select: its caret is a `background-image`
+   (--doodle-caret, already remapped to a straight chevron for this skin) and the shorthand would
+   erase it. The shadow goes to none on both -- an elevation-1 drop under a text field is card
+   grammar applied to a control, and the rim is the affordance. */
+[data-skin="atlas"] .quick-add-input,
+[data-skin="atlas"] .quick-add-select {
+  background-color: var(--glass-bg-raised);
+  border: var(--stroke-default);
+  box-shadow: none;
+}
+
+[data-skin="atlas"] .quick-add-input:focus,
+[data-skin="atlas"] .quick-add-select:focus {
+  border-color: color-mix(in srgb, var(--primary) 70%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
+/* The new-course form and the detailed drawer, both of which unfold inside a glass frame. */
+[data-skin="atlas"] .inline-new-course-popup,
+[data-skin="atlas"] .detailed-form-drawer {
+  background: var(--glass-bg-sunken);
+  border: var(--stroke-default);
+  border-radius: var(--bento-radius-inner);
+  box-shadow: none;
+}
+
+[data-skin="atlas"] .course-name-input,
+[data-skin="atlas"] .course-color-select {
+  background: var(--glass-bg-raised);
+  border: var(--stroke-default);
+}
+
+/* --- The board --------------------------------------------------------------------------------
+   --space-5 (20px) to the bento gutter, so the notes sit on the same rhythm as the dashboard
+   tiles. The auto-fill track stays: it is a responsive rule, not a doodle one. */
+[data-skin="atlas"] .notebook-task-list {
+  gap: var(--bento-gap);
+}
+
+/* The note itself. Paper is still the mood -- see the long comment on the base rule; that decision
+   is about *which* colour and applies to both skins -- but it is now mood over glass rather than
+   mood over opaque surface. 14% over --glass-bg-raised lands at about 0.81 alpha, which is
+   translucent enough for the blur to matter and opaque enough for 11px badge text to stay legible
+   over whatever the aurora is doing behind it. The nested color-mix degrades correctly on its own:
+   the @supports block in tokens.css swaps --glass-bg-raised for opaque --surface-elevated where
+   backdrop-filter is missing, and the outer mix just re-runs against that.
+
+   min-height and padding are deliberately not touched. Both are re-declared by the tasks-page
+   mobile block at (0,2,0), this rule is (0,3,0), and overriding them here would mean gating two
+   properties behind `min-width: 769px` to buy nothing: 14rem is a reasonable board tile and
+   space-5/space-4 clears the top edge below.
+
+   box-shadow unconditional at elevation-1 -- see fact 1 in the section header. */
+[data-skin="atlas"] .notebook-task-row.sticky-task-note {
+  background: color-mix(in srgb, var(--primary) 14%, var(--glass-bg-raised));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  border: var(--stroke-default);
+  border-radius: var(--bento-radius-inner);
+  box-shadow: var(--elevation-1);
+  /* Flattens the base tilt and both :nth-child tilts at once: (0,3,0) matches theirs and this is
+     ~650 lines later. Agrees with the mobile block, so no gate. */
+  transform: none;
+}
+
+/* The tape becomes the course edge. Same pseudo-element, opposite idea: a strip of masking tape is
+   a pinboard conceit, but "this note belongs to Anatomy" is information, and a luminous hairline
+   along the top of a glass tile is how this skin says it. Fading to transparent rather than
+   running flat across, so it reads as light on an edge instead of a second border.
+
+   `display: block` is a deliberate override of the mobile block's `display: none` at (0,2,0). The
+   tape was hidden on phones because tape only means anything against neighbouring notes; a course
+   colour means *more* in a single column, not less, since it is the only place the course shows
+   before the badge row.
+
+   Gradients have no logical direction keyword, so the RTL companion below is required, not
+   optional -- an edge that lights from the left in Arabic points away from where reading starts. */
+[data-skin="atlas"] .notebook-task-row.sticky-task-note::before {
+  display: block;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  border: 0;
+  border-radius: var(--bento-radius-inner) var(--bento-radius-inner) 0 0;
+  background: linear-gradient(
+    to right,
+    var(--note-color),
+    color-mix(in srgb, var(--note-color) 10%, transparent)
+  );
+  opacity: 1;
+  transform: none;
+}
+
+[dir="rtl"] [data-skin="atlas"] .notebook-task-row.sticky-task-note::before {
+  background: linear-gradient(
+    to left,
+    var(--note-color),
+    color-mix(in srgb, var(--note-color) 10%, transparent)
+  );
+}
+
+/* The triage spine survives untouched in shape -- it is the priority readout and the same idea in
+   both skins -- and only softens its ends into the tile's radius. */
+[data-skin="atlas"] .notebook-task-row.sticky-task-note::after {
+  inset-block: 0;
+  width: 3px;
+  border-radius: 0;
+  opacity: 1;
+}
+
+/* Overdue. (0,4,0), and it has to be: the doodle rule is `.notebook-task-row.sticky-task-note
+   [data-overdue="yes"]` at (0,3,0), which beats the comfort pass at (0,2,0) -- so without this an
+   overdue note kept a hard 4px red offset shadow on a phone even under atlas, the one card on the
+   page still drawn in ink. A danger ring plus the resting elevation, so the state is the same
+   information with none of the drop. */
+[data-skin="atlas"] .notebook-task-row.sticky-task-note[data-overdue="yes"] {
+  border-color: color-mix(in srgb, var(--danger) 55%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--danger) 45%, transparent), var(--elevation-1);
+}
+
+/* Hover, at (0,4,0) against the doodle rule's (0,3,0), and inside the same `(hover: hover)` gate
+   for the same reason: a tap latches :hover on mobile and the card would stay lifted while the
+   user scrolls. Deeper mood tint plus one step up the elevation scale -- the dashboard's 1.02
+   scale is not reused here, because these tiles sit in a dense auto-fill grid where a scaling card
+   crosses its neighbour's rim. */
+@media (hover: hover) {
+  [data-skin="atlas"] .notebook-task-row.sticky-task-note:hover {
+    z-index: 2;
+    background: color-mix(in srgb, var(--primary) 20%, var(--glass-bg-raised));
+    box-shadow: var(--elevation-2);
+    transform: translateY(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-skin="atlas"] .notebook-task-row.sticky-task-note:hover {
+    /* The elevation and the tint stay: they are the affordance, and neither is motion. */
+    transform: none;
+  }
+}
+
+/* Dragging, (0,4,0). No `transform` here on purpose -- dnd-kit writes
+   `CSS.Transform.toString(transform)` as an inline style while a note is held, and an inline
+   declaration beats any selector, so anything written here would either be ignored or fight the
+   library for one frame. Elevation only, which is the whole point: the held note is above the
+   board. */
+[data-skin="atlas"] .notebook-task-row.sticky-task-note.dragging {
+  box-shadow: var(--elevation-3);
+}
+
+/* Completed, (0,4,0). `grayscale(0.2)` is doodle's way of saying "spent" on coloured paper; on
+   glass the equivalent is to fall out of the palette and sink to the sunken tier, which is
+   cheaper to composite than a filter and does not mute the subject tag along with everything
+   else. */
+[data-skin="atlas"] .notebook-task-row.sticky-task-note.completed {
+  background: var(--glass-bg-sunken);
+  filter: none;
+}
+
+/* (0,3,0), matching `.sticky-task-note .task-row-actions`. */
+[data-skin="atlas"] .sticky-task-note .task-row-actions {
+  border-top: var(--stroke-muted);
+}
+
+/* (0,4,0) against `.sticky-task-note .task-action-icon-btn:hover`, which paints an ink border and
+   a 1px hard shadow. */
+[data-skin="atlas"] .sticky-task-note .task-action-icon-btn:hover {
+  border-color: var(--glass-rim-strong);
+  background: var(--glass-bg-raised);
+  box-shadow: none;
+}
+
+/* --- Badges and chips ------------------------------------------------------------------------
+   `:not(.priority-urgent)` is (0,3,0) and that qualifier is not cosmetic. `.priority-urgent` is
+   (0,2,0) and sits ~1300 lines *above* this block, so a plain `[data-skin="atlas"]
+   .task-priority-pill` at (0,2,0) would win on source order and repaint the one priority level
+   that has to be legible from across a board back into a translucent pill. Urgent keeps its solid
+   --danger fill and gets only its ink border retired, below. */
+[data-skin="atlas"] .task-priority-pill:not(.priority-urgent) {
+  border: 1px solid color-mix(in srgb, var(--triage-color, var(--secondary)) 40%, transparent);
+  background: color-mix(in srgb, var(--triage-color, var(--secondary)) 16%, var(--glass-bg-raised));
+}
+
+[data-skin="atlas"] .task-priority-pill.priority-urgent {
+  border-color: color-mix(in srgb, var(--danger) 70%, transparent);
+}
+
+[data-skin="atlas"] .task-subject-tag {
+  background: color-mix(in srgb, var(--subject-color, var(--primary)) 16%, var(--glass-bg-raised));
+  border: 1px solid color-mix(in srgb, var(--subject-color, var(--primary)) 38%, transparent);
+}
+
+[data-skin="atlas"] .task-overdue-chip {
+  border: 1px solid color-mix(in srgb, var(--danger) 45%, transparent);
+  background: color-mix(in srgb, var(--danger) 14%, var(--glass-bg-raised));
+}
+
+[data-skin="atlas"] .task-meta-pill {
+  background: var(--glass-bg-sunken);
+  border: var(--stroke-muted);
+}
+
+/* Both (0,2,0) and (0,3,0) spellings, because `.sticky-task-note .notebook-subtasks-box` at
+   (0,2,0) already overrides the base box's paper and would otherwise decide it inside a note. */
+[data-skin="atlas"] .notebook-subtasks-box,
+[data-skin="atlas"] .sticky-task-note .notebook-subtasks-box {
+  background: var(--glass-bg-sunken);
+  border: var(--stroke-muted);
+  border-radius: var(--bento-radius-inner);
+}
+
+/* --- Generative progress ---------------------------------------------------------------------
+   The plan's "generative progress chip", and it needs no markup change at all: task-workspace.tsx
+   already writes the real percentage as an inline `width` on the inner span, and the footer bar's
+   mini progress does the same. So the number is already here -- what changes is what it is made
+   of. --success is retired in both, which is also the last of the "why is everything green"
+   complaint: a fill that means "how far along" should be the palette, not a fixed green.
+
+   A ramp from a light tint to full --primary rather than --primary to --accent: those two tokens
+   are the same hex in the notebook and cosmic palettes, so an accent gradient renders flat in two
+   moods out of five. Light-to-full is always a visible ramp and always the mood.
+
+   No glow. Both tracks are `overflow: hidden`, so a box-shadow on the fill is clipped at exactly
+   the edge where it would have read. */
+[data-skin="atlas"] .task-subtask-bar,
+[data-skin="atlas"] .notebook-mini-progress {
+  border: 1px solid var(--glass-rim);
+  background: var(--glass-bg-sunken);
+}
+
+[data-skin="atlas"] .task-subtask-bar > span,
+[data-skin="atlas"] .notebook-mini-progress span {
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--primary) 45%, transparent),
+    var(--primary)
+  );
+}
+
+/* The other half of "gradients have no logical direction": in Arabic the bar fills from the right,
+   so the deep end has to be on the right too or the ramp runs backwards against its own fill. */
+[dir="rtl"] [data-skin="atlas"] .task-subtask-bar > span,
+[dir="rtl"] [data-skin="atlas"] .notebook-mini-progress span {
+  background: linear-gradient(
+    to left,
+    color-mix(in srgb, var(--primary) 45%, transparent),
+    var(--primary)
+  );
+}
+
+/* --- Vitals strip, footer, empty state -------------------------------------------------------
+   `box-shadow` untouched on the strip: its `var(--shadow-doodle-xs)` is already elevation-1. */
+[data-skin="atlas"] .task-vitals-strip {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  border: var(--stroke-default);
+  border-radius: var(--bento-radius);
+}
+
+/* The tone-coded rule beside each number stays -- it is the readout, not the material -- and only
+   thins and rounds. 3px square against a hairline rim was the one edge on the strip still drawn at
+   ink weight. */
+[data-skin="atlas"] .task-vital {
+  border-inline-start-width: 2px;
+  border-radius: 1px;
+}
+
+[data-skin="atlas"] .notebook-footer-bar {
+  background: var(--glass-bg-sunken);
+  border-top: var(--stroke-muted);
+}
+
+/* --- Dashboard task rows ---------------------------------------------------------------------
+   The compressed one-row form of the same note, on the dashboard's Today card. 12% where the note
+   uses 14%, for the reason the base rule gives: the same tint over a strip reads as a selected row
+   rather than as coloured stock.
+
+   No box-shadow here either. `.dashboard-task-card` carries `var(--shadow-doodle)` and is in the
+   comfort pass list, and under atlas both of those resolve to elevation-1 -- so the correct atlas
+   result at both sizes is already what the tokens produce. */
+[data-skin="atlas"] .dashboard-task-card {
+  background: color-mix(in srgb, var(--primary) 12%, var(--glass-bg-raised));
+  border: var(--stroke-default);
+}
+
+/* (0,3,0), which is what the alternating tilts are; won on source order. */
+[data-skin="atlas"] .sticky-tasks-list > .dashboard-task-card {
+  transform: none;
+}
+
+/* (0,3,0) does not survive here -- `.sticky-tasks-list > .dashboard-task-card:hover` is also
+   (0,3,0) and would win the transform on source order for exactly the state being replaced. */
+[data-skin="atlas"] .sticky-tasks-list > .dashboard-task-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--elevation-2);
+}
+
+/* --- Dashboard sticky card internals ---------------------------------------------------------
+   The card itself is already glass from Phase 3 (with its tape hidden and its elevation gated);
+   these are the controls inside it, which were still drawn in ink. */
+[data-skin="atlas"] .sticky-add-btn {
+  background: var(--glass-bg-raised);
+  border: var(--stroke-default);
+  box-shadow: none;
+}
+
+[data-skin="atlas"] .sticky-add-btn:hover {
+  background: color-mix(in srgb, var(--primary) 16%, var(--glass-bg-raised));
+  border-color: color-mix(in srgb, var(--primary) 45%, transparent);
+  transform: translateY(-1px);
+  box-shadow: var(--elevation-1);
+}
+
+[data-skin="atlas"] .sticky-inline-add-form {
+  background: var(--glass-bg-sunken);
+  border: var(--stroke-default);
+  border-radius: var(--bento-radius-inner);
+}
+
+[data-skin="atlas"] .sticky-task-input,
+[data-skin="atlas"] .sticky-cancel-btn {
+  background: var(--glass-bg-raised);
+  border: var(--stroke-default);
+}
+
+/* 2px of solid --primary is doodle's focus ring. A soft halo plus a coloured rim is this skin's,
+   and it is the same one the quick-add field above uses. */
+[data-skin="atlas"] .sticky-task-input:focus {
+  border-color: color-mix(in srgb, var(--primary) 70%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
+/* `:root[data-skin="atlas"]` rather than the bare attribute, and this is the one place in the
+   block that needs it: `:root[data-mood="cosmic"] .sticky-empty-state` is (0,3,0) and repaints
+   this to a 20%-black wash. (0,2,0) would lose to it in one palette out of five -- the exact kind
+   of bug that only shows up after someone switches mood. Matched at (0,3,0) and declared later,
+   so it wins the tie in cosmic and outranks the base rule everywhere else.
+
+   The hardcoded `rgba(255, 255, 255, 0.4)` goes for the same reason: a fixed white wash is invisible
+   on the light palettes and a grey patch on the dark ones. */
+:root[data-skin="atlas"] .sticky-empty-state {
+  background: var(--glass-bg-sunken);
+  border: var(--stroke-muted);
+  border-radius: var(--bento-radius-inner);
+}
+
 /* ================= Focus Workspace & Fullscreen Zen Mode ================= */
 .focus-workspace-container {
   display: flex;
@@ -2642,7 +3614,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #FEF08A;
+  /* The themed pastel, not the hardcoded notebook yellow: --card-pastel-yellow is re-inked by
+     every mood (a dark warm tone on cosmic), so the exit control stays visible on the dark
+     fullscreen ground instead of floating as a bright yellow square. */
+  background: var(--card-pastel-yellow, #FEFCE8);
   border: 2px solid var(--secondary);
   border-radius: 4px 7px 3px 6px;
   box-shadow: 3px 3px 0 var(--secondary);
@@ -2662,7 +3637,7 @@
 .fullscreen-exit-sticky-btn:hover {
   transform: rotate(0deg) scale(1.12);
   box-shadow: 4px 4px 0 var(--secondary);
-  background: #FDE047;
+  background: color-mix(in srgb, var(--primary) 20%, var(--card-pastel-yellow, #FEFCE8));
 }
 
 .fullscreen-exit-sticky-btn:active {
@@ -2751,24 +3726,41 @@
   }
 }
 
-/* Doodle Timer Master Card */
+/* Doodle Timer Master Card
+   One rule, where this was two ~160 lines apart -- a shape half here and a size half down in the
+   "Focus timer refresh" block, with nothing to say which owned what.
+
+   The `background` here is largely ceremonial and is kept for the case where the shared card
+   family is ever narrowed: that family sets `background-color` and the corner-doodle
+   `background-image` as longhands much further down the file, and a later longhand beats an
+   earlier shorthand every time. The card's real surface is set there. */
 .doodle-timer-card {
-  border-radius: var(--radius-doodle-card);
-  border: 2px solid var(--secondary);
-  background: var(--surface);
-  box-shadow: var(--shadow-doodle-md);
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  text-align: center;
-  position: relative;
+  justify-content: center;
   width: 100%;
+  min-height: 38rem;
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-doodle-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-doodle-md);
+  text-align: center;
+  overflow: hidden;
 }
 
+/* Zen mode. Also one rule where it was two ~550 lines apart, and that pair was actively lying:
+   both declared `padding`, at equal specificity, so the generous clamp(space-8, 8vw, space-12)
+   written here never applied -- the tighter one further down won on source order. The tighter one
+   is the shipping look and the one kept, because zen mode has to fit a 40rem card into a phone in
+   landscape without the digits touching the edges. */
 .fullscreen-focus-active .doodle-timer-card {
+  min-height: auto;
+  max-width: 40rem;
+  padding: clamp(var(--space-5), 3.5vw, var(--space-8)) clamp(var(--space-4), 3vw, var(--space-6));
   border: 3px solid var(--secondary);
   box-shadow: var(--shadow-doodle-lg);
-  padding: clamp(var(--space-8), 8vw, var(--space-12));
 }
 
 /* Mode segmented switcher: see the "Focus timer refresh" section below. The tabs became a
@@ -2907,16 +3899,6 @@
 .focus-main-grid {
   grid-template-columns: minmax(0, 1fr) minmax(17rem, 20rem);
   gap: var(--space-5);
-}
-
-.doodle-timer-card {
-  min-height: 38rem;
-  justify-content: center;
-  overflow: hidden;
-  /* The ruled-paper `background` shorthand that used to be here never painted: the shared card
-     rule further down the file sets `background-color` and the corner-doodle `background-image`
-     as longhands, and a longhand later in the file beats an earlier shorthand every time. The
-     card's surface is set for real in the medical section below, past both of them. */
 }
 
 .doodle-timer-card::before,
@@ -3311,11 +4293,6 @@
 .fullscreen-focus-active .timer-dial {
   width: min(21rem, 36vh);
   margin: var(--space-3) auto;
-}
-.fullscreen-focus-active .doodle-timer-card {
-  min-height: auto;
-  max-width: 40rem;
-  padding: clamp(var(--space-5), 3.5vw, var(--space-8)) clamp(var(--space-4), 3vw, var(--space-6));
 }
 .fullscreen-focus-active .giant-timer-digits {
   font-size: clamp(3.2rem, 7vw, 4.4rem);
@@ -3918,7 +4895,9 @@
 
 .timer-ecg-line {
   fill: none;
-  stroke: var(--success-strong);
+  /* Mood accent, same call as the shared .ecg-trace above -- the timer's monitor trace used to
+     be the one element that stayed green in every palette. */
+  stroke: var(--primary);
   stroke-width: 2px;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -4163,13 +5142,19 @@
    direct child of the AI Exam Plan page -- including the `<form>` that wraps two cards of its own,
    which is where the double borders came from, and the always-mounted feedback slot, which is where
    the empty box came from -- while the padding list below granted none of them padding. Each section
-   on that page now declares its own frame; see "The proposal page itself" further down. */
+   on that page now declares its own frame; see "The proposal page itself" further down.
+
+   `.challenge-detail-shell > *` and `.challenge-result-shell > *` are off it for the same reason.
+   Both shells have a pure-layout `<div>` among their children -- `.challenge-detail-grid` and
+   `.result-layout` -- so the blanket rule drew a card around a two-column grid whose own columns are
+   cards, and granted it no padding, which is what put a doubled 4px line down the result page. It
+   also framed the two grid columns on the detail page from the outside and left the columns
+   themselves bare, so the event log and the rule panel read as one box split by a gap. Every section
+   on both pages declares its own frame now; see "Challenge detail & result" further down. */
 .leaderboard-controls,
 .leaderboard-summary,
 .leaderboard-table-panel,
 .leaderboard-sidebar > *,
-.challenge-detail-shell > *,
-.challenge-result-shell > *,
 .challenge-composer,
 .detail-metrics,
 .reflection-card,
@@ -4311,12 +5296,25 @@
   min-width: 0;
 }
 
+/* `flex-wrap: wrap` because this row is always "title on one side, action button on the other"
+   and there is a width below which those two cannot share a line. Without it the button did not
+   shrink and did not move -- it just left the card: at 320px the "Save changes" submit sat 62px
+   past `.exam-plan-meta`'s content edge, which grew the card's scrollWidth to 294 inside a 252px
+   box and dragged `.exam-plan-editor` (296 inside 256) out with it, since a grid child hanging
+   off its own box still counts against the grid's.
+   Wrapping is free above that width -- a flex line that already fits never breaks -- and on the
+   line below, `space-between` with a single item leaves the button at the start, which is where
+   a stacked action belongs anyway. The 11 `.section-heading` sites across challenges, exam plans,
+   leaderboards, lobbies and task detail all share that one shape, so this is fixed once here
+   rather than per page. Neither item can overflow alone: the widest heading and the widest
+   button are both well under a 320px card's content box. */
 .leaderboard-table-panel .section-heading,
 .section-heading {
   display: flex;
   align-items: start;
   justify-content: space-between;
   gap: var(--space-3);
+  flex-wrap: wrap;
   margin-bottom: var(--space-4);
 }
 
@@ -4506,6 +5504,207 @@
 .goal-card:nth-child(4n+4),
 .insight-card {
   background-color: var(--card-pastel-peach);
+}
+
+/* ================= Atlas skin -- shared card family & focus timer =================
+   This block has to live *here*, below the shared card family and its cosmic variant, and that
+   placement is the whole reason it is a second block instead of part of the Phase 4 section a
+   couple of thousand lines above. Two selectors up there cannot be beaten from up there:
+
+     .focus-workspace-container .doodle-timer-card   (0,2,0)  -- sets background-color
+     :root[data-mood="cosmic"] .doodle-timer-card    (0,3,0)  -- sets background-image + border-color
+
+   `:root[data-skin="atlas"] .foo` is also (0,3,0), so it ties with the cosmic variant and wins on
+   source order -- which only works below it. Hence the `:root` prefix on every rule in this
+   section, where the Phase 4 block above uses the bare attribute.
+
+   The `background-image: none` in the first rule is not cosmetic tidying, it is a Phase 3 bug fix.
+   The family paints two hand-drawn corner marks as background-images with baked-in hex colours,
+   and the cosmic variant re-paints them at (0,3,0) -- which beat Phase 3's
+   `[data-skin="atlas"] .dashboard-card { background: var(--glass-bg) }` at (0,2,0). So every glass
+   dashboard tile in the cosmic palette still had ink doodles pinned to its corners and a #475569
+   border. It looked like the skin had half-applied, because it had. */
+:root[data-skin="atlas"] .dashboard-card,
+:root[data-skin="atlas"] .today-card,
+:root[data-skin="atlas"] .task-card,
+:root[data-skin="atlas"] .focus-sidebar-card,
+:root[data-skin="atlas"] .focus-timer-card,
+:root[data-skin="atlas"] .doodle-timer-card,
+/* Phase 5, Batch A. These two are family members, so they belong in this block rather than in the
+   Batch A page block at the end of the file, and for the same reason the rest of the list is here:
+   `:root[data-mood="cosmic"] .analytics-panel` and its `.insight-card` sibling are (0,3,0), so only
+   a `:root`-prefixed rule below them wins. Putting them at the end of the file would also work, but
+   then half the family's atlas material would live in one place and half in another. */
+/* Phase 5, Batch B -- the rest of the family. Same reason as the two above: the cosmic twin at
+   :5416 owns every one of these selectors at (0,3,0), so only a `:root`-prefixed rule below it
+   wins, and the family's atlas material stays in one place. The two Batch A members stay on the
+    list -- dropping them here would hand their material back to the cosmic ink. */
+:root[data-skin="atlas"] .analytics-panel,
+:root[data-skin="atlas"] .insight-card,
+:root[data-skin="atlas"] .metric-card,
+:root[data-skin="atlas"] .goal-card,
+:root[data-skin="atlas"] .ui-card,
+:root[data-skin="atlas"] .room-card,
+:root[data-skin="atlas"] .exam-plan-card,
+:root[data-skin="atlas"] .challenge-list-card,
+:root[data-skin="atlas"] .privacy-card,
+:root[data-skin="atlas"] .social-panel,
+:root[data-skin="atlas"] .stat-card,
+:root[data-skin="atlas"] .session-card,
+:root[data-skin="atlas"] .lobby-card,
+:root[data-skin="atlas"] .friend-card,
+:root[data-skin="atlas"] .notification-card {
+  background-image: none;
+  border: var(--stroke-default);
+  border-radius: var(--bento-radius);
+}
+
+/* The fills for Batch B's members. Tiles that sit in an auto-fit grid beside siblings take
+   the raised tier -- a raised fill is what separates a tile from its neighbours once neither
+   has 2px of ink; page-width panels take the plain tier, the way `.analytics-panel` does.
+   None of them takes the pastel cycle anymore: the four fixed pastels are mood-blind by
+   construction, which is the same fault class as the always-green task paper, and under
+   atlas the mood arrives through --glass-bg-raised instead. Doodle keeps every pastel --
+   these rules are later in the file but the pastel rules are (0,1,0)/(0,2,0) against this
+   (0,3,0) only when the skin attribute is present, i.e. exactly when they must lose. */
+:root[data-skin="atlas"] .metric-card,
+:root[data-skin="atlas"] .goal-card,
+:root[data-skin="atlas"] .room-card,
+:root[data-skin="atlas"] .lobby-card,
+:root[data-skin="atlas"] .exam-plan-card,
+:root[data-skin="atlas"] .challenge-list-card,
+:root[data-skin="atlas"] .friend-card,
+:root[data-skin="atlas"] .notification-card {
+  background-color: var(--glass-bg-raised);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+:root[data-skin="atlas"] .ui-card,
+:root[data-skin="atlas"] .social-panel,
+:root[data-skin="atlas"] .privacy-card,
+:root[data-skin="atlas"] .session-card {
+  background-color: var(--glass-bg);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+/* `background-color`, never the `background` shorthand: the shorthand resets background-image, and
+   these rules are what *sets* that reset above -- collapsing the two would work today and break
+   the moment a member of this family grows a real background-image of its own.
+
+   The timer card and the focus sidebar take a light mood tint rather than plain glass. They are the
+   two largest single surfaces in the app and the only ones a user stares at for 25 minutes at a
+   time, so the palette they picked should be in them, not merely behind them. 10%, not the note's
+   14%: at 38rem tall the same tint is a wall of colour rather than a sheet of stock. */
+:root[data-skin="atlas"] .today-card,
+:root[data-skin="atlas"] .focus-sidebar-card,
+:root[data-skin="atlas"] .focus-timer-card,
+:root[data-skin="atlas"] .doodle-timer-card {
+  background-color: color-mix(in srgb, var(--primary) 10%, var(--glass-bg-raised));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+/* .task-card stays plain glass. It is the generic list card, used well outside these two pages, and
+   tinting it would be a Phase 5 decision leaking out of Phase 4. Listed separately rather than
+   folded into the rule above precisely so that decision is visible. */
+:root[data-skin="atlas"] .task-card {
+  background-color: var(--glass-bg);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+/* Phase 5, Batch A -- the fills for the two selectors added to the first rule. `.analytics-panel` is
+   a full-width page frame, so it takes the same plain glass the tasks page's three frames take.
+   `.insight-card` sits in an auto-fit grid beside up to five siblings, so it takes the raised tier,
+   the way the analytics course chips do -- a raised fill is what separates a tile from the frame
+   around it once neither of them has 2px of ink.
+   Neither gets a mood tint. An insight card already carries three colours that mean something -- the
+   confidence chip, the severity eyebrow, and the amber/red border a BURNOUT or PERFORMANCE_DROP card
+   gets below -- and a wash under all of it is a fourth colour competing with them. */
+:root[data-skin="atlas"] .analytics-panel {
+  background-color: var(--glass-bg);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+:root[data-skin="atlas"] .insight-card {
+  background-color: var(--glass-bg-raised);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+/* The `border` shorthand above erases these: they are (0,2,0) at components.css:6016 against its
+   (0,3,0), which is the same trap `.priority-urgent` sprang in Phase 4. A burnout warning is
+   information, not decoration, so it survives the reskin -- at the rim's weight rather than 2px of
+   ink, and mixed down so a full-saturation --danger hairline doesn't read louder on glass than it
+   did on paper. */
+:root[data-skin="atlas"] .insight-card[data-type="BURNOUT"] {
+  border-color: color-mix(in srgb, var(--warning) 60%, transparent);
+}
+
+:root[data-skin="atlas"] .insight-card[data-type="PERFORMANCE_DROP"] {
+  border-color: color-mix(in srgb, var(--danger) 60%, transparent);
+}
+
+/* The two strips of masking tape holding the timer card to the wall. Pure paper conceit -- there is
+   nothing for tape to stick to on glass -- so Atlas drops them rather than restyling them, the same
+   call Phase 3 made for the sticky card's `.sticky-tape-top`. */
+:root[data-skin="atlas"] .doodle-timer-card::before,
+:root[data-skin="atlas"] .doodle-timer-card::after {
+  display: none;
+}
+
+/* Zen mode. Its `box-shadow: var(--shadow-doodle-lg)` is already --elevation-3 through the remap,
+   so only the 3px ink border and the paper need replacing -- and the blur steps up to the heavy
+   value, because a fullscreen sheet is the one surface where the aurora behind it is large enough
+   for a 20px blur to still read as a picture rather than as light. */
+:root[data-skin="atlas"] .fullscreen-focus-active .doodle-timer-card {
+  border: var(--stroke-strong);
+  border-radius: var(--bento-radius);
+  background-color: color-mix(in srgb, var(--primary) 8%, var(--glass-bg-raised));
+  -webkit-backdrop-filter: blur(var(--glass-blur-heavy));
+  backdrop-filter: blur(var(--glass-blur-heavy));
+}
+
+/* The family's hover nudges a card up and to the left by a pixel, which is a drawn card being
+   lifted off the page. Atlas lifts straight up. The elevation half of that rule already resolves
+   correctly (--shadow-doodle-md is --elevation-2), so only the transform is restated -- and only
+   for the members this phase owns. */
+@media (hover: hover) and (pointer: fine) {
+  :root[data-skin="atlas"] .today-card:hover,
+  :root[data-skin="atlas"] .task-card:hover,
+  /* Batch B family members with a hover rule of their own. The elevation half of the base
+     hover already reads --elevation-2 through the remap; only the drawn diagonal lift is
+     restated. */
+  :root[data-skin="atlas"] .metric-card:hover,
+  :root[data-skin="atlas"] .goal-card:hover,
+  :root[data-skin="atlas"] .room-card:hover,
+  :root[data-skin="atlas"] .exam-plan-card:hover,
+  :root[data-skin="atlas"] .challenge-list-card:hover,
+  :root[data-skin="atlas"] .session-card:hover,
+  :root[data-skin="atlas"] .lobby-card:hover,
+  :root[data-skin="atlas"] .friend-card:hover,
+  :root[data-skin="atlas"] .notification-card:hover {
+    transform: translateY(-1px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-skin="atlas"] .today-card:hover,
+  :root[data-skin="atlas"] .task-card:hover,
+  :root[data-skin="atlas"] .metric-card:hover,
+  :root[data-skin="atlas"] .goal-card:hover,
+  :root[data-skin="atlas"] .room-card:hover,
+  :root[data-skin="atlas"] .exam-plan-card:hover,
+  :root[data-skin="atlas"] .challenge-list-card:hover,
+  :root[data-skin="atlas"] .session-card:hover,
+  :root[data-skin="atlas"] .lobby-card:hover,
+  :root[data-skin="atlas"] .friend-card:hover,
+  :root[data-skin="atlas"] .notification-card:hover {
+    transform: none;
+  }
 }
 
 .challenge-event-list,
@@ -5220,6 +6419,322 @@
    field plus its submit button overflowed the panel on narrow viewports. */
 .social-search { flex-wrap: wrap; }
 .social-search input { flex: 1 1 10rem; min-width: 0; }
+/* The input is wrapped in a label now (the visible placeholder is not an accessible name), and
+   the flex child that has to shrink is the label, not the input inside it. */
+.social-search-field { display: flex; flex: 1 1 12rem; min-width: 0; }
+.social-search-field input { width: 100%; }
+
+/* ================= Friends & Accountability ================= */
+.friends-workspace {
+  display: grid;
+  gap: var(--space-5);
+}
+
+/* The page header carries its own bottom margin for pages that stack blocks; inside a grid that
+   margin sits on top of the gap and opens a 44px hole under the header. */
+.friends-workspace > .page-header-container { margin-bottom: 0; }
+
+/* Three counts above the panels, so the page opens with a state instead of three headings you
+   have to read to find out there is nothing under them. The 7rem floor keeps them on one row at
+   320px -- a vertical stack of three numbers is just more page to scroll past. */
+.friends-vitals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 7rem), 1fr));
+  gap: var(--space-3);
+}
+
+.friends-vitals > article {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-doodle-chip);
+  background: var(--surface);
+  box-shadow: var(--shadow-doodle-xs);
+}
+
+.friends-vitals > article > svg { color: var(--muted); }
+
+.friends-vitals > article strong {
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
+  line-height: 1.1;
+}
+
+.friends-vitals > article span {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 800;
+}
+
+/* Nothing waiting is the normal state, so only the count that needs an answer gets the accent. */
+.friends-vitals > article[data-alert="on"] {
+  background: var(--primary-subtle);
+  box-shadow: var(--shadow-doodle);
+}
+
+.friends-vitals > article[data-alert="on"] > svg { color: var(--primary-strong); }
+
+.social-notice {
+  padding: var(--space-3) var(--space-4);
+  border: 2px dashed var(--danger);
+  border-radius: var(--radius-doodle-chip);
+  background: var(--danger-subtle);
+  color: var(--danger-strong);
+  font-weight: 800;
+}
+
+.social-notice[data-tone="ok"] {
+  border-color: var(--success);
+  background: var(--success-subtle);
+  color: var(--success-strong);
+}
+
+.social-panel .panel-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+}
+
+.social-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 2rem;
+  padding: 0.15rem 0.5rem;
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-full);
+  background: var(--primary-subtle);
+  font-family: var(--font-heading);
+  font-weight: 900;
+}
+
+.social-panel > .social-search { margin-top: var(--space-4); }
+
+.social-group-label {
+  margin-top: var(--space-4);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 900;
+}
+
+.social-results {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.social-group-label + .social-results { margin-top: var(--space-2); }
+
+.social-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-doodle-chip);
+  background: var(--surface-elevated);
+}
+
+.social-empty {
+  margin-top: var(--space-4);
+  padding: var(--space-5) var(--space-4);
+  border: 2px dashed var(--line-strong);
+  border-radius: var(--radius-doodle-card);
+  background: var(--surface-sunken);
+  color: var(--muted);
+  text-align: center;
+  font-weight: 700;
+}
+
+.friend-identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1 1 11rem;
+  min-width: 0;
+}
+
+.friend-identity > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+/* Names arrive from the database at any length, and a long unbroken one used to push the actions
+   out of the card rather than wrapping. */
+.friend-identity strong {
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.friend-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 2.75rem;
+  height: 2.75rem;
+  /* A drawn blob rather than a circle -- same reason the cards have wobbly corners. */
+  border-radius: 62% 38% 46% 54%/60% 42% 58% 40%;
+  border: 2px solid var(--secondary);
+  background: var(--card-pastel-sky);
+  box-shadow: var(--shadow-doodle-xs);
+  font-family: var(--font-heading);
+  font-size: var(--text-base);
+  font-weight: 900;
+  line-height: 1;
+}
+
+/* Tinted by academic year, so a person keeps the same colour everywhere they appear. */
+.friend-avatar[data-year="2"] { background: var(--card-pastel-mint); }
+.friend-avatar[data-year="3"] { background: var(--card-pastel-peach); }
+.friend-avatar[data-year="4"] { background: var(--card-pastel-lavender); }
+.friend-avatar[data-year="5"] { background: var(--card-pastel-yellow); }
+.friend-avatar[data-year="6"] { background: var(--primary-subtle); }
+
+.friend-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.friend-card {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+}
+
+.friend-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Both everyday actions share the card width instead of huddling at one edge. */
+.friend-actions > * { flex: 1 1 8rem; }
+
+.social-flag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border: 1.5px dashed var(--secondary);
+  border-radius: var(--radius-full);
+  background: var(--surface-sunken);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 800;
+}
+
+.social-flag[data-tone="ok"] {
+  border-style: solid;
+  border-color: var(--success);
+  background: var(--success-subtle);
+  color: var(--success-strong);
+}
+
+.social-flag[data-tone="call"] {
+  border-style: solid;
+  border-color: var(--primary);
+  background: var(--primary-subtle);
+  color: var(--primary-strong);
+}
+
+.pair-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.6rem;
+  border: 1.5px solid var(--secondary);
+  border-radius: var(--radius-full);
+  background: var(--surface-sunken);
+  font-size: var(--text-xs);
+  font-weight: 800;
+}
+
+.pair-status[data-status="PENDING"] {
+  border-color: var(--warning);
+  background: var(--warning-subtle);
+  color: var(--warning-strong);
+}
+
+.pair-status[data-status="ACTIVE"] {
+  border-color: var(--success);
+  background: var(--success-subtle);
+  color: var(--success-strong);
+}
+
+/* Remove and Block are one-way, so they sit behind a disclosure rather than beside the two
+   actions a thumb reaches for. */
+.friend-more {
+  padding-top: var(--space-2);
+  border-top: 2px dashed var(--line);
+}
+
+.friend-more > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2rem;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  cursor: pointer;
+  list-style: none;
+}
+
+.friend-more > summary::-webkit-details-marker { display: none; }
+.friend-more > summary svg { transition: transform var(--transition-fast); }
+.friend-more[open] > summary svg { transform: rotate(180deg); }
+.friend-more > *:not(summary) { margin-top: var(--space-2); }
+
+.friend-confirm {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 2px solid var(--danger);
+  border-radius: var(--radius-doodle-chip);
+  background: var(--danger-subtle);
+  font-size: var(--text-xs);
+  font-weight: 800;
+}
+
+.friend-confirm > span { flex: 1 1 7rem; }
+
+/* `.inline-actions` is a space-between row with a space-4 gap for full-width toolbars; inside a
+   card it only holds two small buttons, which that spacing pulls apart. */
+.social-row .inline-actions,
+.friend-more .inline-actions {
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+@media (max-width: 520px) {
+  /* One action per line, full width, at a height a thumb can hit -- `.btn-sm` is a fixed 32px,
+     which is fine beside desktop text and mean on a phone. */
+  .social-row { align-items: stretch; }
+  .social-row > .btn,
+  .social-row > .social-flag,
+  .social-row > .inline-actions { width: 100%; }
+  .social-row .inline-actions { justify-content: stretch; }
+  .social-row .inline-actions > * { flex: 1 1 7rem; }
+  .social-row .btn-sm,
+  .friend-actions .btn-sm,
+  .friend-confirm .btn-sm { height: 40px; }
+  .friends-vitals > article { padding: var(--space-3); }
+}
+
 .muted-copy { color: var(--muted); }
 .success-copy { color: var(--success); font-weight: 800; }
 .form-feedback,
@@ -5231,6 +6746,432 @@
   background: var(--primary-subtle);
   color: var(--foreground);
   font-weight: 700;
+}
+
+/* ================= Challenge Composer =================
+   Ten of these class names had no stylesheet at all: the five numbered steps, both radio pickers
+   and every field wrapper were unstyled divs, so the page rendered as bare native radios stacked
+   down the viewport under a duplicate wordmark. */
+.challenge-composer-page {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.challenge-composer-page > .page-header-container { margin-bottom: 0; }
+
+.challenge-composer-page .challenge-form-empty {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+}
+
+.challenge-composer {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.composer-section {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.composer-step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 2px dashed var(--line);
+}
+
+.composer-step > span {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 2px solid var(--secondary);
+  border-radius: 58% 42% 50% 50%/52% 48% 52% 48%;
+  background: var(--primary-subtle);
+  box-shadow: var(--shadow-doodle-xs);
+  font-family: var(--font-heading);
+  font-size: var(--text-xs);
+  font-weight: 900;
+}
+
+.composer-step h2 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--text-base);
+}
+
+.composer-step .eyebrow { margin: 0; }
+
+.composer-filter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding-inline: var(--space-3);
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-doodle-btn);
+  background: var(--surface);
+}
+
+.composer-filter:focus-within {
+  outline: 2px dashed var(--secondary);
+  outline-offset: 2px;
+}
+
+.composer-filter > svg { flex: 0 0 auto; color: var(--muted); }
+
+.composer-filter input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.composer-filter input:focus-visible { outline: none; }
+
+.opponent-picker,
+.challenge-choice-grid,
+.resolution-picker {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.opponent-picker { grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); }
+.opponent-picker[data-empty="true"] { grid-template-columns: 1fr; }
+.challenge-choice-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr)); }
+
+.opponent-picker > label,
+.challenge-choice-grid > label,
+.resolution-picker > label {
+  position: relative;
+  display: grid;
+  gap: 0.25rem;
+  padding-block: var(--space-3);
+  /* Logical so RTL leaves the room on the correct side for the radio, which is positioned with
+     inset-inline-end. */
+  padding-inline: var(--space-3) var(--space-6);
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-doodle-chip);
+  background: var(--surface-elevated);
+  box-shadow: var(--shadow-doodle-xs);
+  cursor: pointer;
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background-color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+/* The native control stays in the accessibility tree and keeps arrow-key group behaviour; the
+   card around it is what you see. */
+.opponent-picker input[type="radio"],
+.challenge-choice-grid input[type="radio"],
+.resolution-picker input[type="radio"] {
+  position: absolute;
+  inset-block-start: 0.6rem;
+  inset-inline-end: 0.6rem;
+  margin: 0;
+  accent-color: var(--primary);
+}
+
+.opponent-picker > label:hover,
+.challenge-choice-grid > label:hover,
+.resolution-picker > label:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow-doodle);
+}
+
+.opponent-picker > label:has(input:focus-visible),
+.challenge-choice-grid > label:has(input:focus-visible),
+.resolution-picker > label:has(input:focus-visible) {
+  outline: 2px dashed var(--secondary);
+  outline-offset: 3px;
+}
+
+.opponent-picker > label:has(input:checked),
+.challenge-choice-grid > label:has(input:checked),
+.resolution-picker > label:has(input:checked) {
+  border-color: var(--primary-strong);
+  background: var(--primary-subtle);
+  box-shadow: var(--shadow-doodle-md);
+}
+
+/* A subject challenge with no subject to name cannot be submitted, so the card says why instead
+   of accepting the choice and failing on the server. */
+.challenge-choice-grid > label[data-disabled="true"] {
+  opacity: 0.55;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.challenge-choice-grid > label[data-disabled="true"]:hover { transform: none; }
+
+.opponent-picker > label {
+  justify-items: center;
+  text-align: center;
+}
+
+.opponent-picker strong,
+.challenge-choice-grid strong {
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.opponent-picker small,
+.challenge-choice-grid small,
+.resolution-picker small {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.challenge-choice-grid > label > svg { color: var(--primary-strong); }
+
+.resolution-picker > label > span {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.resolution-picker strong {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 900;
+}
+
+.composer-field {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.composer-field > span {
+  color: var(--muted);
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  font-weight: 800;
+}
+
+.composer-field input,
+.composer-field select {
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-doodle-btn);
+  background: var(--surface);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.composer-field input:focus-visible,
+.composer-field select:focus-visible {
+  outline: 2px dashed var(--secondary);
+  outline-offset: 2px;
+}
+
+.composer-field input[aria-invalid="true"] { border-color: var(--danger); }
+
+/* Same drawn chevron as .auth-form select and .quick-add-select. */
+.composer-field select {
+  appearance: none;
+  padding-inline: var(--space-3) 2.1rem;
+  background-image: var(--doodle-caret);
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 0.7rem auto;
+  cursor: pointer;
+}
+
+[dir="rtl"] .composer-field select { background-position: left 0.75rem center; }
+
+.target-field input {
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+}
+
+.composer-split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+
+.composer-date-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: var(--space-3);
+}
+
+.composer-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.composer-preset {
+  min-height: 36px;
+  padding-inline: var(--space-3);
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-full);
+  background: var(--surface-sunken);
+  color: var(--foreground);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.composer-preset:hover { background: var(--surface-hover); }
+
+/* Equal specificity with :hover, so this has to stay below it. */
+.composer-preset[aria-pressed="true"] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: var(--shadow-doodle-xs);
+}
+
+.composer-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.composer-hint svg {
+  flex: 0 0 auto;
+  margin-block-start: 0.15rem;
+}
+
+.composer-warning {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 2px dashed var(--danger);
+  border-radius: var(--radius-doodle-chip);
+  background: var(--danger-subtle);
+  color: var(--danger-strong);
+  font-size: var(--text-xs);
+  font-weight: 800;
+}
+
+/* The invitation as the opponent will read it, which the five steps never showed back. */
+.composer-summary {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 2.5px solid var(--secondary);
+  border-radius: var(--radius-doodle-card);
+  background: var(--card-pastel-sky);
+  box-shadow: var(--shadow-doodle-md);
+}
+
+.composer-summary > strong {
+  font-family: var(--font-heading);
+  font-size: var(--text-base);
+}
+
+.composer-summary ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.composer-summary li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  font-size: var(--text-xs);
+  font-weight: 800;
+}
+
+.composer-summary li > svg {
+  flex: 0 0 auto;
+  color: var(--primary-strong);
+}
+
+.composer-summary li > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.composer-rules {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 2px dashed var(--secondary);
+  border-radius: var(--radius-doodle-card);
+  background: var(--surface-sunken);
+}
+
+.composer-rules > strong {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-heading);
+  font-size: var(--text-sm);
+}
+
+.composer-rules p {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+.composer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 2px dashed var(--line);
+}
+
+/* `.form-error` is auth's one-line text style; the composer's only failure channel deserves a
+   band. More specific than the auth rule, so import order does not matter. */
+.challenge-composer .form-error {
+  margin: 0;
+  min-height: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--danger);
+  border-radius: var(--radius-doodle-chip);
+  background: var(--danger-subtle);
+  color: var(--danger-strong);
+  font-size: var(--text-sm);
+  font-weight: 800;
+}
+
+@media (max-width: 720px) {
+  .composer-split { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 520px) {
+  /* Send sits above Cancel once they stack: the primary action stays the first thing under the
+     form, not something you scroll past Cancel to reach. */
+  .composer-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+  .composer-actions > .btn { width: 100%; }
+  .composer-preset { min-height: 40px; }
 }
 
 .empty-state,
@@ -5284,6 +7225,868 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+}
+
+.challenge-stats > article span {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 800;
+}
+
+.challenge-stats > article strong {
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+  font-weight: 900;
+  line-height: 1;
+}
+
+/* ================= Challenge status chip =================
+   Rendered on all three challenge pages -- the list card topline, the detail header and the result
+   outcome block -- and it had no stylesheet at all, so every one of them printed the status as a bare
+   run of body text next to a date. The tone carries the state, so the word is not the only signal. */
+.challenge-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0.25rem 0.7rem;
+  border: 1.5px solid var(--secondary);
+  border-radius: var(--radius-full);
+  background: var(--surface-sunken);
+  color: var(--foreground);
+  font-size: var(--text-xs);
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.challenge-status[data-status="PENDING"] {
+  background: var(--warning-subtle);
+  color: var(--warning-strong);
+}
+
+.challenge-status[data-status="SCHEDULED"] {
+  background: var(--accent-subtle);
+  color: var(--foreground);
+}
+
+.challenge-status[data-status="ACTIVE"] {
+  background: var(--success-subtle);
+  color: var(--success-strong);
+}
+
+.challenge-status[data-status="COMPLETED"] {
+  background: var(--primary-subtle);
+  color: var(--foreground);
+}
+
+.challenge-status[data-status="EXPIRED"] {
+  color: var(--muted);
+}
+
+.challenge-status[data-status="DECLINED"],
+.challenge-status[data-status="CANCELLED"] {
+  background: var(--danger-subtle);
+  color: var(--danger-strong);
+}
+
+/* ================= Challenge list =================
+   `.challenge-list`, `.challenge-list-topline`, `.challenge-card-copy`, `.challenge-score-pair`,
+   `.challenge-card-link`, `.challenge-main-panel`, `.challenge-side-panel` and `.badge-list` were
+   also unstyled: only `.challenge-list-card` itself had a frame, so its five blocks ran together as
+   one column of unspaced text with the score as an inline "5 vs 3". */
+.challenge-main-panel,
+.challenge-side-panel {
+  min-width: 0;
+}
+
+.challenge-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+  gap: var(--space-4);
+}
+
+/* The empty state is a sibling of the cards, so without this it took one 17rem track and sat in the
+   corner of an otherwise blank three-column grid. */
+.challenge-list > .challenge-empty {
+  grid-column: 1 / -1;
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+}
+
+.challenge-list > .challenge-empty h2 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  line-height: 1.25;
+}
+
+.challenge-list > .challenge-empty p {
+  margin: 0;
+}
+
+.challenge-list > .challenge-empty .btn {
+  margin-top: var(--space-2);
+}
+
+.challenge-list-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.challenge-list-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.challenge-list-topline time {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.challenge-card-copy {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.challenge-card-copy p {
+  margin: 0;
+  color: var(--primary-strong);
+  font-size: var(--text-xs);
+  font-weight: 900;
+}
+
+.challenge-card-copy h2 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  line-height: 1.2;
+}
+
+.challenge-card-copy span {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+/* The one number pair on the card, so it gets the monospace treatment the scoreboard uses rather
+   than sitting in the paragraph flow. */
+.challenge-score-pair {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 2px dashed var(--secondary);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.challenge-score-pair strong {
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.challenge-score-pair span {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 800;
+}
+
+.challenge-card-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  /* The card's own footer control, and the only tap target on it -- 44px so a thumb can land. */
+  min-height: 44px;
+  margin-top: auto;
+  padding-top: var(--space-3);
+  border-top: 2px dashed var(--line);
+  color: var(--primary-strong);
+  font-size: var(--text-sm);
+  font-weight: 900;
+}
+
+.challenge-card-link:hover {
+  color: var(--foreground);
+}
+
+.challenge-card-link svg {
+  flex: 0 0 auto;
+  transition: transform var(--transition-fast);
+}
+
+.challenge-list-card:hover .challenge-card-link svg {
+  transform: translateX(3px);
+}
+
+[dir="rtl"] .challenge-list-card:hover .challenge-card-link svg {
+  transform: translateX(-3px);
+}
+
+.challenge-side-panel > section {
+  padding: var(--space-5);
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-doodle-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-doodle);
+}
+
+.badge-list {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.badge-list > article {
+  padding: var(--space-3);
+  border: 2px dashed var(--secondary);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.badge-list > article strong {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 900;
+}
+
+.badge-list > article small {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+/* ================= Challenge detail & result =================
+   These two pages used to be held together entirely by `.challenge-detail-shell > *` /
+   `.challenge-result-shell > *` (see the note on the card list above). Removing that blanket means
+   each real section frames itself here, and the pure-layout wrappers stop drawing a box. */
+.challenge-invite-band,
+.challenge-time-band,
+.challenge-event-panel,
+.challenge-rule-panel {
+  padding: var(--space-4);
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-doodle-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-doodle);
+}
+
+.challenge-detail-shell > * + *,
+.challenge-result-shell > * + * {
+  margin-top: var(--space-4);
+}
+
+/* Accept / decline / cancel-invitation: the one thing on the page that is waiting on you. */
+.challenge-invite-band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  border-style: dashed;
+  background: var(--primary-subtle);
+}
+
+.challenge-invite-band > div {
+  min-width: 0;
+  flex: 1 1 16rem;
+}
+
+.challenge-invite-band h2 {
+  margin: 0.15rem 0 var(--space-1);
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  line-height: 1.25;
+}
+
+.challenge-invite-band p:not(.eyebrow) {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.challenge-invite-band .eyebrow {
+  margin: 0;
+}
+
+.challenge-scoreboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: var(--space-4);
+}
+
+.challenge-scoreboard > article {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 2px dashed var(--secondary);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+/* Your own side of the board, so the two columns are not interchangeable at a glance. */
+.challenge-scoreboard > article[data-self="true"] {
+  border-style: solid;
+  background: var(--primary-subtle);
+  box-shadow: var(--shadow-doodle-xs);
+}
+
+.scoreboard-person {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/* The drawn initial, matching the friends page avatar rather than inventing a second one. */
+.scoreboard-person > span[aria-hidden] {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 2px solid var(--secondary);
+  border-radius: 50% 45% 50% 45%;
+  background: var(--card-pastel-sky);
+  font-family: var(--font-label);
+  font-size: var(--text-sm);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.scoreboard-person > div {
+  min-width: 0;
+}
+
+.scoreboard-person strong {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.scoreboard-person small {
+  display: block;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.scoreboard-value {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.scoreboard-value strong {
+  font-size: var(--text-2xl);
+  line-height: 1;
+}
+
+.scoreboard-value span {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 800;
+}
+
+/* The progress bar was a `<div role="progressbar">` with an inline-width `<span>` inside and no
+   stylesheet, so the one live signal on the page rendered as nothing at all. */
+.challenge-progress-track {
+  height: 0.85rem;
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.challenge-progress-track > span {
+  display: block;
+  height: 100%;
+  min-width: 0.2rem;
+  border-inline-end: 2px solid var(--secondary);
+  background: var(--primary);
+  transition: width var(--transition-slow) ease;
+}
+
+.challenge-scoreboard > article > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 800;
+}
+
+.challenge-time-band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.challenge-time-band > div {
+  min-width: 0;
+}
+
+.challenge-time-band .eyebrow {
+  margin: 0 0 var(--space-1);
+}
+
+.challenge-time-band output {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: clamp(1.6rem, 5vw, 2.2rem);
+  font-weight: 900;
+  line-height: 1;
+  /* Digits changing width once a second made the whole band jitter. */
+  font-variant-numeric: tabular-nums;
+}
+
+.challenge-time-band dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 7.5rem), 1fr));
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+}
+
+.challenge-time-band dt,
+.challenge-rule-panel dt {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 800;
+}
+
+.challenge-time-band dd,
+.challenge-rule-panel dd {
+  margin: 0.1rem 0 0;
+  font-size: var(--text-sm);
+  font-weight: 800;
+}
+
+.challenge-event-panel,
+.challenge-rule-panel {
+  min-width: 0;
+  align-self: start;
+}
+
+.challenge-rule-panel h2,
+.challenge-event-panel h2,
+.result-badge-panel h2,
+.result-share-panel h2 {
+  margin: 0.15rem 0 0;
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  line-height: 1.25;
+}
+
+.challenge-rule-panel .eyebrow,
+.challenge-event-panel .eyebrow,
+.result-badge-panel .eyebrow,
+.result-share-panel .eyebrow {
+  margin: 0;
+}
+
+.challenge-rule-panel dl {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-4) 0 0;
+  padding-top: var(--space-4);
+  border-top: 2px dashed var(--line);
+}
+
+.challenge-rule-panel > .btn,
+.challenge-rule-panel > .danger-button,
+.challenge-rule-panel > .primary-button {
+  width: 100%;
+  margin-top: var(--space-4);
+}
+
+.challenge-event-list > li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 2px dashed var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+/* A recount after a source was edited or deleted, which the log has to be able to show as
+   something other than ordinary progress. */
+.challenge-event-list > li[data-adjustment="true"] {
+  border-color: var(--warning);
+  background: var(--warning-subtle);
+}
+
+.event-mark {
+  flex: 0 0 auto;
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-top: 0.3rem;
+  border: 1.5px solid var(--secondary);
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+.challenge-event-list > li[data-adjustment="true"] .event-mark {
+  background: var(--warning);
+}
+
+.challenge-event-list > li > div {
+  min-width: 0;
+}
+
+.challenge-event-list strong {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 900;
+}
+
+.challenge-event-list p {
+  margin: 0.15rem 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.challenge-event-list time {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+/* `.challenge-event-empty` set `border-style: dashed` and nothing else. It is inside the `<ol>`, so
+   it was never carded by anything and the dashed style had no border to apply to. */
+.challenge-event-empty {
+  display: block;
+  padding: var(--space-5);
+  border: 2px dashed var(--secondary);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+/* ---- Result page ---- */
+.result-score-band {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.result-outcome {
+  display: grid;
+  align-content: start;
+  gap: var(--space-1);
+  border-style: dashed;
+  /* Nested one level inside `.result-score-band`, which is already `--surface`: without the sunken
+     fill the dashed border was the only thing separating the two. */
+  background: var(--surface-sunken);
+  box-shadow: none;
+}
+
+.result-outcome > .challenge-status {
+  justify-self: start;
+  margin-bottom: var(--space-1);
+}
+
+.result-outcome p {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 800;
+}
+
+.result-outcome strong {
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  line-height: 1.25;
+}
+
+.result-outcome small {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.result-participants {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: var(--space-3);
+  border-style: dashed;
+  background: var(--surface-sunken);
+  box-shadow: none;
+}
+
+.result-participants > article {
+  display: grid;
+  align-content: start;
+  gap: var(--space-1);
+  background: var(--surface);
+}
+
+/* The leading result, which the copy alone ("Leading result" vs "Your result") had to carry. */
+.result-participants > article[data-leading="true"] {
+  border-style: solid;
+  background: var(--primary-subtle);
+  box-shadow: var(--shadow-doodle-xs);
+}
+
+.result-participants > article > span {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 800;
+}
+
+.result-participants h2 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--text-base);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.result-participants > article > div {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.result-participants > article > div strong {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xl);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.result-participants > article > div small,
+.result-participants > article > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+/* The shareable card, previewed exactly as the public page renders it. Unstyled, this was four
+   nested unspaced blocks that read as a paragraph of names and numbers. */
+.share-card-preview {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 2px solid var(--secondary);
+  border-radius: var(--radius-doodle-card);
+  background: var(--surface-sunken);
+  box-shadow: var(--shadow-doodle-xs);
+}
+
+.share-card-preview > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding-bottom: var(--space-2);
+  border-bottom: 2px dashed var(--line);
+}
+
+.share-card-preview > header span {
+  font-family: var(--font-label);
+  font-size: var(--text-sm);
+  font-weight: 900;
+}
+
+.share-card-preview > header strong {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 800;
+}
+
+.share-card-preview > p {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  line-height: 1.25;
+}
+
+.share-card-preview > div {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+  gap: var(--space-3);
+}
+
+.share-card-preview > div article {
+  display: grid;
+  gap: 0.15rem;
+  padding: var(--space-3);
+  border: 2px dashed var(--secondary);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.share-card-preview > div article span {
+  font-size: var(--text-sm);
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.share-card-preview > div article strong {
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.share-card-preview > div article small,
+.share-card-preview > footer {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.share-card-preview > footer {
+  padding-top: var(--space-2);
+  border-top: 2px dashed var(--line);
+}
+
+.share-controls {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 2px dashed var(--line);
+}
+
+.share-controls > label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  /* A checkbox row is a tap target, and this one was 16px tall. */
+  min-height: 44px;
+  font-size: var(--text-sm);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.share-controls > label input[type="checkbox"] {
+  flex: 0 0 auto;
+  width: 1.15rem;
+  height: 1.15rem;
+  accent-color: var(--primary);
+}
+
+.share-controls .muted-copy {
+  margin: 0;
+  font-size: var(--text-xs);
+}
+
+.share-controls .inline-actions {
+  justify-content: flex-start;
+  gap: var(--space-2);
+}
+
+.result-badges > article {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.result-badges > article > span[aria-hidden] {
+  flex: 0 0 auto;
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.result-badges > article > div {
+  min-width: 0;
+}
+
+.result-badges strong {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 900;
+}
+
+.result-badges p {
+  margin: 0.1rem 0;
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.result-badges small {
+  display: block;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.result-note {
+  padding: var(--space-4);
+  margin-top: var(--space-4);
+  border: 2px dashed var(--secondary);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.result-note strong {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 900;
+}
+
+.result-note p {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+/* From 721px up only, so the `1fr` stack that the 720px block below already sets for
+   `.result-layout` still wins on phones. */
+@media (min-width: 721px) {
+  .result-score-band {
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    align-items: start;
+  }
+
+  .result-layout {
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 520px) {
+  /* Bands that pair a text block with actions stack, and the actions go full width -- the
+     `.inline-actions` default is a space-between row, which on a phone puts two 32px buttons at
+     opposite edges of the card. */
+  .challenge-invite-band,
+  .challenge-time-band {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .challenge-invite-band .inline-actions,
+  .share-controls .inline-actions {
+    justify-content: stretch;
+  }
+
+  .challenge-invite-band .inline-actions > *,
+  .share-controls .inline-actions > * {
+    flex: 1 1 8rem;
+  }
+
+  .challenge-invite-band .danger-button,
+  .challenge-invite-band .primary-button,
+  .challenge-invite-band .secondary-button {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .challenge-card-link {
+    font-size: var(--text-xs);
+  }
 }
 
 .room-grid {
@@ -5555,12 +8358,14 @@
   min-height: 1.5rem;
 }
 
+/* Logical, not the physical `border-left` these used to carry: in RTL the spine landed on
+   the wrong edge of the event chip. LTR renders identically -- inline-start IS left there. */
 .calendar-event.task {
-  border-left: 3px solid var(--primary);
+  border-inline-start: 3px solid var(--primary);
 }
 
 .calendar-event.session {
-  border-left: 3px solid var(--accent);
+  border-inline-start: 3px solid var(--accent);
   background: var(--surface-sunken);
 }
 
@@ -6006,6 +8811,11 @@
   border: 2px dashed var(--secondary);
   border-radius: var(--radius-md);
   background: var(--surface-sunken);
+  /* Merged from the AI Exam Plan section, which used to re-declare this component as a second
+     bare-class rule further down the file. */
+  display: grid;
+  gap: var(--space-3);
+  text-align: start;
 }
 
 
@@ -6720,6 +9530,251 @@
   }
 }
 
+/* ================= Atlas Skin: Aurora Mesh Background =================
+   The Atlas counterpart to the doodle drawing field above. Three blurred gradient orbs
+   drifting on long, offset loops, a pointer-following spotlight, and a veil that keeps
+   text legible over all of it.
+
+   Deliberately zero JavaScript. Compositor-only animation (transform and opacity, never
+   filter or background-position) means the drift keeps running at full frame rate while the
+   main thread is busy hydrating, fetching and rendering the route -- which is precisely when
+   a first-time visitor is looking at the background. A requestAnimationFrame version of the
+   same effect would stutter exactly then.
+
+   Every colour is mixed from the palette tokens rather than written literally, so all five
+   moods get a correct aurora out of one declaration: on the four light moods the orbs read as
+   soft tinted light, and on cosmic -- where --primary and --accent sit on a near-black
+   --background -- the same mix reads as a genuine glow. */
+
+[data-skin="atlas"] .study-ambient-canvas {
+  /* How strongly each orb tints its mood. Light moods need a low value or the whole page
+     turns muddy; the cosmic override below raises it, because a dark canvas can absorb far
+     more colour before it stops reading as a background. */
+  --aurora-orb-alpha: 24%;
+  /* Strength of the readability veil painted over the orbs. */
+  --aurora-veil-alpha: 34%;
+}
+
+[data-skin="atlas"] .mood-cosmic {
+  --aurora-orb-alpha: 42%;
+  --aurora-veil-alpha: 22%;
+}
+
+/* The grid is the doodle skin's paper texture. Atlas keeps it, but barely -- just enough to
+   give the glass something to sit on top of, rather than a visible ruled sheet. */
+[data-skin="atlas"] .ambient-texture-grid {
+  opacity: 0.22;
+}
+
+/* Each skin renders only its own layer (see the comment in study-background.tsx), so these two
+   rules exist for the static geometry-check fixture, which has no React to choose and so
+   renders both. Keeping them also means a stale DOM never shows two backgrounds at once. */
+[data-skin="atlas"] .ambient-doodles-layer {
+  display: none;
+}
+
+[data-skin="doodle"] .ambient-aurora-layer {
+  display: none;
+}
+
+.ambient-aurora-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  /* The orbs are wider than the viewport and blurred well past their own bounds. `paint`
+     containment clips that overflow to this box and, more importantly, tells the browser
+     nothing inside can affect layout outside it -- so the drift never invalidates the
+     app's layout. */
+  contain: paint;
+}
+
+.ambient-aurora-orb {
+  position: absolute;
+  border-radius: 50%;
+  /* Promoted once, up front. Without this the first animation frame is what triggers layer
+     creation, which is a visible hitch at exactly the moment the page is settling. */
+  will-change: transform;
+}
+
+/* Orb 1 -- the anchor. Primary-tinted, top-left, the only one that scales: `scale` on a
+   blurred layer can force a re-rasterisation at the new size, so it is spent once here and
+   the other two stay translate-only. */
+.ambient-aurora-orb-1 {
+  top: -20%;
+  inset-inline-start: -15%;
+  width: 70vmax;
+  height: 70vmax;
+  background: radial-gradient(
+    circle at center,
+    color-mix(in srgb, var(--primary) var(--aurora-orb-alpha), transparent) 0%,
+    transparent 68%
+  );
+  filter: blur(60px);
+  animation: aurora-drift-1 var(--aurora-duration) var(--ease-in-out) infinite alternate;
+}
+
+/* Orb 2 -- the counterweight. Accent-tinted, bottom-right, drifting the opposite way on a
+   deliberately incommensurate duration so the pair never visibly re-syncs into a loop. */
+.ambient-aurora-orb-2 {
+  bottom: -25%;
+  inset-inline-end: -18%;
+  width: 60vmax;
+  height: 60vmax;
+  background: radial-gradient(
+    circle at center,
+    color-mix(in srgb, var(--accent) var(--aurora-orb-alpha), transparent) 0%,
+    transparent 66%
+  );
+  filter: blur(70px);
+  animation: aurora-drift-2 calc(var(--aurora-duration) * 1.7) var(--ease-in-out) infinite alternate;
+}
+
+/* Orb 3 -- depth. Mixed from --secondary (the ink colour), so it darkens the light moods and
+   lightens cosmic; either way it pushes the other two orbs apart in depth. Breathes on
+   opacity instead of moving far, which reads as atmosphere rather than a third object. */
+.ambient-aurora-orb-3 {
+  top: 30%;
+  inset-inline-start: 35%;
+  width: 55vmax;
+  height: 55vmax;
+  background: radial-gradient(
+    circle at center,
+    color-mix(in srgb, var(--secondary) calc(var(--aurora-orb-alpha) * 0.45), transparent) 0%,
+    transparent 62%
+  );
+  filter: blur(80px);
+  animation: aurora-drift-3 calc(var(--aurora-duration) * 2.3) var(--ease-in-out) infinite alternate;
+}
+
+/* The pointer spotlight. --mouse-x/--mouse-y are set on .study-ambient-canvas by the rAF loop
+   in study-background.tsx, and are read here as a gradient POSITION on a single element --
+   never as a transform on the orbs. A custom property that feeds a child's transform forces a
+   style recalculation for every child on every frame; feeding one element's own background
+   costs one repaint of one composited layer.
+
+   The loop is already gated on `(pointer: fine)`, so on touch devices --mouse-x/y keep their
+   50% fallbacks and this sits harmlessly in the centre. */
+.ambient-aurora-spotlight {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle 42vmax at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    color-mix(in srgb, var(--primary) 14%, transparent) 0%,
+    transparent 70%
+  );
+  opacity: 0.85;
+  /* Adds light without lifting the black point, so it brightens the aurora instead of
+     washing the whole canvas grey. */
+  mix-blend-mode: soft-light;
+}
+
+/* Readability veil. Everything above is decoration; this is the part that makes the app
+   usable on top of it. A flat wash of --background pulls the orbs back toward the mood's own
+   colour, and the vertical gradient weights it toward the bottom, where the long text and
+   task lists live -- the top of the page is mostly headings and glass cards that carry their
+   own backdrop. */
+.ambient-aurora-veil {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      color-mix(in srgb, var(--background) var(--aurora-veil-alpha), transparent) 100%
+    ),
+    radial-gradient(
+      ellipse 120% 90% at 50% 40%,
+      transparent 0%,
+      color-mix(in srgb, var(--background) calc(var(--aurora-veil-alpha) * 0.7), transparent) 100%
+    );
+}
+
+/* Translate-dominant on purpose: percentage translations on a composited layer are a matrix
+   change the compositor applies to an already-rasterised texture, so these cost effectively
+   nothing per frame despite the 60-80px blurs. */
+@keyframes aurora-drift-1 {
+  from {
+    transform: translate3d(-6%, -4%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(8%, 6%, 0) scale(var(--aurora-scale));
+  }
+}
+
+@keyframes aurora-drift-2 {
+  from {
+    transform: translate3d(7%, 5%, 0);
+  }
+  to {
+    transform: translate3d(-9%, -7%, 0);
+  }
+}
+
+@keyframes aurora-drift-3 {
+  from {
+    transform: translate3d(-4%, 3%, 0);
+    opacity: 0.55;
+  }
+  to {
+    transform: translate3d(5%, -4%, 0);
+    opacity: 1;
+  }
+}
+
+/* Reduced motion keeps the aurora -- it is a static composition that happens to move, and
+   deleting it would leave a flat page rather than a calmer one. Only the drift stops. The
+   spotlight goes, because a pointer-tracked light is motion by definition. */
+@media (prefers-reduced-motion: reduce) {
+  .ambient-aurora-orb-1,
+  .ambient-aurora-orb-2,
+  .ambient-aurora-orb-3 {
+    animation: none;
+  }
+
+  .ambient-aurora-spotlight {
+    display: none;
+  }
+}
+
+/* ================= Brand Mark =================
+   Both marks are in the DOM at once and the skin picks one -- see the header comment in
+   src/components/ui/logo.tsx for why that beats a `skin` prop. `display: none` rather than
+   `visibility`/`opacity` so the hidden mark takes no space in the flex lockup.
+
+   Neither rule is a fallback for the other: if `data-skin` were ever missing, both marks would
+   show, which is loud enough to notice immediately rather than silently rendering the wrong
+   brand. The attribute is server-rendered in layout.tsx, so that is a bug signal, not a state
+   to design around. */
+[data-skin="atlas"] .logo-mark-doodle {
+  display: none;
+}
+
+[data-skin="doodle"] .logo-mark-atlas {
+  display: none;
+}
+
+.logo-wordmark {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--secondary);
+  letter-spacing: -0.01em;
+}
+
+/* Atlas tightens the tracking and pins the optical size. Fraunces is loaded with its `opsz`
+   axis (layout.tsx), and its automatic value at 1.25rem is tuned for running text, which
+   leaves the lockup a shade soft next to hairline rims; naming opsz explicitly sharpens the
+   stems. SOFT and WONK are held at their defaults so the brand stays a clean serif -- the auth
+   headlines are where those axes earn their keep.
+
+   `wght` is deliberately absent from font-variation-settings: leaving it out means the
+   `font-weight: 800` above still drives the axis, so the weight stays in one place. */
+[data-skin="atlas"] .logo-wordmark {
+  letter-spacing: -0.022em;
+  font-variation-settings: "opsz" 18, "SOFT" 0, "WONK" 0;
+}
+
 /* ================= Study Mood Selector Component ================= */
 .study-mood-trigger-btn {
   display: inline-flex;
@@ -6845,11 +9900,24 @@
   flex-shrink: 0;
 }
 
-/* Card grid variant — flat, tappable, no nested popover. Used in the mobile sheet. */
+/* Card grid variant — flat, tappable, no nested popover. Used in the mobile sheet and in the
+   settings hub's Appearance card.
+   The two-column pair holds only while a column has ~9rem to live in; below that the labels
+   cannot shrink (the check icon is `flex: none`, the label ellipsises but its min-content is
+   still one word), so the grid forced its track wide and dragged every ancestor wider than
+   the viewport -- the settings hub clipped ~100px of itself on a 320px phone. One column
+   under 480px, matching what `.auth-content .study-mood-card-grid` already did at 560px for
+   the narrower sign-up sheet. */
 .study-mood-card-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-2);
+}
+
+@media (max-width: 479px) {
+  .study-mood-card-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .study-mood-card {
@@ -7755,8 +10823,9 @@
 
 /* A plan note is not a task and must not be mistaken for one at a glance, so it takes the warning
    spine -- the one accent no other event type on this grid uses. */
+/* Logical spine, same fix as .calendar-event.task/.session above. */
 .calendar-event.plan {
-  border-left: 3px solid var(--warning);
+  border-inline-start: 3px solid var(--warning);
   background: var(--warning-subtle, var(--surface-sunken));
   border-style: dashed;
 }
@@ -8555,12 +11624,10 @@
   font-size: var(--text-sm);
 }
 
-.task-conversion-confirmation {
-  display: grid;
-  gap: var(--space-3);
-  text-align: start;
-}
-
+/* The checklist inside the conversion gate. The frame itself is declared once, up at the Exam
+   Plans section where the gate's card lives -- this used to be a second bare-class rule that
+   re-declared nothing the first one owned and only added the grid; merged up there so the
+   component has one frame rule instead of two half-frames 2800 lines apart. */
 .task-conversion-confirmation label {
   display: flex;
   align-items: start;
@@ -8694,6 +11761,1445 @@
     flex: 1 1 100%;
     justify-content: center;
     min-height: 44px;
+  }
+}
+
+/* ================= Atlas skin -- Batch A: analytics, insights, goals, sessions, calendar =========
+   Phase 5's first material pass. Everything here follows the one rule the whole re-skin rests on:
+   the base rule is never touched, an `[data-skin="atlas"] .same-class` block is added below it, and
+   doodle keeps working because nothing it reads has changed.
+
+   Placed at the end of the file rather than beside each section, because the sections it covers span
+   from :5759 to :10740 and several of the rules it beats are mood overrides at (0,3,0) -- a tie that
+   only source order can break. One block at the bottom is below all of them by construction. The
+   two shared-card-family members Batch A owns (`.analytics-panel`, `.insight-card`) are the
+   exception and live up at :5513 with the rest of that family.
+
+   Three things are deliberately absent from almost every rule below:
+
+   `border-radius`. The base rules name `--radius-doodle-card` / `--radius-doodle-btn` /
+   `--radius-doodle-chip`, and the token remap at tokens.css already points those at --bento-radius,
+   12px and --radius-full. Restating them here would be a no-op that future readers have to verify.
+   The only radii restated are the two hand-drawn *literals* -- the heat cells' two-axis wobble --
+   because a literal is the one thing a token remap cannot reach.
+
+   `box-shadow`. Same reason: `--shadow-doodle-xs` through `--shadow-doodle-xl` already resolve to
+   --elevation-1 through --elevation-4. A rule that already says `box-shadow: var(--shadow-doodle-md)`
+   is already casting an atlas shadow. The exceptions are the three hard offset literals
+   (`1px 1px 0px var(--secondary)`, `2px 2px 0`, `3px 3px 0`), which are drawn-shadow syntax and have
+   to be replaced outright. Note also that six selectors here are members of the mobile comfort pass
+   in globals.css, which asserts `box-shadow: var(--shadow-doodle-xs)` on them at <=768px through the
+   harness's decoBad probe: `.analytics-ai-panel`, `.analytics-panel`, `.analytics-wide-panel`,
+   `.insight-card`, `.insight-list article`, `.manual-session-panel`. Declaring a box-shadow on any of
+   those from here would win on specificity and break that assertion. None of them gets one.
+
+   `border-width` on the 1.5px borders. Chromium floors border-width to whole CSS pixels in the used
+   value, so every `1.5px solid` in this file *already renders* as the 1px hairline atlas wants -- the
+   harness says so in its own comment at the analytics assertions. What is wrong about those borders
+   under atlas is the colour: full-strength `var(--secondary)` ink rather than a rim mixed down out of
+   it. So the small badges and chips below get `border-color` alone. Less diff, and nothing for a
+   later per-side longhand to collide with. */
+
+/* --- Analytics command center ---------------------------------------------------------------- */
+
+/* The sticky left rail and the page's two pale panels. Raised tier for the rail because it floats
+   over the scrolling column beside it. */
+[data-skin="atlas"] .analytics-sidebar {
+  background-color: var(--glass-bg-raised);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .analytics-toolbar {
+  background-color: color-mix(in srgb, var(--primary) 10%, var(--glass-bg-sunken));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .analytics-summary article {
+  background-color: var(--glass-bg-raised);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  border: var(--stroke-default);
+}
+
+/* The pen-drawn dividers. Dashed is the doodle vocabulary for "a rule someone drew"; atlas divides
+   with a hairline instead. `--stroke-muted` rather than `--stroke-default` on purpose: these sit
+   *inside* a card that already has a rim, and two lines of equal weight read as a nested frame. */
+[data-skin="atlas"] .analytics-sidebar-title,
+[data-skin="atlas"] .analytics-split,
+[data-skin="atlas"] .analytics-tooltip-footer {
+  border-color: color-mix(in srgb, var(--line) 60%, transparent);
+  border-style: solid;
+  border-width: 1px;
+}
+
+/* Same idea, but this one is a 1.5px dashed line already mixed down from --secondary, so only the
+   style changes -- the width is a Chromium 1px either way and the colour is already a rim. */
+[data-skin="atlas"] .analytics-course-grid header {
+  border-bottom-style: solid;
+}
+
+/* The sidebar footnote and the streak pills: dashed --primary outlines over a --primary-subtle
+   wash. Atlas keeps the mood in them (they are the two places on this page where the accent is the
+   point) and drops the outline to a mixed-down rim. */
+[data-skin="atlas"] .analytics-sidebar-note,
+[data-skin="atlas"] .analytics-streak {
+  background-color: color-mix(in srgb, var(--primary) 12%, var(--glass-bg-raised));
+  border: 1px solid color-mix(in srgb, var(--primary) 40%, transparent);
+}
+
+/* Small circular badges take `--stroke-strong` (26%) rather than `--stroke-default` (16%): a 16%
+   rim around a 30px circle is a suggestion of a shape rather than a shape. */
+[data-skin="atlas"] .analytics-metric-icon,
+[data-skin="atlas"] .analytics-streak-icon {
+  background-color: color-mix(in srgb, var(--primary) 16%, var(--glass-bg-raised));
+  border-color: var(--glass-rim-strong);
+}
+
+/* currentColor is --success-strong or --muted here, which is information (the direction of the
+   change) and stays. Only the drawn weight comes off. */
+[data-skin="atlas"] .analytics-delta {
+  border-width: 1px;
+}
+
+/* The range select. `background-color`, never the shorthand: the caret is a real background-image
+   two declarations further down the base rule, and --doodle-caret already remaps to a straight
+   chevron under atlas. This is the rule the handoff's warning was written about. */
+[data-skin="atlas"] .analytics-toolbar select {
+  background-color: var(--glass-bg-raised);
+  border: var(--stroke-default);
+}
+
+/* (0,3,1) against the base focus rule's (0,2,0) -- the `border` shorthand above is (0,2,1) and would
+   otherwise have swallowed the focused border colour. The house focus idiom: a mixed-down --primary
+   rim plus a 3px halo, no movement. */
+[data-skin="atlas"] .analytics-toolbar select:focus-visible {
+  border-color: color-mix(in srgb, var(--primary) 70%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
+/* Heat cells. The wobble is a two-axis literal, so it is the one radius in this block that has to be
+   restated; 3px keeps a 15px box reading as a rounded square rather than a circle. The dashed
+   `[data-level="0"]` and bare `[data-empty="true"]` variants are untouched -- "an empty day inside
+   the month" versus "not in the month" is a fact, not decoration. */
+[data-skin="atlas"] .analytics-cal-cell,
+[data-skin="atlas"] .analytics-hourmap tbody td {
+  border-radius: 3px;
+}
+
+[data-skin="atlas"] .analytics-sort button {
+  background-color: var(--glass-bg-raised);
+  border-color: var(--glass-rim-strong);
+}
+
+/* (0,3,1). The base pressed rule is (0,2,1) and so is the rule above it, which is a tie this block
+   would win on source order -- taking the --primary fill off the pressed sort pill with it. */
+[data-skin="atlas"] .analytics-sort button[aria-pressed="true"] {
+  background-color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 55%, transparent);
+}
+
+/* The course cards keep their subject identity: a mood-blind border here would be the same fault as
+   the "always green" task paper, and the harness asserts two distinct borders and two distinct
+   washes across the fixture's two cards. So --subject-color stays in both, mixed over glass instead
+   of over --surface, and only the 2px drops to a rim. */
+[data-skin="atlas"] .analytics-course-grid article {
+  background-color: color-mix(in srgb, var(--subject-color, var(--primary)) 12%, var(--glass-bg-raised));
+  border: 1px solid color-mix(in srgb, var(--subject-color, var(--secondary)) 55%, transparent);
+}
+
+[data-skin="atlas"] .analytics-tooltip {
+  background-color: var(--glass-bg-raised);
+  -webkit-backdrop-filter: blur(var(--glass-blur-heavy));
+  backdrop-filter: blur(var(--glass-blur-heavy));
+  border: var(--stroke-default);
+}
+
+/* The AI slab is the one card on the page that does NOT become transparent glass. Everything on it
+   -- the heading, the six signal cards' --surface wash, the CTA's inverted fill -- is built on
+   --secondary/--secondary-foreground being a contrast pair, and thinning the slab thins all of it at
+   once. 88% with a heavy blur is the liquid-glass reading of a dark slab: the aurora is present
+   behind it as light rather than as shapes, and 12% of bleed cannot move a >10:1 pair below 4.5:1 in
+   any of the five moods. No @supports fallback needed either -- at 88% the unblurred fallback is
+   already opaque enough to read.
+
+   `:root`-prefixed, unlike the rest of this block: `:root[data-mood="cosmic"] .analytics-ai-panel`
+   at :5925 is (0,3,0), so this has to match it and win on order.
+
+   `background-image: none` is the deviation from the handoff's Batch A note, which asked for the
+   corner marks to be kept. They are three baked-in hex literals (#38BDF8/#FBBF24/#F472B6, and
+   #263D5B/#F59E0B/#EC4899 in the cosmic twin) -- mood-blind ink, which is the exact fault class the
+   task-paper and chart-colour work spent Phase 4 removing. `.dashboard-card` in the same family
+   already drops them under atlas for that reason. The harness assertion is inverted per skin rather
+   than skipped, so "doodle still has its marks" is still measured. */
+:root[data-skin="atlas"] .analytics-ai-panel {
+  background-color: color-mix(in srgb, var(--secondary) 88%, transparent);
+  background-image: none;
+  -webkit-backdrop-filter: blur(var(--glass-blur-heavy));
+  backdrop-filter: blur(var(--glass-blur-heavy));
+  border: 1px solid color-mix(in srgb, var(--secondary-foreground) 22%, transparent);
+}
+
+/* "The pen went round twice" -- the second, looser dashed outline inset 5px inside the frame. It is
+   a drawing of a hand redrawing an edge, which has no atlas equivalent, so it goes rather than being
+   restyled. Same call Phase 3/4 made for the three notebook frames that share the rule at :1381. */
+[data-skin="atlas"] .analytics-wide-panel::after,
+[data-skin="atlas"] .analytics-ai-panel::after,
+[data-skin="atlas"] .analytics-ai-icon::after {
+  display: none;
+}
+
+/* The slab's own internal dividers have to be mixed from --secondary-foreground, not from --line:
+   --line is a hairline for light surfaces and disappears on this one. Same reason the base rules
+   here already reach for --secondary-foreground instead of the shared token. */
+[data-skin="atlas"] .analytics-signal-grid,
+[data-skin="atlas"] .analytics-ai-disclaimer {
+  border-top: 1px solid color-mix(in srgb, var(--secondary-foreground) 20%, transparent);
+}
+
+/* `box-shadow: none`, not an elevation: --elevation-* all carry `0 0 0 1px var(--glass-rim)`, and
+   --glass-rim is mixed from --secondary -- the slab's own background colour, so the ring would be
+   invisible, and the dark ink half of the shadow is invisible on a dark slab too. The 12% --surface
+   wash plus the hairline is what separates these cards here. */
+[data-skin="atlas"] .analytics-signal-grid article {
+  border: 1px solid color-mix(in srgb, var(--secondary-foreground) 28%, transparent);
+  box-shadow: none;
+}
+
+/* The one CTA on the slab. Its fill is --secondary-foreground and stays that way (the harness checks
+   it differs from the slab, which is really a check that the base button's --surface did not win);
+   only the 3px drawn offset becomes a soft shadow, and it has to be tinted from the panel's
+   foreground for the same reason the dividers above do. (0,3,0) and (0,5,0) against the base
+   rules' (0,2,0) and (0,4,0). */
+[data-skin="atlas"] .analytics-ai-heading .secondary-button {
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--secondary-foreground) 22%, transparent);
+}
+
+[data-skin="atlas"] .analytics-ai-heading .secondary-button:hover:not(:disabled) {
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--secondary-foreground) 28%, transparent);
+}
+
+/* --- AI Insights notebook -------------------------------------------------------------------- */
+
+[data-skin="atlas"] .insight-status-strip {
+  background-color: color-mix(in srgb, var(--primary) 10%, var(--glass-bg-sunken));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .insight-toolbar {
+  background-color: var(--glass-bg);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .insight-status-icon,
+[data-skin="atlas"] .insight-toggle-button {
+  background-color: var(--glass-bg-raised);
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .insight-status-dot,
+[data-skin="atlas"] .ai-label {
+  border-color: var(--glass-rim-strong);
+}
+
+/* The AI chip's `1px 1px 0px var(--secondary)` is the last drawn offset on this page. A 20px pill
+   does not need an elevation to read as a pill once it has a fill, so it loses the shadow outright
+   rather than gaining a soft one. Declared in this file though the base rule lives in globals.css:
+   (0,2,0) beats its (0,1,0) whichever file wins on order. */
+[data-skin="atlas"] .ai-label {
+  box-shadow: none;
+}
+
+/* Dashed --danger reads as a torn-out warning slip. The alert keeps the semantic colour in its rim
+   and its wash -- it is the only red thing on the page and it means something -- and gives up the
+   dashes. */
+[data-skin="atlas"] .insight-alert {
+  border: 1px solid color-mix(in srgb, var(--danger) 45%, transparent);
+}
+
+[data-skin="atlas"] .insight-card-context {
+  border-top: var(--stroke-muted);
+}
+
+/* Solid-muted rather than dashed. Dashed is a real convention for "placeholder", but on this page it
+   is the same 2px --secondary dash the status strip and the toolbar were drawing, so keeping it
+   would leave the empty state as the one doodle frame on an otherwise reskinned page -- and the
+   copy inside it already says there is nothing here yet. */
+[data-skin="atlas"] .insight-empty-state {
+  background-color: var(--glass-bg);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  border: var(--stroke-muted);
+}
+
+[data-skin="atlas"] .insight-empty-icon {
+  background-color: color-mix(in srgb, var(--primary) 16%, var(--glass-bg-raised));
+  border: var(--stroke-strong);
+}
+
+/* --- Goal creation form -------------------------------------------------------------------- */
+
+/* Two strips of masking tape pinning the form to the page. Pure paper conceit, so atlas drops it --
+   the same call the timer card's tape got in Phase 4 and the sticky card's in Phase 3. */
+[data-skin="atlas"] .goal-form-tape {
+  display: none;
+}
+
+[data-skin="atlas"] .goal-doodle-form {
+  background-color: var(--glass-bg-raised);
+  -webkit-backdrop-filter: blur(var(--glass-blur-heavy));
+  backdrop-filter: blur(var(--glass-blur-heavy));
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .goal-form-header,
+[data-skin="atlas"] .goal-form-actions,
+[data-skin="atlas"] .goal-card-header {
+  border-color: color-mix(in srgb, var(--line) 60%, transparent);
+  border-style: solid;
+  border-width: 1px;
+}
+
+[data-skin="atlas"] .goal-header-icon-bubble {
+  background-color: color-mix(in srgb, var(--primary) 16%, var(--glass-bg-raised));
+  border-color: var(--glass-rim-strong);
+}
+
+/* border-color alone: the base rule's `:hover` repaints the background to --danger-subtle at
+   (0,2,0), and a `background-color` here would tie with it and win on source order -- taking the
+   hover state with it. The sunken fill it already has is right on glass anyway. */
+[data-skin="atlas"] .goal-form-close-btn {
+  border-color: var(--glass-rim-strong);
+}
+
+[data-skin="atlas"] .goal-form-field input,
+[data-skin="atlas"] .goal-form-field select,
+[data-skin="atlas"] .goal-metric-tab-btn,
+[data-skin="atlas"] .manual-session-form input,
+[data-skin="atlas"] .manual-session-form select,
+[data-skin="atlas"] .manual-session-form textarea {
+  background-color: var(--glass-bg-sunken);
+  border: var(--stroke-default);
+}
+
+/* (0,3,1) against the base focus rule's (0,2,1) -- an exact tie with the rule above, which this
+   block would otherwise win. `transform: none` is the substantive change beyond the ring: nudging a
+   focused field a pixel up and left is a drawn effect, and on glass it reads as the field coming
+   loose. */
+[data-skin="atlas"] .goal-form-field input:focus,
+[data-skin="atlas"] .goal-form-field select:focus {
+  border-color: color-mix(in srgb, var(--primary) 70%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent);
+  transform: none;
+}
+
+/* (0,3,0), for the same tie: `.goal-metric-tab-btn.active` is (0,2,0). */
+[data-skin="atlas"] .goal-metric-tab-btn.active {
+  background-color: color-mix(in srgb, var(--primary) 18%, var(--glass-bg-raised));
+  border-color: color-mix(in srgb, var(--primary) 55%, transparent);
+}
+
+[data-skin="atlas"] .goal-period-tag,
+[data-skin="atlas"] .goal-status-tag,
+[data-skin="atlas"] .task-meta > * {
+  background-color: var(--glass-bg-sunken);
+  border-color: var(--glass-rim-strong);
+}
+
+/* --- Sessions history, subtasks and detail notes --------------------------------------------- */
+
+[data-skin="atlas"] .session-row,
+[data-skin="atlas"] .detail-notes,
+[data-skin="atlas"] .subtask-section {
+  background-color: var(--glass-bg);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .session-state,
+[data-skin="atlas"] .manual-session-panel {
+  background-color: var(--glass-bg-sunken);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  border: var(--stroke-muted);
+}
+
+[data-skin="atlas"] .subtask-row {
+  background-color: var(--glass-bg-sunken);
+  border-color: color-mix(in srgb, var(--line) 60%, transparent);
+}
+
+/* --- Calendar and planner -------------------------------------------------------------------- */
+
+[data-skin="atlas"] .calendar-toolbar,
+[data-skin="atlas"] .day-drawer,
+[data-skin="atlas"] .agenda-list section {
+  background-color: var(--glass-bg);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .calendar-nav button,
+[data-skin="atlas"] .day-drawer-add input,
+[data-skin="atlas"] .calendar-source-picker select {
+  background-color: var(--glass-bg-raised);
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .view-tabs {
+  background-color: var(--glass-bg-sunken);
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .day-drawer-header,
+[data-skin="atlas"] .week-day-header,
+[data-skin="atlas"] .agenda-list h3 {
+  border-bottom-color: color-mix(in srgb, var(--line) 60%, transparent);
+  border-bottom-style: solid;
+  border-bottom-width: 1px;
+}
+
+/* No `backdrop-filter` on the grid cells, unlike every other surface in this block. A month is 42 of
+   these and a week is 7, and each blur is its own backdrop root -- real paint cost for an effect
+   nothing can see, because a 96px cell covers too little of the aurora for a 20px blur to have a
+   gradient to work on. A translucent fill over the mesh is the whole readable effect at this size. */
+[data-skin="atlas"] .calendar-day,
+[data-skin="atlas"] .week-day {
+  background-color: var(--glass-bg-raised);
+  border: var(--stroke-default);
+}
+
+/* (0,3,0) each, because the rule above is (0,2,0) and so are the three variants -- a tie this block
+   wins on order, which would flatten "selected", "outside" and "today" into ordinary cells. */
+[data-skin="atlas"] .calendar-day.selected,
+[data-skin="atlas"] .week-day.today {
+  background-color: color-mix(in srgb, var(--primary) 14%, var(--glass-bg-raised));
+  border-color: color-mix(in srgb, var(--primary) 60%, transparent);
+}
+
+[data-skin="atlas"] .calendar-day.outside {
+  background-color: var(--glass-bg-sunken);
+}
+
+/* Rim colour only, and no fill -- and via `:where()`, deliberately. Three kind variants
+   (.task / .session / .plan) each paint a 3px inline-start spine in their own colour at
+   (0,2,0); this rule used to be a bare (0,2,0) as well, won the tie on source order, and
+   quietly repainted all four sides -- spine included -- in rim grey, which is precisely the
+   erasure this comment always warned about. Wrapping the class drops the whole rule to
+   (0,1,0): still later than the base rule's own (0,1,0), so the three non-spine edges go to
+   the rim, but the spines' (0,2,0) now outranks it and keep their colours. */
+[data-skin="atlas"] :where(.calendar-event) {
+  border-color: var(--glass-rim-strong);
+}
+
+[data-skin="atlas"] .agenda-event {
+  background-color: var(--glass-bg-sunken);
+  border-color: var(--glass-rim-strong);
+}
+
+/* The selected pill in both tablists, and the one place a hard `1px 1px 0px var(--secondary)` offset
+   survives on these pages. (0,3,1) against the base rules' (0,2,1). */
+[data-skin="atlas"] .view-tabs button[aria-selected="true"],
+[data-skin="atlas"] .calendar-source-tabs button[aria-selected="true"],
+[data-skin="atlas"] .exam-view-tabs button[aria-selected="true"] {
+  border-color: color-mix(in srgb, var(--primary) 45%, transparent);
+  box-shadow: var(--elevation-1);
+}
+
+[data-skin="atlas"] .calendar-source-bar,
+[data-skin="atlas"] .calendar-copy-box {
+  background-color: var(--glass-bg-sunken);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  border: var(--stroke-muted);
+}
+
+/* `.exam-view-tabs` is grouped in here for the same reason the base rule at :10661 groups it: it is
+   the same pill tablist, and leaving it on 2px of ink until Batch B would split one component's
+   material across two phases for no gain. */
+[data-skin="atlas"] .calendar-source-tabs,
+[data-skin="atlas"] .exam-view-tabs {
+  background-color: var(--glass-bg-raised);
+  border: var(--stroke-default);
+}
+
+/* The two bespoke filled buttons on these pages, both carrying a literal `2px solid var(--secondary)`
+   that no token remap reaches. `--stroke-strong` rather than a `--primary` tint: the fill underneath is
+   already `--primary`, so a primary-mixed rim renders as no rim at all. Border only -- the fill arrives
+   from a `background` shorthand at (0,1,1) and must survive.
+   The shared `.primary-button` / `.secondary-button` ink is deliberately NOT touched here; it is a
+   global control, not a Batch A surface, and reskinning it from inside a page batch would change every
+   route at once. Flagged as a follow-up. */
+[data-skin="atlas"] .calendar-copy-box button,
+[data-skin="atlas"] .day-drawer-add button {
+  border: var(--stroke-strong);
+}
+
+/* --- Hover, and its reduced-motion companion ------------------------------------------------- */
+
+/* Doodle lifts a card up *and to the left*, which is a drawn card being peeled off the page. Atlas
+   lifts straight up. Only the transform is restated in every case: the elevation half of each base
+   hover already reads `var(--shadow-doodle-md)`, which is --elevation-2 through the remap.
+   `.calendar-day:hover` is absent because it is already `translateY(-1px)`. */
+@media (hover: hover) and (pointer: fine) {
+  [data-skin="atlas"] .insight-card:hover,
+  [data-skin="atlas"] .session-row:hover,
+  [data-skin="atlas"] .calendar-nav button:hover,
+  [data-skin="atlas"] .goal-form-close-btn:hover,
+  [data-skin="atlas"] .goal-metric-tab-btn:hover {
+    transform: translateY(-1px);
+  }
+}
+
+/* The transform goes, the elevation stays: a user who has asked for less motion has not asked for a
+   flatter interface, and the shadow is what says "this responds to a pointer". */
+@media (prefers-reduced-motion: reduce) {
+  [data-skin="atlas"] .insight-card:hover,
+  [data-skin="atlas"] .session-row:hover,
+  [data-skin="atlas"] .calendar-nav button:hover,
+  [data-skin="atlas"] .goal-form-close-btn:hover,
+  [data-skin="atlas"] .goal-metric-tab-btn:hover {
+    transform: none;
+  }
+}
+
+/* ================= Atlas skin -- Batch B: leaderboards, friends, challenges, exam plans, forum ==
+   The second material pass, same grammar as Batch A above: the base rule is never touched, an
+   `[data-skin="atlas"]` rule is added here at the end of the file, and every tie this block wins,
+   it wins on source order against a doodle or mood rule of equal specificity. The shared card
+   family members this batch owns (.goal-card, .friend-card, .challenge-list-card, ...) live up at
+   :5513 with the rest of that family, because their cosmic twin is there.
+
+   What is deliberately absent, for the same reasons Batch A records above:
+
+   `box-shadow`. --shadow-doodle* remaps through tokens.css; the drawn literals
+   (`1px 1px 0 var(--secondary)` on selected pills and chips) are replaced outright where they
+   occur, usually with nothing -- a filled pill does not need an elevation to read as selected.
+   And none of the comfort-block members reachable from here
+   (.leaderboard-table-panel, .reflection-card, .public-challenge-card, .exam-plan-form-panel,
+   .exam-plan-recent-panel, .result-badge-panel, .result-share-panel) gets a box-shadow, so the
+   phone step-down keeps reaching them.
+
+   `border-radius`. Token remaps cover --radius-doodle-card/btn/chip. Restated only for the two
+   hand-drawn blob literals (the composer step bubble and the friend avatar), which go to plain
+   circles under atlas -- a wobbly outline is drawing, and glass has no drawing on it. */
+
+/* --- Leaderboards ------------------------------------------------------------------------------ */
+
+/* The three page frames plus the session-detail cards that share the doodle-treatment list.
+   Plain glass tier: they are page-width frames, not tiles. No backdrop-filter cost concern at
+   one per page. */
+[data-skin="atlas"] .leaderboard-controls,
+[data-skin="atlas"] .leaderboard-summary,
+[data-skin="atlas"] .leaderboard-table-panel,
+[data-skin="atlas"] .challenge-composer,
+[data-skin="atlas"] .reflection-card,
+[data-skin="atlas"] .distraction-log,
+[data-skin="atlas"] .public-challenge-card {
+  background-color: var(--glass-bg);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  border: var(--stroke-default);
+}
+
+/* The leaderboard summary is dashed in doodle ("a note about the board"). On glass the rim
+   carries that nesting by weight alone, like every other inset panel before it. */
+[data-skin="atlas"] .leaderboard-summary {
+  border: var(--stroke-muted);
+}
+
+[data-skin="atlas"] .leaderboard-table-wrap {
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .leaderboard-table-wrap th {
+  background-color: var(--glass-bg-sunken);
+}
+
+/* Row hover and "this is you" share --primary-subtle, which is mood-derived and reads fine over
+   glass; untouched. The rank chip takes the accent treatment instead: tinted, blurred, rimmed. */
+[data-skin="atlas"] .my-rank {
+  background-color: color-mix(in srgb, var(--primary) 12%, var(--glass-bg-raised));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  border: var(--stroke-strong);
+}
+
+[data-skin="atlas"] .segmented-control {
+  background-color: var(--glass-bg-sunken);
+  border: var(--stroke-default);
+}
+
+/* The selected pill's `1px 1px 0 var(--secondary)` is a drawn offset on a filled pill, which
+   already says "selected" twice; the third signal goes rather than becoming a shadow. */
+[data-skin="atlas"] .segmented-control button[aria-selected="true"],
+[data-skin="atlas"] .segmented-control button[aria-pressed="true"],
+[data-skin="atlas"] .segmented-control button:hover {
+  box-shadow: none;
+}
+
+[data-skin="atlas"] .leaderboard-filter-row select {
+  background-color: var(--glass-bg-raised);
+  border: var(--stroke-default);
+}
+
+/* --- Friends & accountability ------------------------------------------------------------------ */
+
+/* Vitals are tiles: raised tier. The alert variant keeps its accent -- its background-color is
+   all that changes; the shadow half of that base rule remaps on its own. */
+[data-skin="atlas"] .friends-vitals > article {
+  background-color: var(--glass-bg-raised);
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .friends-vitals > article[data-alert="on"] {
+  background-color: color-mix(in srgb, var(--primary) 14%, var(--glass-bg-raised));
+}
+
+/* The notice band's colour IS its message (danger vs ok), so only the drawn weight comes off --
+   same call as .insight-alert. border-color is deliberately not declared here so the tone
+   variants' own colours survive. */
+[data-skin="atlas"] .social-notice {
+  border-style: solid;
+  border-width: 1px;
+}
+
+[data-skin="atlas"] .social-count {
+  border: var(--stroke-strong);
+}
+
+[data-skin="atlas"] .social-row {
+  background-color: var(--glass-bg-raised);
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .social-empty {
+  background-color: var(--glass-bg-sunken);
+  border: var(--stroke-muted);
+}
+
+/* The avatar's year tint stays (it is identity, themed per mood); what goes is the drawn blob
+   outline and the ink border. */
+[data-skin="atlas"] .friend-avatar {
+  border-radius: 50%;
+  border-color: var(--glass-rim-strong);
+}
+
+/* The disclosure's dashed top rule becomes a hairline. */
+[data-skin="atlas"] .friend-more {
+  border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+}
+
+/* One-way actions behind the disclosure: semantic wash kept, drawn weight dropped. */
+[data-skin="atlas"] .friend-confirm {
+  border-width: 1px;
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+}
+
+/* --- Challenge composer ------------------------------------------------------------------------ */
+
+[data-skin="atlas"] .composer-step {
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+}
+
+/* The step bubble: circle, not blob. stroke-strong because a 16% rim around a 36px disc is a
+   suggestion rather than a shape. */
+[data-skin="atlas"] .composer-step > span {
+  border-radius: 50%;
+  background-color: color-mix(in srgb, var(--primary) 16%, var(--glass-bg-raised));
+  border: var(--stroke-strong);
+}
+
+[data-skin="atlas"] .composer-filter {
+  background-color: var(--glass-bg-raised);
+  border: var(--stroke-default);
+}
+
+/* Focus rings: dashed secondary ink becomes the house idiom -- a primary rim plus halo, no dash. */
+[data-skin="atlas"] .composer-filter:focus-within,
+[data-skin="atlas"] .composer-field input:focus-visible,
+[data-skin="atlas"] .composer-field select:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--primary) 60%, transparent);
+  outline-offset: 2px;
+}
+
+/* Radio cards. Raised tier so the card reads separate from the composer frame behind it. */
+[data-skin="atlas"] .opponent-picker > label,
+[data-skin="atlas"] .challenge-choice-grid > label,
+[data-skin="atlas"] .resolution-picker > label {
+  background-color: var(--glass-bg-raised);
+  border: var(--stroke-default);
+}
+
+/* Checked keeps the accent fill (--primary-subtle is mood-derived); only the full-strength ink
+   border mixes down. (0,4,1) against the base checked rule's (0,3,1). */
+[data-skin="atlas"] .opponent-picker > label:has(input:checked),
+[data-skin="atlas"] .challenge-choice-grid > label:has(input:checked),
+[data-skin="atlas"] .resolution-picker > label:has(input:checked) {
+  border-color: color-mix(in srgb, var(--primary) 55%, transparent);
+}
+
+/* Field controls. `background-color`, never the shorthand: the select's caret is a real
+   background-image further down the base rule, and --doodle-caret already remaps to the straight
+   chevron under atlas. This is the exact trap the handoff warns about. */
+[data-skin="atlas"] .composer-field input,
+[data-skin="atlas"] .composer-field select {
+  background-color: var(--glass-bg-sunken);
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .composer-preset {
+  background-color: var(--glass-bg-sunken);
+  border: var(--stroke-muted);
+}
+
+/* The invitation preview: pastel paper becomes the mood itself. */
+[data-skin="atlas"] .composer-summary {
+  background-color: color-mix(in srgb, var(--primary) 10%, var(--glass-bg-raised));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .composer-rules {
+  background-color: var(--glass-bg-sunken);
+  border: var(--stroke-muted);
+}
+
+[data-skin="atlas"] .composer-actions {
+  border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+}
+
+/* Feedback and warning bands. The feedback trio shares one rule across four routes; the washes
+   stay semantic, the dashes go. `.exam-plan-feedback` is scoped out of its hidden state -- that
+   state zeroes the border and background at (0,2,0), a tie this later rule would otherwise win
+   and put a frame back on the visually-hidden slot. */
+[data-skin="atlas"] .form-feedback,
+[data-skin="atlas"] .challenge-feedback,
+[data-skin="atlas"] .exam-plan-feedback:not([data-visible="no"]) {
+  background-color: color-mix(in srgb, var(--primary) 8%, var(--glass-bg));
+  border: var(--stroke-muted);
+}
+
+[data-skin="atlas"] .composer-warning,
+[data-skin="atlas"] .challenge-composer .form-error {
+  border-width: 1px;
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+}
+
+/* Empty states. Dashed was the doodle placeholder convention; Batch A replaced it with a quiet
+   solid frame and the copy inside already says why the page is empty. */
+[data-skin="atlas"] .empty-state,
+[data-skin="atlas"] .challenge-empty,
+[data-skin="atlas"] .challenge-form-empty {
+  background-color: var(--glass-bg);
+  border: var(--stroke-muted);
+}
+
+/* --- Challenge list, stats, detail, result ------------------------------------------------------ */
+
+[data-skin="atlas"] .challenge-stats > article {
+  background-color: var(--glass-bg-raised);
+  border: var(--stroke-default);
+}
+
+/* The score pair is an inset readout: sunken tier, muted rim, same grammar as the vitals. */
+/* The one number pair on the list card, the year pill and the status chip: small pills whose
+   tone is carried by fill and text, so their full-strength ink borders mix down to rims. */
+[data-skin="atlas"] .year-pill,
+[data-skin="atlas"] .challenge-status {
+  border-color: var(--glass-rim-strong);
+}
+
+[data-skin="atlas"] .challenge-score-pair {
+  background-color: var(--glass-bg-sunken);
+  border: var(--stroke-muted);
+}
+
+[data-skin="atlas"] .challenge-side-panel > section {
+  background-color: var(--glass-bg);
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .badge-list > article {
+  background-color: var(--glass-bg-sunken);
+  border: var(--stroke-muted);
+}
+
+/* The invite band is "waiting on you" -- the one accent on the page, so it keeps a mood tint and
+   a primary-mixed rim instead of plain glass, the way the analytics streak pills did. */
+[data-skin="atlas"] .challenge-invite-band {
+  background-color: color-mix(in srgb, var(--primary) 12%, var(--glass-bg-raised));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid color-mix(in srgb, var(--primary) 40%, transparent);
+}
+
+[data-skin="atlas"] .challenge-time-band,
+[data-skin="atlas"] .challenge-event-panel,
+[data-skin="atlas"] .challenge-rule-panel,
+[data-skin="atlas"] .detail-metrics {
+  background-color: var(--glass-bg);
+  border: var(--stroke-default);
+}
+
+/* Inset children of those frames: the shared doodle rule draws them as 2px-dashed boxes; atlas
+   nests them by tier instead. The data-self / data-leading variants below these set their own
+   background at higher specificity and survive. */
+[data-skin="atlas"] .detail-metrics > *,
+[data-skin="atlas"] .result-participants > *,
+[data-skin="atlas"] .result-badges > *,
+[data-skin="atlas"] .public-card-scores > *,
+[data-skin="atlas"] .challenge-scoreboard > article {
+  background-color: var(--glass-bg-sunken);
+  border: var(--stroke-muted);
+}
+
+[data-skin="atlas"] .event-mark {
+  border-color: var(--glass-rim-strong);
+}
+
+[data-skin="atlas"] .challenge-progress-track {
+  background-color: var(--glass-bg-sunken);
+  border: var(--stroke-default);
+}
+
+/* The fill's 2px end-cap is drawn ink; on a rimmed track it is a second line crossing the fill. */
+[data-skin="atlas"] .challenge-progress-track > span {
+  border-inline-end: 0;
+}
+
+/* Result page. The outer band is plain glass; outcome and participants sit inside it, so they
+   take the sunken tier -- which preserves the nesting the base rules were encoding with
+   `background: var(--surface-sunken)` inside `--surface`. */
+[data-skin="atlas"] .result-score-band {
+  background-color: var(--glass-bg);
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .result-outcome,
+[data-skin="atlas"] .result-participants {
+  background-color: var(--glass-bg-sunken);
+  border: var(--stroke-muted);
+}
+
+/* Both are comfort-block members: material only, no box-shadow from here. */
+[data-skin="atlas"] .result-badge-panel,
+[data-skin="atlas"] .result-share-panel {
+  background-color: var(--glass-bg);
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .share-card-preview {
+  background-color: var(--glass-bg-sunken);
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .share-card-preview > header {
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+}
+
+[data-skin="atlas"] .share-card-preview > footer,
+[data-skin="atlas"] .share-controls {
+  border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+}
+
+[data-skin="atlas"] .share-card-preview > div article {
+  background-color: var(--glass-bg-raised);
+  border: var(--stroke-muted);
+}
+
+[data-skin="atlas"] .result-note {
+  background-color: var(--glass-bg-sunken);
+  border: var(--stroke-muted);
+}
+
+/* The score orbit: 3px primary ring and the `3px 3px 0` drawn shadow both soften. */
+[data-skin="atlas"] .score-orbit {
+  background-color: color-mix(in srgb, var(--primary) 12%, var(--glass-bg-raised));
+  border-color: color-mix(in srgb, var(--primary) 55%, transparent);
+  box-shadow: var(--elevation-1);
+}
+
+/* --- Exam plans ---------------------------------------------------------------------------------- */
+
+/* The Board/List tablist on the challenges-style toolbar and the rest-day picker's selected chip:
+   both carry a drawn `1px 1px 0 var(--secondary)` on a filled pill, which goes. The selected tab
+   also keeps a 1.5px ink border that mixes down. */
+[data-skin="atlas"] .challenge-toolbar div[role="tablist"] {
+  background-color: var(--glass-bg-raised);
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .challenge-toolbar button[role="tab"][aria-selected="true"] {
+  border-color: color-mix(in srgb, var(--primary) 45%, transparent);
+  box-shadow: none;
+}
+
+[data-skin="atlas"] .exam-rest-day[data-selected="yes"] {
+  box-shadow: none;
+}
+
+/* All comfort-block members below: material only, never a box-shadow. */
+[data-skin="atlas"] .exam-plan-form-panel,
+[data-skin="atlas"] .exam-plan-recent-panel {
+  background-color: var(--glass-bg);
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .exam-plan-meta,
+[data-skin="atlas"] .exam-plan-item,
+[data-skin="atlas"] .exam-plan-conversion {
+  background-color: var(--glass-bg);
+  border: var(--stroke-default);
+}
+
+/* Fields. Sunken tier like every other form control in the skin. */
+[data-skin="atlas"] .exam-plan-meta input,
+[data-skin="atlas"] .exam-plan-meta textarea,
+[data-skin="atlas"] .exam-plan-item input:not([type="checkbox"]),
+[data-skin="atlas"] .exam-plan-item select,
+[data-skin="atlas"] .exam-plan-item textarea {
+  background-color: var(--glass-bg-sunken);
+  border: var(--stroke-default);
+}
+
+/* (0,3,1) each: without these the rules above would win the tie on source order and erase the
+   disabled and focused states the base rules declare. */
+[data-skin="atlas"] .exam-plan-meta input:disabled,
+[data-skin="atlas"] .exam-plan-meta textarea:disabled,
+[data-skin="atlas"] .exam-plan-item input:disabled,
+[data-skin="atlas"] .exam-plan-item select:disabled,
+[data-skin="atlas"] .exam-plan-item textarea:disabled {
+  background-color: var(--glass-bg-sunken);
+  border: var(--stroke-muted);
+}
+
+[data-skin="atlas"] .exam-plan-meta input:focus,
+[data-skin="atlas"] .exam-plan-meta textarea:focus,
+[data-skin="atlas"] .exam-plan-item input:focus,
+[data-skin="atlas"] .exam-plan-item select:focus,
+[data-skin="atlas"] .exam-plan-item textarea:focus {
+  outline: 2px solid color-mix(in srgb, var(--primary) 60%, transparent);
+  outline-offset: 2px;
+}
+
+[data-skin="atlas"] .exam-plan-attribution {
+  background-color: color-mix(in srgb, var(--primary) 10%, var(--glass-bg-raised));
+  border-color: var(--glass-rim-strong);
+}
+
+[data-skin="atlas"] .exam-plan-fact {
+  border-inline-start: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+}
+
+[data-skin="atlas"] .exam-plan-share {
+  background-color: var(--glass-bg-raised);
+  border: var(--stroke-muted);
+}
+
+/* The close-out zone keeps its danger wash AND its dashes -- dashed is what reads as a
+   "marked-off zone" here, the same call the plan-note add button makes -- only the 2px weight
+   drops. border-style is deliberately not declared, so the base shorthand's dashed survives. */
+[data-skin="atlas"] .exam-plan-reject-zone {
+  border-width: 1px;
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+}
+
+[data-skin="atlas"] .task-conversion-confirmation {
+  background-color: var(--glass-bg-sunken);
+  border: var(--stroke-muted);
+}
+
+[data-skin="atlas"] .wizard-container {
+  background-color: var(--glass-bg);
+  border: var(--stroke-default);
+}
+
+/* Steps: quiet circles; active and done keep their fills and mix their rims down. The width has
+   to come off here because the active/done base rules re-declare a full 2px ink border. */
+[data-skin="atlas"] .wizard-step {
+  border-width: 1px;
+  border-color: var(--glass-rim-strong);
+}
+
+[data-skin="atlas"] .wizard-step.active {
+  border-color: color-mix(in srgb, var(--primary) 55%, transparent);
+}
+
+[data-skin="atlas"] .wizard-step.done {
+  border-color: color-mix(in srgb, var(--primary) 35%, transparent);
+}
+
+/* Topic cards keep their weight spines (`border-inline-start`, --subject-coral/--sky are
+   information exactly like the analytics course borders), so nothing declares that edge --
+   the other three sides go to the hairline via logical longhands that follow the direction. */
+[data-skin="atlas"] .exam-topic-card {
+  background-color: var(--glass-bg-raised);
+  border-top: var(--stroke-muted);
+  border-bottom: var(--stroke-muted);
+  border-inline-end: var(--stroke-muted);
+}
+
+[data-skin="atlas"] .exam-strategy-card {
+  background-color: var(--glass-bg);
+  border: var(--stroke-muted);
+}
+
+[data-skin="atlas"] .exam-strategy-card[data-selected="yes"] {
+  background-color: color-mix(in srgb, var(--primary) 14%, var(--glass-bg-raised));
+  border: 1px solid color-mix(in srgb, var(--primary) 55%, transparent);
+}
+
+[data-skin="atlas"] .exam-rest-days {
+  background-color: var(--glass-bg-sunken);
+  border: var(--stroke-muted);
+}
+
+[data-skin="atlas"] .exam-upload-thumb {
+  background-color: var(--glass-bg-sunken);
+  border-color: var(--glass-rim-strong);
+}
+
+[data-skin="atlas"] .exam-review-card {
+  background-color: var(--glass-bg-sunken);
+  border: var(--stroke-default);
+}
+
+/* --- Plan forum ---------------------------------------------------------------------------------- */
+
+/* The new-plan pad: pastel paper becomes the raised-glass sheet, heavy blur, like the goal form
+   before it. */
+[data-skin="atlas"] .plan-new-pad {
+  background-color: var(--glass-bg-raised);
+  -webkit-backdrop-filter: blur(var(--glass-blur-heavy));
+  backdrop-filter: blur(var(--glass-blur-heavy));
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .plan-field input,
+[data-skin="atlas"] .plan-note-form input {
+  background-color: var(--glass-bg-sunken);
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .plan-span-readout {
+  background-color: var(--glass-bg-sunken);
+  border: var(--stroke-muted);
+}
+
+/* Filled primary button carrying a literal 2px ink border: --stroke-strong, the same call the
+   calendar copy button got in Batch A -- a primary-mixed rim would vanish against the fill. */
+[data-skin="atlas"] .plan-create-btn {
+  border: var(--stroke-strong);
+}
+
+[data-skin="atlas"] .plan-shelf-head {
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+}
+
+[data-skin="atlas"] .plan-shelf-count {
+  background-color: var(--glass-bg-sunken);
+  border-color: var(--glass-rim-strong);
+}
+
+[data-skin="atlas"] .plan-shelf-empty {
+  background-color: var(--glass-bg-sunken);
+  border: var(--stroke-muted);
+}
+
+/* Plan cards carry a hashed --subject-color paper (identity between visits, variety within a
+   shelf). Same call as the analytics course grid: the subject colour survives, mixed over glass
+   instead of over opaque surface. */
+[data-skin="atlas"] .plan-card {
+  background-color: color-mix(
+    in srgb,
+    var(--subject-color, var(--primary)) 12%,
+    var(--glass-bg-raised)
+  );
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid color-mix(in srgb, var(--subject-color, var(--secondary)) 40%, transparent);
+}
+
+[data-skin="atlas"] .plan-board-head {
+  background-color: var(--glass-bg);
+  border: var(--stroke-default);
+}
+
+/* Notices keep the accent wash; the dashes go. */
+[data-skin="atlas"] .plan-board-notice,
+[data-skin="atlas"] .plan-readonly-banner {
+  background-color: color-mix(in srgb, var(--primary) 10%, var(--glass-bg));
+  border: var(--stroke-muted);
+}
+
+[data-skin="atlas"] .plan-edit-row {
+  background-color: var(--glass-bg-sunken);
+  border: var(--stroke-muted);
+}
+
+/* Day notes: the mood's own paper replaces the fixed pastel-yellow pad, the way task notes took
+   wantPaper(14) in Phase 4. Today keeps its accent border. */
+[data-skin="atlas"] .plan-day-note {
+  background-color: color-mix(in srgb, var(--primary) 10%, var(--glass-bg-raised));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .plan-day-note[data-today="yes"] {
+  border-color: color-mix(in srgb, var(--primary) 60%, transparent);
+}
+
+/* The pinboard tilt is paper behaviour; a rotated glass panel reads as a rendering error. Same
+   call the task notes made in Phase 4, and at every width -- the mobile block already zeroes the
+   tilt for both skins, this extends it upward. (0,4,0) beats the nth-child tilt rules'
+   (0,3,0) regardless of order. */
+[data-skin="atlas"] .plan-day-grid > .plan-day-note:nth-child(2n),
+[data-skin="atlas"] .plan-day-grid > .plan-day-note:nth-child(2n + 1) {
+  transform: none;
+}
+
+[data-skin="atlas"] .plan-day-head {
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+}
+
+/* Task rows inside a note: the subject spine stays (course identity, the whole point of it);
+   the other three sides drop to the hairline. Logical longhands, so the untouched edge is the
+   inline-start spine in either direction. */
+[data-skin="atlas"] .plan-note-task {
+  background-color: var(--glass-bg-raised);
+  border-top: var(--stroke-muted);
+  border-bottom: var(--stroke-muted);
+  border-inline-end: var(--stroke-muted);
+}
+
+[data-skin="atlas"] .plan-note-swatch {
+  border-color: var(--glass-rim-strong);
+}
+
+[data-skin="atlas"] .plan-note-remove {
+  background-color: var(--glass-bg-raised);
+  border-color: var(--glass-rim-strong);
+}
+
+/* The add affordance stays dashed -- it is an invitation on an empty note, and unlike the page-level
+   empty states there is no copy explaining anything; the dashed outline is the explanation. */
+[data-skin="atlas"] .plan-note-add-btn {
+  border-color: var(--glass-rim-strong);
+}
+
+[data-skin="atlas"] .plan-note-form {
+  background-color: var(--glass-bg-sunken);
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .plan-note-form-actions button {
+  background-color: var(--glass-bg-raised);
+  border-color: var(--glass-rim-strong);
+}
+
+[data-skin="atlas"] .plan-visibility-pill,
+[data-skin="atlas"] .exam-day-load {
+  border-color: var(--glass-rim-strong);
+}
+
+/* --- Composer and picker hovers, gated ------------------------------------------------------------ */
+
+/* Drawn diagonal lifts become straight lifts, inside @media (hover: hover) per the house rule.
+   Elevation halves already remap through --shadow-doodle*. */
+@media (hover: hover) and (pointer: fine) {
+  [data-skin="atlas"] .opponent-picker > label:hover,
+  [data-skin="atlas"] .challenge-choice-grid > label:hover,
+  [data-skin="atlas"] .resolution-picker > label:hover,
+  [data-skin="atlas"] .plan-day-grid > .plan-day-note:hover,
+  [data-skin="atlas"] .plan-card:hover {
+    transform: translateY(-1px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-skin="atlas"] .opponent-picker > label:hover,
+  [data-skin="atlas"] .challenge-choice-grid > label:hover,
+  [data-skin="atlas"] .resolution-picker > label:hover,
+  [data-skin="atlas"] .plan-day-grid > .plan-day-note:hover,
+  [data-skin="atlas"] .plan-card:hover {
+    transform: none;
+  }
+}
+
+/* ================= Atlas skin -- Batch C: editor, wizard, settings hub =========================
+   The last material pass, same grammar as A and B. Launch State & Errors needs nothing: its
+   section is layout and typography only, with no card frame to reskin.
+
+   Two global calls live here rather than in any page batch:
+
+   The masking tape. Phase 3 hid it on the one card it knew about (the dashboard sticky card) and
+   every later surface that renders `.sticky-tape-top` -- the plan forum's pad, the forum notes,
+   the board, the exam board -- kept drawing a dashed yellow strip on glass. One rule at (0,2,0)
+   retires it everywhere; doodle never declares data-skin, so its tape is untouched. */
+
+[data-skin="atlas"] .sticky-tape-top {
+  display: none;
+}
+
+/* --- Editor panel & form layouts ---------------------------------------------------------------- */
+
+/* Comfort-block member: material only, no box-shadow from here. */
+[data-skin="atlas"] .editor-panel {
+  background-color: var(--glass-bg);
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .task-form input,
+[data-skin="atlas"] .task-form textarea,
+[data-skin="atlas"] .task-form select {
+  background-color: var(--glass-bg-sunken);
+  border: var(--stroke-default);
+}
+
+/* --- Wizard, remainder -------------------------------------------------------------------------- */
+/* .wizard-container / .wizard-step (+ active/done) were done in Batch B. What was left is the
+   two drawn connectors. */
+
+[data-skin="atlas"] .wizard-step-line {
+  border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+}
+
+[data-skin="atlas"] .wizard-step-actions {
+  border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+}
+
+/* --- Settings hub --------------------------------------------------------------------------------- */
+
+[data-skin="atlas"] .settings-hero-header {
+  background-color: var(--glass-bg);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  border: var(--stroke-default);
+}
+
+/* Small pill: stroke-strong, the same weight the social-count got. */
+[data-skin="atlas"] .settings-status-badge {
+  border-color: var(--glass-rim-strong);
+}
+
+[data-skin="atlas"] .settings-category-tabs {
+  background-color: var(--glass-bg-sunken);
+  border: var(--stroke-default);
+}
+
+/* The selected tab's `1px 1px 0 var(--secondary)` is drawn ink on a filled pill; gone. */
+[data-skin="atlas"] .settings-tab-btn.active {
+  border-color: color-mix(in srgb, var(--primary) 45%, transparent);
+  box-shadow: none;
+}
+
+/* Comfort-block member: material only. */
+[data-skin="atlas"] .settings-notebook-card {
+  background-color: var(--glass-bg-raised);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .card-header-line {
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+}
+
+/* The danger zone keeps its red rim (it is a warning), drops to hairline weight, and loses the
+   `3px 3px 0 var(--danger)` drawn offset -- but only above the breakpoint: it is a comfort-block
+   member, so an unconditional shadow here would cancel the phone step-down exactly as the
+   tokens.css comment describes. */
+[data-skin="atlas"] .danger-zone-card {
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+}
+
+@media (min-width: 769px) {
+  [data-skin="atlas"] .danger-zone-card {
+    box-shadow: var(--elevation-2);
+  }
+}
+
+/* Settings fields. Sunken tier like every other control; the :focus companion is required --
+   the base focus rule re-declares border-color at (0,2,0), a tie this later rule would win. */
+[data-skin="atlas"] .doodle-input,
+[data-skin="atlas"] .doodle-select {
+  background-color: var(--glass-bg-sunken);
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .doodle-input:focus,
+[data-skin="atlas"] .doodle-select:focus {
+  border-color: color-mix(in srgb, var(--primary) 70%, transparent);
+}
+
+[data-skin="atlas"] .lang-option {
+  background-color: var(--glass-bg-sunken);
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .lang-option.selected {
+  border-color: color-mix(in srgb, var(--primary) 55%, transparent);
+}
+
+[data-skin="atlas"] .theme-card-btn {
+  background-color: var(--glass-bg-raised);
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .theme-card-btn.active {
+  background-color: color-mix(in srgb, var(--primary) 14%, var(--glass-bg-raised));
+  border-color: color-mix(in srgb, var(--primary) 55%, transparent);
+}
+
+[data-skin="atlas"] .form-submit-row {
+  border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+}
+
+/* --- Study mood selector ------------------------------------------------------------------------- */
+/* Shared chrome (sidebar trigger, popover, mobile sheet cards). The dropdown is floating chrome
+   over arbitrary content, so it takes the raised tier + heavy blur, like the mobile sheet does.
+   `.study-mood-card` is a comfort member: material only, no box-shadow. */
+
+[data-skin="atlas"] .study-mood-trigger-btn,
+[data-skin="atlas"] .study-mood-sidebar-btn {
+  background-color: var(--glass-bg-raised);
+  border-color: var(--glass-rim-strong);
+}
+
+[data-skin="atlas"] .study-mood-dropdown-menu {
+  background-color: var(--glass-bg-raised);
+  -webkit-backdrop-filter: blur(var(--glass-blur-heavy));
+  backdrop-filter: blur(var(--glass-blur-heavy));
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .study-mood-menu-item.active {
+  background-color: color-mix(in srgb, var(--primary) 14%, var(--glass-bg-raised));
+}
+
+[data-skin="atlas"] .study-mood-icon-bubble,
+[data-skin="atlas"] .study-mood-item-icon {
+  background-color: var(--glass-bg-sunken);
+  border-color: var(--glass-rim-strong);
+}
+
+[data-skin="atlas"] .study-mood-card {
+  background-color: var(--glass-bg-raised);
+  border: var(--stroke-default);
+}
+
+[data-skin="atlas"] .study-mood-card.active {
+  background-color: color-mix(in srgb, var(--primary) 14%, var(--glass-bg-raised));
+}
+
+/* Drawn diagonal lifts on the settings pickers and the mood trigger become straight lifts,
+   gated per the house rule. Elevation halves remap through --shadow-doodle*. */
+@media (hover: hover) and (pointer: fine) {
+  [data-skin="atlas"] .theme-card-btn:hover,
+  [data-skin="atlas"] .study-mood-trigger-btn:hover,
+  [data-skin="atlas"] .study-mood-sidebar-btn:hover {
+    transform: translateY(-1px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-skin="atlas"] .theme-card-btn:hover,
+  [data-skin="atlas"] .study-mood-trigger-btn:hover,
+  [data-skin="atlas"] .study-mood-sidebar-btn:hover {
+    transform: none;
+  }
+}
+
+/* ================= Atlas skin -- global controls: buttons ======================================
+   The pass Batch A deliberately deferred. Every filled button in the app carried a literal
+   `2px solid var(--secondary)` that no token remap could reach, so the whole control layer
+   stayed ink-outlined under atlas while every surface around it went to glass.
+
+   `--stroke-strong` (26% rim) rather than --stroke-default or a primary tint: the fills under
+   these are --primary / --danger, and both a default rim and a primary-mixed one render as no
+   edge at all against them -- the exact call the calendar copy button and .plan-create-btn
+   already made. `.btn-ghost` is excluded because doodle keeps it borderless on purpose and an
+   equal-specificity rule at the end of the file would hand it a rim out of nowhere.
+
+   The active state's `0px 0px 0px var(--secondary)` is drawn-shadow syntax ("pressed into the
+   ink") and goes; the pressed feedback that survives is the translate, which is motion and not
+   material. Hover states are untouched: their elevation halves remap through --shadow-doodle-md
+   on their own, and their transforms stay -- this pass replaces ink, not interaction feel.
+
+   Width and colour longhands, NOT a `border` shorthand: two states demote specific buttons to
+   dashed outline tiers (the mobile header's Detailed Form, and the disabled quick-add submit),
+   both at (0,3,0) -- an exact tie this late block would win, flattening their dashes back to
+   solid. Longhands leave border-style alone, so those states keep working in every skin. */
+
+[data-skin="atlas"] .btn:not(.btn-ghost),
+[data-skin="atlas"] .primary-button,
+[data-skin="atlas"] .secondary-button,
+[data-skin="atlas"] .danger-button {
+  border-width: 1px;
+  border-color: var(--glass-rim-strong);
+}
+
+[data-skin="atlas"] .btn-ghost:hover {
+  border-color: var(--glass-rim);
+}
+
+[data-skin="atlas"] .btn:active:not(:disabled):not([aria-disabled="true"]),
+[data-skin="atlas"] .primary-button:active:not(:disabled),
+[data-skin="atlas"] .secondary-button:active:not(:disabled) {
+  box-shadow: none;
+}
+
+/* --- Enter focus (task card pill) ---------------------------------------------------------------
+   The one-tap bridge from a task card to /focus?task=<id>. A small accent pill rather than an
+   icon in the manage-only actions column, so it is reachable at every width -- starting a
+   session for a task is a primary move, not a management one. Mood-derived fill and rim, the
+   same recipe as the app's other accent chips. */
+.enter-focus-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 40%, transparent);
+  border-radius: var(--radius-full);
+  background-color: color-mix(in srgb, var(--primary) 10%, var(--surface));
+  color: var(--primary-strong);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  line-height: 1.4;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .enter-focus-btn:hover {
+    background-color: color-mix(in srgb, var(--primary) 18%, var(--surface));
+    border-color: color-mix(in srgb, var(--primary) 65%, transparent);
+    transform: translateY(-1px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enter-focus-btn:hover {
+    transform: none;
   }
 }
 

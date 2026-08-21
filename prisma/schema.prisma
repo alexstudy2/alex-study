@@ -2,9 +2,22 @@ generator client {
   provider = "prisma-client-js"
 }
 
+/// Two URLs because Supabase exposes two poolers and they are good at different things.
+///
+/// `url` (:6543, transaction mode, `?pgbouncer=true`) is what the running app uses: a
+/// transaction-mode pooler is the only thing that survives serverless connection churn.
+/// It cannot hold a prepared statement across statements, which is why the flag is there.
+///
+/// `directUrl` (:5432, session mode) is what the CLI uses. The schema engine introspects
+/// with prepared statements, so `db push` against :6543 dies with
+/// `ERROR: prepared statement "s6" already exists` before it reads a single table.
+/// `prisma.config.ts` also points its `datasource.url` at DIRECT_URL, but the CLI does not
+/// honour that key -- it read `env("DATABASE_URL")` from here and hit the pooler anyway.
+/// Only CLI commands (db push, introspect) read `directUrl`; the client still uses `url`.
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum ProfileVisibility {
@@ -23,6 +36,14 @@ enum StudyMood {
   COSMIC
   AURORA
   SUNSET
+}
+
+/// The material system, orthogonal to StudyMood. Mood owns the palette (which colours);
+/// skin owns the materials (radius, border, shadow, blur). ATLAS is the premium glass
+/// system and the default; DOODLE is the original hand-drawn system, kept selectable.
+enum StudySkin {
+  ATLAS
+  DOODLE
 }
 
 enum ConsentStatus {
@@ -280,6 +301,7 @@ model UserPreference {
   userId                      String    @unique
   locale                      AppLocale @default(EN)
   studyMood                   StudyMood @default(NOTEBOOK)
+  skin                        StudySkin @default(ATLAS)
   defaultFocusMinutes         Int       @default(25)
   defaultShortBreakMinutes    Int       @default(5)
   defaultLongBreakMinutes     Int       @default(15)

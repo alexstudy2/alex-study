@@ -49,6 +49,9 @@ type Props = {
   subjects: Option[];
   initialTimer: TimerRun | null;
   initialServerNow: string;
+  /** Arriving from a task card's "Enter focus" (/focus?task=...). Pre-answers the assignment
+   * gate with that task; ignored when a recovered timer is in charge of the form. */
+  preselectedTaskId?: string | null;
 };
 
 const copy = {
@@ -299,12 +302,28 @@ export function FocusWorkspace(props: Props) {
   const t = copy[props.locale];
   const [mode, setMode] = useState<TimerMode>(props.initialTimer?.mode ?? "FOCUS");
   const [timer, setTimer] = useState(props.initialTimer);
-  const [taskId, setTaskId] = useState(props.initialTimer?.task?.id ?? "");
-  const [subjectId, setSubjectId] = useState(props.initialTimer?.subject?.id ?? "");
+  const [taskId, setTaskId] = useState(
+    props.initialTimer?.task?.id ?? props.preselectedTaskId ?? "",
+  );
+  const [subjectId, setSubjectId] = useState(
+    props.initialTimer?.subject?.id ??
+      /* The entered-with task's own course, so the session is fully aimed before anyone
+         touches the form. */
+      props.tasks.find((task) => task.id === props.preselectedTaskId)?.subjectId ??
+      "",
+  );
   /* A recovered timer has already answered the question, so it must not be sent back through the
-     gate: a run with a task is a TASK session, one without is an independent one. */
+     gate: a run with a task is a TASK session, one without is an independent one. A task arrived
+     from a task card's "Enter focus" link counts as answered too -- that is the whole point of
+     the link. */
   const [assignment, setAssignment] = useState<Assignment>(() =>
-    props.initialTimer ? (props.initialTimer.task ? "TASK" : "INDEPENDENT") : "",
+    props.initialTimer
+      ? props.initialTimer.task
+        ? "TASK"
+        : "INDEPENDENT"
+      : props.preselectedTaskId
+        ? "TASK"
+        : "",
   );
   const [durations, setDurations] = useState({
     focus: props.preferences.focus,
@@ -341,6 +360,10 @@ export function FocusWorkspace(props: Props) {
      already succeeded by the time this is true. */
   const [finishing, setFinishing] = useState(false);
   const finishTimeout = useRef<number | null>(null);
+  /* Guards the end-of-clock auto-complete: the 250ms clock re-renders four times a second while
+     the request is in flight, and without it each render would fire another "complete" against
+     an already-completing session. */
+  const autoCompleteRef = useRef<string | null>(null);
   const [sound, setSound] = useState(props.preferences.ambientSound ?? "off");
   const audioContext = useRef<AudioContext | null>(null);
   const noiseNode = useRef<AudioNode | null>(null);
@@ -547,9 +570,12 @@ export function FocusWorkspace(props: Props) {
         return;
       }
       setTimer(data.timer);
+      /* A fresh session is allowed to auto-complete again -- the guard is per session, not for
+         the component's lifetime. */
+      autoCompleteRef.current = null;
       /* The setup step is answered the moment a session is actually running. Matters if the
-         window is narrowed mid-session: without this the phone layout would come back to a setup
-         window standing in front of a live timer. */
+          window is narrowed mid-session: without this the phone layout would come back to a setup
+          window standing in front of a live timer. */
       setSetupPending(false);
       setServerOffset(new Date(data.serverNow).getTime() - Date.now());
     } catch {
@@ -615,6 +641,21 @@ export function FocusWorkspace(props: Props) {
       setError(t.error);
     }
   }
+
+  /* The clock ran out, so the session ends itself. Nothing below watches for zero -- the dial
+     used to sit at 0:00 forever and wait for a manual "Complete session", which is not what a
+     timer is for. The same act("complete") a press would have taken runs here: the server marks
+     the session COMPLETED, the flourish plays, and the summary card opens. The ref guard keeps
+     the four-ticks-a-second clock from firing it twice while the request is in flight; breaks
+     complete themselves the same way as focus sessions. */
+  useEffect(() => {
+    if (!timer || remaining > 0) return;
+    if (timer.status !== "RUNNING" || busy || finishing || celebration) return;
+    if (autoCompleteRef.current === timer.id) return;
+    autoCompleteRef.current = timer.id;
+    void act("complete");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timer, remaining, busy, finishing, celebration]);
 
   /* A useCallback because the Escape handler below lists it as a dependency: a plain function
      would be a new identity on every tick of the 250ms clock and re-bind the listener with it. */
@@ -716,7 +757,12 @@ export function FocusWorkspace(props: Props) {
           {focusMode && <MedicalArtClinic />}
 
           {/* 1. Master Timer Card */}
-          <div className="doodle-timer-card">
+          {/* Two names, on purpose. `doodle-timer-card` is what every rule in components.css and
+              the mobile comfort pass already keys on, so it stays -- removing it would be a
+              rename across ~40 selectors for no behaviour change. `focus-timer-card` is the
+              skin-neutral name the Atlas rules use, and it was already in the shared card
+              family's selector list waiting for an element to carry it. */}
+          <div className="doodle-timer-card focus-timer-card">
             {/* Chart header: the badge that makes the card read as a patient chart rather than
                 a generic panel. Decorative twin of the mode label below it, so the icon is
                 hidden and the text is the accessible name of nothing -- it is a heading. */}

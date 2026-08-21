@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db/prisma";
 import { apiUser, invalid, unauthorized } from "@/lib/tasks/response";
+import { relationshipMarks } from "@/lib/social/queries";
 import { searchQuerySchema } from "@/lib/social/validation";
 import { enforceRateLimit, searchRateLimit } from "@/lib/http/rate-limit";
 
@@ -27,5 +28,14 @@ export async function GET(request: Request) {
     take: 12,
     orderBy: { name: "asc" },
   });
-  return Response.json({ users });
+  /* Results used to arrive with no idea of who was already a friend, so every row offered an Add
+     button and existing friends answered it with the generic "could not be completed". The client
+     can now label the row instead of firing a request that is known to fail. */
+  const marks = await relationshipMarks(
+    user.id,
+    users.map((match) => match.id),
+  );
+  return Response.json({
+    users: users.map((match) => ({ ...match, relationship: marks.get(match.id) ?? "none" })),
+  });
 }

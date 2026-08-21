@@ -54,10 +54,22 @@ export function TodayStudyCard({
   const displayMinutes = Math.floor(totalSeconds / 60);
   const displaySeconds = totalSeconds % 60;
   const targetMinutes = Math.max(plannedMinutes, Math.ceil(totalSeconds / 60));
-  const progressPercent = Math.min(
-    100,
-    plannedMinutes > 0 ? Math.round((totalSeconds / 60 / plannedMinutes) * 100) : 0,
-  );
+  /* While a focus session runs, the percentage tracks THAT session (elapsed of its own
+     duration) -- it used to track the daily plan, and with no plan set (`plannedMinutes = 0`)
+     it sat at 0% forever while the clock ticked. Session progress wins whenever there is one;
+     otherwise the day's progress against the plan, falling back to the running target so an
+     unplanned day still sees its number move. */
+  const sessionPercent =
+    timer && timer.mode === "FOCUS" && timer.durationSeconds > 0
+      ? Math.min(100, Math.round((liveSeconds / timer.durationSeconds) * 100))
+      : null;
+  const plannedPercent =
+    plannedMinutes > 0
+      ? Math.min(100, Math.round((totalSeconds / 60 / plannedMinutes) * 100))
+      : targetMinutes > 0
+        ? Math.min(100, Math.round((totalSeconds / 60 / targetMinutes) * 100))
+        : 0;
+  const progressPercent = sessionPercent ?? plannedPercent;
   const isLive = timer?.mode === "FOCUS" && timer.status === "RUNNING";
 
   return (

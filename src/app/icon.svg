@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="Alex Study">
+  <!--
+    The Alex Study mark: the Pharos of Alexandria, reduced until the tower silhouette and the
+    letter A are the same shape. Two tapering legs, the light gallery as the crossbar, the
+    beacon as a gold apex, and a diagonal beam that doubles as the tile's glass sheen.
+
+    This is the standalone copy, served by Next.js at /icon.svg (the file-convention route keeps
+    the extension in the pathname and appends a content hash as a query -- verified in
+    node_modules/next/dist/build/webpack/loaders/next-metadata-image-loader.js, where
+    `interpolatedName` is '[name].[ext]'). That is why src/app/manifest.ts can reference
+    "/icon.svg" directly instead of needing a duplicate under public/. Next also emits the
+    <link rel="icon"> for it automatically, alongside the legacy favicon.ico in this directory.
+
+    It duplicates the geometry in src/components/ui/logo.tsx with the palette resolved to
+    literals, because a favicon is fetched as its own document and has no access to the app's
+    custom properties -- var(--primary) here would simply not resolve. The values are the
+    notebook (default) mood:
+      #49B6E5 --primary        #6AC3EA  color-mix(in srgb, #ffffff 18%, var(--primary))
+      #111827 --primary-foreground      #D97706 --warning
+      rgba(38, 61, 91, .26)    --glass-rim-strong
+
+    If those tokens change in src/styles/tokens.css, this file does not follow automatically.
+    The full-bleed PWA variant is public/icon-maskable.svg.
+  -->
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6AC3EA"/>
+      <stop offset="100%" stop-color="#49B6E5"/>
+    </linearGradient>
+    <clipPath id="beam">
+      <rect x="2" y="2" width="44" height="44" rx="12.5"/>
+    </clipPath>
+  </defs>
+
+  <rect x="2" y="2" width="44" height="44" rx="12.5" fill="url(#tile)"/>
+
+  <g clip-path="url(#beam)">
+    <path d="M -6 20 L 30 -8 L 44 -8 L 6 30 Z" fill="#ffffff" opacity="0.16"/>
+  </g>
+
+  <g stroke="#111827" stroke-linecap="round" fill="none">
+    <path d="M14.5 36 L24 15" stroke-width="3.6"/>
+    <path d="M33.5 36 L24 15" stroke-width="3.6"/>
+    <path d="M17.9 29.5 L30.1 29.5" stroke-width="3.2"/>
+  </g>
+
+  <path d="M24 6.4 L27.7 12.2 L24 18 L20.3 12.2 Z" fill="#D97706"/>
+
+  <rect x="2" y="2" width="44" height="44" rx="12.5" fill="none" stroke="rgba(38, 61, 91, 0.26)" stroke-width="1.25"/>
+</svg>

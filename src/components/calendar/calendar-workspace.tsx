@@ -10,6 +10,10 @@ import { cairoDateKey } from "@/lib/calendar/dates";
 import type { PlanOption } from "@/lib/plan-forum/types";
 import type { CalendarEvent } from "./types";
 
+/** A calendar event as it sits in a day bucket: same-topic repeats collapse into the earliest
+ * one and leave their count behind. */
+type GroupedEvent = CalendarEvent & { repeatCount?: number };
+
 export function CalendarWorkspace({
   initialEvents,
   initialAnchor,
@@ -119,15 +123,40 @@ export function CalendarWorkspace({
     setCopying(false);
   }
 
-  const groups = useMemo(
-    () =>
-      new Map<string, CalendarEvent[]>(
-        Array.from(new Set(events.map((event) => cairoDateKey(new Date(event.startsAt))))).map(
-          (key) => [key, events.filter((event) => cairoDateKey(new Date(event.startsAt)) === key)]
-        )
-      ),
-    [events]
-  );
+  /**
+   * Day buckets, with one refinement: a topic that repeats as several sessions on the SAME day
+   * renders once (earliest start kept, count carried on it), while the same topic on different
+   * days keeps appearing in every one of its days -- the buckets are per-day by construction.
+   * Without the collapse, three back-to-back runs of "Cardiology review" filled a month cell
+   * and pushed everything else behind the "+2" overflow.
+   */
+  const groups = useMemo(() => {
+    const sorted = [...events].sort(
+      (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
+    );
+    const byDay = new Map<string, GroupedEvent[]>();
+    for (const event of sorted) {
+      const key = cairoDateKey(new Date(event.startsAt));
+      const list = byDay.get(key) ?? [];
+      if (event.type === "session") {
+        const twin = list.find((other) => other.type === "session" && other.title === event.title);
+        if (twin) {
+          twin.repeatCount = (twin.repeatCount ?? 1) + 1;
+          continue;
+        }
+      }
+      list.push(event);
+      byDay.set(key, list);
+    }
+    return byDay;
+  }, [events]);
+
+  /** The collapsed count rides along as a plain suffix, so every view gets it for free. */
+  function eventTitle(event: GroupedEvent) {
+    return event.repeatCount && event.repeatCount > 1
+      ? `${event.title} ×${event.repeatCount}`
+      : event.title;
+  }
 
   /** Where a painted event goes when tapped. A plan note leads back to the note, not to a task. */
   function eventHref(event: CalendarEvent) {
@@ -295,7 +324,7 @@ export function CalendarWorkspace({
                       href={eventHref(event)}
                       key={`${event.type}-${event.id}`}
                     >
-                      {event.title}
+                      {eventTitle(event)}
                     </Link>
                   ))}
                   {items.length > 3 && <span className="more-events">+{items.length - 3}</span>}
@@ -327,7 +356,7 @@ export function CalendarWorkspace({
                   key={`${event.type}-${event.id}`}
                 >
                   <span className="event-time">{timeOf(event.startsAt)}</span>
-                  <span>{event.title}</span>
+                  <span>{eventTitle(event)}</span>
                 </Link>
               ))}
               {!dayNotes.length && (
@@ -405,7 +434,7 @@ export function CalendarWorkspace({
                         key={`${event.type}-${event.id}`}
                       >
                         <span className="event-time">{timeOf(event.startsAt)}</span>
-                        <span>{event.title}</span>
+                        <span>{eventTitle(event)}</span>
                       </Link>
                     ))
                   ) : (
@@ -435,7 +464,7 @@ export function CalendarWorkspace({
                   key={`${event.type}-${event.id}`}
                 >
                   <span>{timeOf(event.startsAt)}</span>
-                  <strong>{event.title}</strong>
+                  <strong>{eventTitle(event)}</strong>
                   <em>{eventLabel(event)}</em>
                 </Link>
               ))}

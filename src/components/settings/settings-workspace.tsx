@@ -14,6 +14,8 @@ import {
   Check,
   Sparkles,
   Lock,
+  Gem,
+  PenTool,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { STUDY_MOODS } from "@/components/ui/study-background-selector";
@@ -24,6 +26,13 @@ import {
   type StudyMood,
   type StudyMoodEnum,
 } from "@/lib/settings/study-mood";
+import {
+  applySkin,
+  skinFromEnum,
+  saveSkin,
+  type StudySkin,
+  type StudySkinEnum,
+} from "@/lib/settings/study-skin";
 import { writeLocaleCookie } from "@/lib/i18n/locale-cookie";
 
 type Locale = "en" | "ar";
@@ -38,6 +47,7 @@ type Initial = {
   preference: {
     locale: "EN" | "AR";
     studyMood: StudyMoodEnum;
+    skin: StudySkinEnum;
     defaultFocusMinutes: number;
     defaultShortBreakMinutes: number;
     defaultLongBreakMinutes: number;
@@ -58,6 +68,7 @@ type Initial = {
 const fallbackPreference: NonNullable<Initial["preference"]> = {
   locale: "EN",
   studyMood: "NOTEBOOK",
+  skin: "ATLAS",
   defaultFocusMinutes: 25,
   defaultShortBreakMinutes: 5,
   defaultLongBreakMinutes: 15,
@@ -91,6 +102,7 @@ export function SettingsWorkspace({ initial, locale }: { initial: Initial; local
   const [studyMood, setStudyMood] = useState<StudyMood>(
     moodFromEnum(initial.preference?.studyMood)
   );
+  const [skin, setSkin] = useState<StudySkin>(skinFromEnum(initial.preference?.skin));
 
   function changeStudyMood(mood: StudyMood) {
     const previous = studyMood;
@@ -100,10 +112,41 @@ export function SettingsWorkspace({ initial, locale }: { initial: Initial; local
     /* Optimistic: the palette repaints on tap. Undo it if the write fails rather than
        leaving the screen showing a preference the server rejected. */
     void saveMood(mood).then(
-      () => flashSaved(),
+      () => {
+        flashSaved();
+        /* And then make it stick. applyMood only touched the live DOM node; the cached RSC
+           payload still carries data-mood from layout.tsx as it was when the page was
+           requested, so any later server render -- a navigation, a revalidate, any other
+           router.refresh() on the page -- re-emits <html data-mood="old"> and the palette
+           silently reverts. Refreshing after the write is what makes "live" also mean
+           "stayed". */
+        router.refresh();
+      },
       () => {
         setStudyMood(previous);
         applyMood(previous);
+        setStatus(text.error);
+      }
+    );
+  }
+
+  /* Same shape as changeStudyMood, deliberately. The skin is a much louder change -- it swaps
+     every radius, border and shadow in the app at once -- but the interaction contract should
+     be identical: it lands instantly, it is refreshed into the server payload, and it rolls
+     back if the server refuses. */
+  function changeSkin(next: StudySkin) {
+    const previous = skin;
+    setSkin(next);
+    applySkin(next);
+    setStatus("");
+    void saveSkin(next).then(
+      () => {
+        flashSaved();
+        router.refresh();
+      },
+      () => {
+        setSkin(previous);
+        applySkin(previous);
         setStatus(text.error);
       }
     );
@@ -446,6 +489,80 @@ export function SettingsWorkspace({ initial, locale }: { initial: Initial; local
                 <p className="text-xs text-muted m-0">
                   {ar ? "اضبط فترات البومودورو وأجواء المذاكرة." : "Customize your study sessions, intervals, and mood."}
                 </p>
+              </div>
+            </div>
+
+            {/* Visual Style (skin) Picker -- the material axis. Sits above the mood picker
+                because it is the larger decision: the mood repaints colours, the skin changes
+                what every surface is made of. */}
+            <div className="mt-4 mb-6">
+              <span className="field-label block mb-1">
+                {ar ? "النمط البصري" : "Visual Style"}
+              </span>
+              <p className="text-xs text-muted mt-0 mb-2">
+                {ar
+                  ? "النمط يحدد الحواف والظلال والخامات. الألوان تظل من اختيارك للجو أدناه."
+                  : "The style sets the edges, shadows and materials. Colours still come from your mood choice below."}
+              </p>
+              <div className="grid grid-cols-2 gap-3 sm:max-w-md">
+                {/* Each preview draws itself with its own skin's material values rather than
+                    with var(--radius-doodle) and friends. That is the whole point: those token
+                    names resolve to whichever skin is currently active, so a token-driven
+                    preview would render both options identically and the picker would be
+                    unusable. Atlas can safely use --glass-rim/--elevation-2/--bento-radius
+                    because those live in the bare :root and no skin block overrides them;
+                    doodle's geometry has to be literal. Colours stay tokenised either way, so
+                    both previews follow the active mood. */}
+                <button
+                  type="button"
+                  aria-pressed={skin === "atlas"}
+                  onClick={() => changeSkin("atlas")}
+                  className={`theme-card-btn ${skin === "atlas" ? "active" : ""}`}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="block w-full h-8 mb-1.5"
+                    style={{
+                      borderRadius: "calc(var(--bento-radius) * 0.7)",
+                      border: "1px solid var(--glass-rim)",
+                      boxShadow: "var(--elevation-2)",
+                      background: "var(--glass-bg-raised)",
+                      backdropFilter: "blur(6px)",
+                    }}
+                  />
+                  <span className="inline-flex items-center gap-1">
+                    <Gem className="w-4 h-4" style={{ color: "var(--primary-strong)" }} />
+                    <span className="text-xs font-extrabold">{ar ? "أطلس" : "Atlas"}</span>
+                  </span>
+                  <span className="text-[10px] text-muted truncate max-w-full text-center">
+                    {ar ? "زجاج فخم · الافتراضي" : "Premium glass · Default"}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  aria-pressed={skin === "doodle"}
+                  onClick={() => changeSkin("doodle")}
+                  className={`theme-card-btn ${skin === "doodle" ? "active" : ""}`}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="block w-full h-8 mb-1.5"
+                    style={{
+                      borderRadius: "20px 6px 18px 8px/8px 18px 6px 20px",
+                      border: "2px solid var(--secondary)",
+                      boxShadow: "2px 2px 0px var(--secondary)",
+                      background: "var(--surface)",
+                    }}
+                  />
+                  <span className="inline-flex items-center gap-1">
+                    <PenTool className="w-4 h-4" style={{ color: "var(--secondary)" }} />
+                    <span className="text-xs font-extrabold">{ar ? "دودل" : "Doodle"}</span>
+                  </span>
+                  <span className="text-[10px] text-muted truncate max-w-full text-center">
+                    {ar ? "الكلاسيكي المرسوم" : "Hand-drawn classic"}
+                  </span>
+                </button>
               </div>
             </div>
 

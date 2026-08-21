@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db/prisma";
 import { createNotification } from "@/lib/notifications/service";
+import { accountabilityPairInclude } from "@/lib/social/queries";
 import { apiUser, notFound, unauthorized } from "@/lib/tasks/response";
 export async function POST(_request: Request, context: { params: Promise<{ pairId: string }> }) {
   const user = await apiUser();
@@ -17,6 +18,8 @@ export async function POST(_request: Request, context: { params: Promise<{ pairI
   const updated = await prisma.accountabilityPair.update({
     where: { id: pair.id },
     data: { status: "ACTIVE", respondedAt: new Date() },
+    // This row replaces the pending one in the client's list, so it needs the same relations.
+    include: accountabilityPairInclude,
   });
   await createNotification({
     userId: pair.createdById,

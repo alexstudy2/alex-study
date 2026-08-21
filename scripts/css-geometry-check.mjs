@@ -55,7 +55,17 @@ const SECTIONS = [
   // The page the card above lives on. Listed separately because the defect was never in the card:
   // `.dashboard-layout-grid` is what set the width, and only a fixture with both columns and both
   // full headers in it can show that.
-  ["fx-dashboard", "/dashboard two-column page", [".dashboard-hero-card", ".dashboard-hero-content", ".dashboard-hero-actions", ".dashboard-layout-grid", ".dashboard-left-col", ".dashboard-right-col", ".today-tasks-sticky-card", ".sticky-tasks-header", ".sticky-tasks-list", ".dashboard-memo-card", ".dashboard-card", ".dashboard-card-header", ".study-rhythm-body", ".dashboard-progress", ".dashboard-goals-list", ".goal-item-card"]],
+  // `.dashboard-hero-art` is absent for the same reason `.empty-scene` is: the atlas skin gives it a
+  // negative inline inset so it bleeds off the card's trailing edge, and a scan that reports every
+  // element wider than its box would call that a defect at every desktop width. It is measured in
+  // the dashboard probe instead, against the hero's own clip. `.dashboard-left-col` and
+  // `.dashboard-right-col` are real flex columns in both skins now, so both have boxes and both
+  // are swept.
+  // `.dashboard-memo-card` came off this list with the AI-insight tile: it is not on the dashboard
+  // any more, though the class is still live on /insights and in the exam-plan editor, so its rules
+  // stay in components.css and the mobile comfort block still proves them via the synthetic DECO
+  // probe further down, which builds its own elements and needs no fixture markup.
+  ["fx-dashboard", "/dashboard two-column page", [".dashboard-hero-card", ".dashboard-hero-content", ".dashboard-hero-actions", ".dashboard-layout-grid", ".dashboard-left-col", ".dashboard-right-col", ".today-tasks-sticky-card", ".sticky-tasks-header", ".sticky-tasks-list", ".dashboard-card", ".dashboard-card-header", ".week-chart", ".week-chart-plot", ".week-chart-axis", ".study-rhythm-body", ".dashboard-progress", ".dashboard-goals-list", ".goal-item-card"]],
   // The phone setup window. `.focus-sidebar-card` is `position: fixed` here, so its own rect is the
   // viewport by construction and the interesting geometry is inside it -- which the setup probe
   // below measures directly. What the sweep is for is the fields: a window is not an excuse for a
@@ -81,6 +91,20 @@ const SECTIONS = [
   // things a rectangle cannot see -- the border, and the gap between caption and control -- are
   // measured by the `out.detail` probe below instead.
   ["fx-examdetail", "/exam-plans/:id proposal page", [".exam-plan-detail-shell", ".exam-plan-detail-header", ".page-header-text", ".exam-plan-share", ".exam-plan-attribution", ".exam-plan-fact", ".exam-plan-editor", ".exam-plan-meta", ".exam-plan-meta .form-grid", ".exam-plan-meta label", ".exam-plan-items", ".exam-plan-item-list", ".exam-plan-item", ".exam-plan-item-heading", ".exam-plan-item .form-grid", ".exam-plan-item label", ".plan-item-select", ".exam-plan-conversion", ".task-conversion-confirmation", ".exam-plan-feedback", ".exam-plan-reject-zone"]],
+  // Phase 5, Batch B. Three route workspaces the earlier sections never carried, plus the four
+  // goal tiles the pastel-cycle probe below reads. `.friend-avatar` blobs and the scoreboard's
+  // drawn initials are absent on purpose: nothing about them can overflow, and their material is
+  // asserted in the batch B probe instead.
+  ["fx-leaderboard", "/leaderboards workspace", [".leaderboard-controls", ".segmented-control", ".leaderboard-filter-row", ".leaderboard-summary", ".my-rank", ".leaderboard-table-panel", ".leaderboard-table-wrap", ".privacy-card"]],
+  ["fx-social", "/friends workspace", [".friends-vitals", ".friends-vitals > article", ".social-columns", ".social-panel", ".social-results", ".social-row", ".social-empty", ".friend-grid", ".friend-card", ".friend-more", ".friend-confirm"]],
+  ["fx-challenges", "/challenges list + composer + detail + result", [".challenge-stats", ".challenge-stats > article", ".challenge-list", ".challenge-list-card", ".challenge-score-pair", ".challenge-side-panel", ".badge-list", ".challenge-composer", ".composer-step", ".opponent-picker", ".composer-presets", ".composer-summary", ".composer-rules", ".composer-actions", ".challenge-detail-grid", ".challenge-event-panel", ".challenge-scoreboard", ".challenge-progress-track", ".challenge-rule-panel", ".detail-metrics", ".result-layout", ".result-score-band", ".result-outcome", ".result-participants", ".result-badge-panel", ".result-badges", ".result-note", ".share-card-preview", ".share-controls", ".reflection-card", ".distraction-log"]],
+  ["fx-goalcards", "/goals tiles (pastel cycle)", [".goal-card"]],
+  // Phase 5, Batch C. The settings hub and the auth front door. `.auth-brand-doodle` and its
+  // svgs are deliberately absent: they sit at negative insets on purpose (the column's own
+  // overflow clips them) and a rectangle sweep would call them spills, exactly like the
+  // watermarks before them. `.auth-content` IS swept -- it is the page's one big card.
+  ["fx-settings", "/settings hub", [".settings-page-wrapper", ".settings-hero-header", ".settings-status-badge", ".settings-category-tabs", ".settings-notebook-card", ".card-header-line", ".doodle-input", ".doodle-select", ".lang-option", ".theme-card-btn", ".study-mood-card-grid", ".study-mood-card", ".form-submit-row"]],
+  ["fx-auth", "/auth front door", [".auth-brand", ".auth-brand-inner", ".auth-headline", ".auth-brand-point", ".auth-mood-ribbon", ".auth-panel", ".auth-content", ".auth-subtitle", ".auth-notice", ".auth-form", ".auth-field-control", ".auth-strength-track", ".auth-stepper-row", ".auth-preset-btn", ".auth-toggle-list", ".auth-toggle-row", ".auth-switch", ".auth-review-list", ".auth-links"]],
 ];
 
 const TAP = [
@@ -131,13 +155,183 @@ const DECO_SELECTORS = (() => {
 })();
 console.log(`[deco] ${DECO_SELECTORS.length} selectors in the mobile comfort block`);
 
+/* Phase 5, Batch A. The material pass reaches ~40 surfaces across five routes, and the fixture only
+   carries markup for a handful of them -- so most of that work would ship measured by nothing. This
+   is the cheap half of the guard: build each selector as a detached element and read what border it
+   is handed, which needs no fixture markup because a border is decided by the cascade alone.
+
+   The claim is per skin and deliberately two-sided: doodle draws >=2px of ink, atlas hands out a
+   <=1px rim. Either direction failing is a real defect -- an atlas rule that never landed, or a
+   doodle rule this pass damaged on its way past.
+
+   Membership rule for this list: the base rule declares 2px or more on at least one side, and the
+   selector is NOT in the mobile comfort block above. Both exclusions matter. Chromium floors
+   border-width to whole CSS pixels in the used value, so a declared 1.5px is reported as 1px and
+   would fail the doodle half of the assertion while being perfectly correct -- which is also why
+   Batch A styles those thinner borders with `border-color` alone and they need no entry here. And a
+   comfort-block member is thinned to 1.5px on a phone by globals.css, so its doodle width depends on
+   the viewport; decoBad already measures those from the other side. */
+const P5_SELECTORS = [
+  // /analytics
+  ".analytics-sidebar",
+  ".analytics-toolbar",
+  ".analytics-summary article",
+  ".analytics-sidebar-note",
+  ".analytics-streak",
+  ".analytics-tooltip",
+  ".analytics-course-grid article",
+  ".analytics-signal-grid article",
+  // /insights
+  ".insight-status-strip",
+  ".insight-status-icon",
+  ".insight-toolbar",
+  ".insight-toggle-button",
+  ".insight-alert",
+  ".insight-empty-state",
+  ".insight-empty-icon",
+  // /goals
+  ".goal-doodle-form",
+  ".goal-form-header",
+  ".goal-form-actions",
+  ".goal-card-header",
+  ".goal-form-field input",
+  ".goal-metric-tab-btn",
+  // /sessions
+  ".session-row",
+  ".session-state",
+  ".manual-session-form input",
+  ".detail-notes",
+  ".subtask-section",
+  // /calendar
+  ".calendar-toolbar",
+  ".calendar-nav button",
+  ".view-tabs",
+  ".calendar-day",
+  ".day-drawer",
+  ".day-drawer-header",
+  ".day-drawer-add input",
+  ".day-drawer-add button",
+  ".week-day",
+  ".week-day-header",
+  ".agenda-list section",
+  ".agenda-list h3",
+  ".calendar-source-bar",
+  ".calendar-source-tabs",
+  ".calendar-source-picker select",
+  ".calendar-copy-box",
+  ".calendar-copy-box button",
+  ".exam-view-tabs",
+  // Phase 5, Batch B -- /leaderboards, /friends, /challenges + composer, /exam-plans, plan forum.
+  // Same membership rule as above: the base rule declares >=2px on at least one side and the
+  // selector is not in the mobile comfort block. That excludes the 1.5px chips (.year-pill,
+  // .challenge-status, .social-flag, .pair-status, .event-mark) which Batch B styles with
+  // border-color alone, and the comfort members (.plan-card, .exam-topic-card,
+  // .exam-strategy-card, .plan-day-note) which it deliberately leaves shadowless.
+  ".leaderboard-controls",
+  ".leaderboard-summary",
+  ".leaderboard-table-wrap",
+  ".leaderboard-filter-row select",
+  ".my-rank",
+  ".segmented-control",
+  ".friends-vitals article",
+  ".social-row",
+  ".social-count",
+  ".social-empty",
+  ".friend-confirm",
+  ".challenge-composer",
+  ".composer-filter",
+  ".composer-field input",
+  ".composer-field select",
+  ".opponent-picker label",
+  ".composer-preset",
+  ".composer-summary",
+  ".composer-rules",
+  ".form-feedback",
+  ".composer-warning",
+  ".challenge-composer .form-error",
+  ".challenge-empty",
+  ".challenge-stats article",
+  ".challenge-score-pair",
+  ".challenge-side-panel section",
+  ".badge-list article",
+  ".challenge-invite-band",
+  ".challenge-time-band",
+  ".challenge-event-panel",
+  ".challenge-rule-panel",
+  ".detail-metrics",
+  ".result-score-band",
+  ".result-outcome",
+  ".result-participants",
+  ".share-card-preview",
+  ".result-note",
+  ".exam-plan-meta",
+  ".exam-plan-item",
+  ".exam-plan-meta input",
+  ".exam-plan-conversion",
+  ".exam-plan-share",
+  ".exam-plan-reject-zone",
+  ".task-conversion-confirmation",
+  ".wizard-container",
+  ".exam-review-card",
+  ".exam-rest-days",
+  ".plan-new-pad",
+  ".plan-board-head",
+  ".plan-shelf-empty",
+  ".plan-board-notice",
+  ".plan-edit-row",
+  ".plan-span-readout",
+  ".plan-create-btn",
+  ".plan-note-form",
+  // Phase 5, Batch C -- editor panel, wizard remainder, settings hub, auth front door. Comfort
+  // members stay off the list (.editor-panel, .settings-notebook-card, .study-mood-card,
+  // .auth-content), as do the 1.5px controls (.study-mood-trigger-btn, .study-mood-sidebar-btn,
+  // .auth-stepper-btn, .auth-toggle-icon) which get border-color alone.
+  ".task-form input",
+  ".wizard-step-line",
+  ".wizard-step-actions",
+  ".settings-hero-header",
+  ".settings-category-tabs",
+  ".card-header-line",
+  ".doodle-input",
+  ".lang-option",
+  ".theme-card-btn",
+  ".form-submit-row",
+  ".study-mood-dropdown-menu",
+  ".auth-brand",
+  ".auth-form input",
+  ".auth-stepper-row",
+  ".auth-preset-btn",
+  ".auth-toggle-list",
+  ".auth-review-list",
+  ".auth-notice",
+  // Global control pass. The probe builds a bare .btn (no ghost), which is exactly the element
+  // the atlas `:not(.btn-ghost)` rule matches -- and the ghost's borderlessness is asserted
+  // separately in the batch B probe below via its computed width.
+  ".btn",
+  ".primary-button",
+  ".secondary-button",
+  ".danger-button",
+];
+console.log(`[batch A+B+C] ${P5_SELECTORS.length} Batch A/B/C surfaces measured for border weight`);
+
 /* Every mood in LTR, plus one RTL sweep. Arabic is half of this app's traffic and the
    failure mode is a physical property -- a padding-left or a margin-right that looks
    correct in English and lands on the wrong edge in Arabic. One mood is enough for that:
-   direction is orthogonal to the palette, and nothing in tokens.css is direction-aware. */
+   direction is orthogonal to the palette, and nothing in tokens.css is direction-aware.
+
+   The skin is the second axis, and it has to be stamped explicitly. `:root[data-skin=...]`
+   only matches when the attribute is PRESENT, so a fixture that never sets it falls through
+   to the bare-`:root` doodle defaults -- which would mean this whole harness kept measuring
+   the old skin while the new one shipped unverified. Atlas is the default, so it gets the
+   full palette sweep; doodle is now a user-selectable choice rather than dead code, so it
+   gets a regression guard. Two moods there, because the only palette-shaped thing in the
+   doodle material block is its shadow ink, and cosmic is the one mood that inverts it. */
 const RUNS = [
-  ...["notebook", "cosmic", "sakura", "aurora", "sunset"].map((m) => [m, "ltr"]),
-  ["notebook", "rtl"],
+  ...["notebook", "cosmic", "sakura", "aurora", "sunset"].map((m) => ["atlas", m, "ltr"]),
+  ["atlas", "notebook", "rtl"],
+  ["doodle", "notebook", "ltr"],
+  ["doodle", "cosmic", "ltr"],
+  ["doodle", "notebook", "rtl"],
 ];
 
 /* One run only ever sees one mood, so "the chart ink is a different colour in cosmic" is not a
@@ -147,7 +341,7 @@ const RUNS = [
    that is mood-blind again would still pass every other check in this file. */
 const CHART_INK = {};
 
-for (const [mood, dir] of RUNS) {
+for (const [skin, mood, dir] of RUNS) {
   for (const [w, h, mobile] of [
     [320, 800, true],
     [360, 800, true],
@@ -163,31 +357,67 @@ for (const [mood, dir] of RUNS) {
     });
     const page = await ctx.newPage();
     await page.goto(`file:///${process.cwd().replace(/\\/g, "/")}/${DIR}/css-geometry.html`);
-    await page.evaluate(
-      ({ m, d }) => {
-        document.documentElement.dataset.mood = m;
-        document.documentElement.dir = d;
-      },
-      { m: mood, d: dir },
-    );
     /* Settle every animation instantly. Phase 7 put a 160ms slide on the timer's mode
        indicator, a 280ms entrance on the dial and an infinite breathing loop on the ring, and
        a harness that measures rectangles cannot measure them mid-flight: the first RTL run
        here reported the indicator 74px off its tab, which was not a layout bug at all but the
        slide caught at 95% of its travel. A zero duration with the fill mode intact lands each
        animation on its end state, and the breathing loop -- which has no fill mode -- falls
-       back to scale(1) instead of oscillating the ring's width by 1.5% under the assertions. */
+       back to scale(1) instead of oscillating the ring's width by 1.5% under the assertions.
+
+       This has to run BEFORE the axes are stamped, not after. Flipping `data-skin` changes the
+       radius, border and shadow of everything on the page, and `.subject-chip` (among others)
+       carries `transition: all var(--transition-fast)` -- so the flip starts a real transition.
+       Lowering `transition-duration` afterwards does not shorten a transition that is already
+       running, so the old order left one in flight and raced the 120ms wait against it. It
+       mostly won, which is the worst kind of bug: `atlas/aurora 360x800` alone reported the
+       course chip mid-interpolation between doodle's wobbly radius and atlas's uniform one,
+       and read as a real material regression on one arbitrary combo. Killing transitions first
+       means the attribute flip is instantaneous and there is nothing to wait for. */
     await page.addStyleTag({
       content:
         "*, *::before, *::after { animation-duration: 0s !important; animation-delay: 0s !important;" +
         " transition-duration: 0s !important; transition-delay: 0s !important; }",
     });
+    await page.evaluate(
+      ({ s, m, d }) => {
+        document.documentElement.dataset.skin = s;
+        document.documentElement.dataset.mood = m;
+        document.documentElement.dir = d;
+      },
+      { s: skin, m: mood, d: dir },
+    );
     await page.waitForTimeout(120);
 
     const res = await page.evaluate(
-      ({ SECTIONS, TAP, DECO_SELECTORS }) => {
+      ({ SECTIONS, TAP, DECO_SELECTORS, P5_SELECTORS }) => {
         const vw = document.documentElement.clientWidth;
         const out = { vw, doc: document.documentElement.scrollWidth - vw, clipped: [], tiny: [], spill: [], viaLabel: [] };
+        /* Resolve a colour expression the way the page would, so an assertion can name the value
+           it wants in the same language the stylesheet uses instead of hardcoding 30 per-mood
+           hexes. The node is created and removed per call: leaving one parked in the body would
+           survive into the next viewport iteration and show up in the overflow sweep. */
+        const resolveBg = (expr) => {
+          const n = document.createElement("span");
+          n.style.cssText = "position:absolute;left:-9999px;top:-9999px";
+          n.style.backgroundColor = expr;
+          document.body.appendChild(n);
+          const got = getComputedStyle(n).backgroundColor;
+          n.remove();
+          return got;
+        };
+        /* The paper the task surfaces are supposed to be painted with: a percentage of the mood's
+           own `--primary` over whichever base the active skin uses. This is the answer to "why is
+           everything green" -- the paper used to be mixed from the course colour, so a green course
+           made a green note in a pink mood. One expression, both skins, because the only thing that
+           changes is what the tint sits on. */
+        const skinNow = document.documentElement.dataset.skin || "doodle";
+        const wantPaper = (pct) =>
+          resolveBg(
+            skinNow === "atlas"
+              ? `color-mix(in srgb, var(--primary) ${pct}%, var(--glass-bg-raised))`
+              : `color-mix(in srgb, var(--primary) ${pct}%, var(--surface))`,
+          );
         for (const [id, label, sels] of SECTIONS) {
           const root = document.getElementById(id);
           if (!root) continue;
@@ -301,29 +531,69 @@ for (const [mood, dir] of RUNS) {
         // as 1px at a device ratio of 1, so the shadow is the signal that is checked
         // exactly; the border is only required to be thinner than the 2px base.
         out.deco = [];
+        /* What the xs step actually looks like, resolved at runtime instead of hardcoded.
+           This used to be a literal /^1\.5px 1\.5px/ pattern, which is the doodle value --
+           under Atlas `--shadow-doodle-xs` remaps to a soft elevation, so that pattern
+           would have failed all ~50 selectors on every Atlas mobile pass and buried the
+           real findings.
+
+           The probe is what makes the comparison possible: getComputedStyle normalises a
+           box-shadow (colour moves to the front, `0` becomes `0px`), so the token's source
+           text can never be compared against a card's computed value directly. Pushing the
+           token through an element and reading it back puts both sides through the same
+           normalisation, which also makes this stricter than the old prefix test -- it now
+           compares the whole shadow, not just its first two lengths. */
+        const shadowOf = (token) => {
+          const el = document.createElement("div");
+          el.style.cssText = `position:absolute;left:-9999px;top:0;width:10px;box-shadow:var(${token})`;
+          document.body.appendChild(el);
+          const v = getComputedStyle(el).boxShadow;
+          el.remove();
+          return v;
+        };
+        const xsShadow = shadowOf("--shadow-doodle-xs");
+        out.xsShadow = xsShadow;
         const probe = document.createElement("div");
         probe.style.cssText = "position:absolute;left:-9999px;top:0;width:200px";
         document.body.appendChild(probe);
-        for (const sel of DECO_SELECTORS) {
-          // Handles both `.card` / `.a.b` and the `.list article` descendant forms.
-          const parts = sel.trim().split(/\s+/);
-          let host = probe;
+        /* Builds `.card`, `.a.b`, `.list article` and `.field input` alike: a leading dot means a div
+           carrying those classes, anything else is that tag name. */
+        const build = (sel, root) => {
+          let host = root;
           let leaf = null;
-          for (const part of parts) {
-            const tag = part.startsWith(".") ? "div" : part;
-            const el = document.createElement(part.startsWith(".") ? "div" : tag);
+          for (const part of sel.trim().split(/\s+/)) {
+            const el = document.createElement(part.startsWith(".") ? "div" : part);
             for (const c of part.split(".").filter(Boolean)) el.classList.add(c);
             host.appendChild(el);
             host = el;
             leaf = el;
           }
-          const st = getComputedStyle(leaf);
+          return leaf;
+        };
+        for (const sel of DECO_SELECTORS) {
+          const st = getComputedStyle(build(sel, probe));
           out.deco.push({
             sel,
             bw: +parseFloat(st.borderTopWidth).toFixed(1),
-            xs: /^1\.5px 1\.5px/.test(st.boxShadow.replace(/^rgba?\([^)]*\)\s*/, "")),
+            xs: st.boxShadow === xsShadow,
+            got: st.boxShadow,
           });
         }
+        /* Batch A's border weights. The widest side, not the top one: several entries carry their
+           border on a single edge (`.goal-form-header` is a bottom rule, `.goal-form-actions` a top
+           one), so a top-only read would report 0 for them and pass every assertion by accident. */
+        out.p5 = P5_SELECTORS.map((sel) => {
+          const st = getComputedStyle(build(sel, probe));
+          return {
+            sel,
+            bw: +Math.max(
+              parseFloat(st.borderTopWidth),
+              parseFloat(st.borderRightWidth),
+              parseFloat(st.borderBottomWidth),
+              parseFloat(st.borderLeftWidth),
+            ).toFixed(1),
+          };
+        });
         probe.remove();
 
         // ---- secondary page header (Phase 5) ----
@@ -336,12 +606,18 @@ for (const [mood, dir] of RUNS) {
         const h1 = hdr?.querySelector("h1");
         if (hdr && badge && h1) {
           const hs = getComputedStyle(hdr);
-          const shadow = hs.boxShadow.replace(/^rgba?\([^)]*\)\s*/, "");
           const br = badge.getBoundingClientRect();
+          /* Probed rather than pattern-matched, for the reason `shadowOf` exists at all: the
+             two literals this used to test for (/^1.5px 1.5px/ and /^2px 2px/) are the doodle
+             offsets, so every Atlas pass failed both branches below -- 45 findings about a
+             step-down that was working. What the assertion is actually about is "mobile takes
+             the xs step, desktop takes the full one", and that is the same claim in both skins
+             once it is written against the tokens instead of against doodle's values. */
           out.hdr = {
             card: parseFloat(hs.borderTopWidth) >= 1 && hs.boxShadow !== "none" && parseFloat(hs.paddingTop) > 0,
-            xs: /^1\.5px 1\.5px/.test(shadow),
-            base: /^2px 2px/.test(shadow),
+            xs: hs.boxShadow === xsShadow,
+            base: hs.boxShadow === shadowOf("--shadow-doodle"),
+            got: hs.boxShadow,
             h1: +parseFloat(getComputedStyle(h1).fontSize).toFixed(1),
             // A flex item with no `flex: 0 0 auto` gets crushed by a long title; the badge is
             // square by construction, so a squeeze shows up as width < height.
@@ -403,6 +679,8 @@ for (const [mood, dir] of RUNS) {
             // visible to anyone who never saw the page work -- so both are measured. Two
             // courses must give two non-transparent papers, four levels four different fills.
             papers: cards.map((c) => getComputedStyle(c).backgroundColor),
+            // What the paper is supposed to be: the mood's own tint, identical on every note.
+            wantPaper: wantPaper(14),
             tags: [...notebook.querySelectorAll(".task-subject-tag")].map(
               (t) => getComputedStyle(t).backgroundColor,
             ),
@@ -559,13 +837,19 @@ for (const [mood, dir] of RUNS) {
               // The line is only where it is meant to be if the frame gave it a containing
               // block; without `position: relative` it escapes to the nearest ancestor that has
               // one and draws a ring around something else entirely.
+              // `display` is read first because Atlas hides these pen lines rather than
+              // restyling them: the border declarations survive on a box that is never
+              // generated, so a predicate built only from border style and width reports a
+              // dashed ink line on a glass panel that visibly has none.
               return (
+                r.display === "none" ||
                 r.borderTopStyle !== "dashed" ||
                 !(parseFloat(r.borderTopWidth) > 0) ||
                 getComputedStyle(el).position === "static"
               );
             }),
             cardPapers: dcards.map((c) => getComputedStyle(c).backgroundColor),
+            wantCardPaper: wantPaper(12),
             cardSpines: dcards.map((c) => getComputedStyle(c, "::before").backgroundColor),
             cardCorners: corners(getComputedStyle(dcards[0])),
             cardTilted: dcards.filter((c) => {
@@ -762,11 +1046,21 @@ for (const [mood, dir] of RUNS) {
             // base .secondary-button's own `background: var(--surface)` did not win.
             ctaFill: cta ? getComputedStyle(cta).backgroundColor : "transparent",
             aiFill: as.backgroundColor,
+            // The heat cells are the one place on this page where the radius is a hand-drawn
+            // two-axis literal rather than a --radius-doodle-* token, so it is the one radius the
+            // skin remap cannot reach and the only one an atlas rule has to restate.
+            cellCorners: [
+              "borderTopLeftRadius",
+              "borderTopRightRadius",
+              "borderBottomRightRadius",
+              "borderBottomLeftRadius",
+            ].map((p) => getComputedStyle(anaHeat)[p]),
             ringsMissing: FRAMES.filter((sel) => {
               const el = anaRoot.querySelector(sel);
               if (!el) return true;
               const r = getComputedStyle(el, "::after");
               return (
+                r.display === "none" ||
                 r.borderTopStyle !== "dashed" ||
                 !(parseFloat(r.borderTopWidth) > 0) ||
                 getComputedStyle(el).position === "static"
@@ -887,13 +1181,50 @@ for (const [mood, dir] of RUNS) {
           };
           const sHead = dash.querySelector(".sticky-tasks-header");
           const cHeads = [...dash.querySelectorAll(".dashboard-card-header")];
+          /* The tiles, not the columns, for the layout questions below: what a reader sees is
+             where the cards are, and the wrapper is only ever a means to that. */
+          const tiles = [...dgrid.querySelectorAll(":scope > section > *")];
+          const tileRects = tiles.map((t) => t.getBoundingClientRect());
+          const art = dash.querySelector(".dashboard-hero-art");
+          const heroCard = dash.querySelector(".dashboard-hero-card");
           out.dash = {
+            skin: document.documentElement.dataset.skin,
             // Against the column it was handed, not the viewport: a grid that overflows its own
             // parent is the fault, and it is measurable before anything reaches the page edge.
             gridOver: Math.round(gr.width - parentW),
             // One column below 960px, two above it.
             colTops: new Set(cols.map((c) => Math.round(c.getBoundingClientRect().top))).size,
             colCount: cols.length,
+            // How many distinct inline start edges the tiles occupy: one when the layout is
+            // stacked, two when it is side by side. Works for both skins because it reads the
+            // tiles' own boxes -- the doodle flex columns and the atlas grid tracks put their
+            // tiles in the same two places, and that shared fact is what is worth asserting.
+            tileCols: new Set(tileRects.map((r) => Math.round(r.left))).size,
+            tileCount: tiles.length,
+            // Both skins arrange the page with two real column boxes; nothing here should ever
+            // read `contents` again, and the reason is `stackGaps` below.
+            colDisplay: cols.map((c) => getComputedStyle(c).display),
+            /* The reported defect, measured. Atlas used to make the wrappers `display: contents`,
+               which promoted the four cards to grid items of a 12-track grid -- and grid items
+               line up in ROWS, so a short right-hand card sat in a row sized by its tall
+               left-hand neighbour and floated at the top of it with ~170px of dead air below.
+               Every other measurement in this probe passed while that was true: the tiles were
+               in two columns, the tracks were right, nothing overflowed.
+               What separates the two layouts is the vertical distance between consecutive cards
+               in the SAME column. It has to be the column's own gutter and nothing else. Read
+               `want` off the element instead of hardcoding 16 or 24, so the check states "these
+               cards sit one gutter apart" for either skin at either breakpoint rather than
+               restating the token values and drifting from them. */
+            stackGaps: cols.map((c) => {
+              const rs = [...c.children]
+                .map((k) => k.getBoundingClientRect())
+                .sort((a, b) => a.top - b.top);
+              return {
+                want: Math.round(parseFloat(getComputedStyle(c).rowGap) || 0),
+                got: rs.slice(1).map((r, i) => Math.round(r.top - rs[i].bottom)),
+              };
+            }),
+            gridTracks: getComputedStyle(dgrid).gridTemplateColumns.split(/\s+/).length,
             stickyRows: sHead ? headerRows(sHead) : -1,
             cardRows: cHeads.map(headerRows),
             // The mechanism, checked at every width: a header that may not wrap contributes its
@@ -911,6 +1242,121 @@ for (const [mood, dir] of RUNS) {
               ),
               0,
             ),
+            /* The hero artwork. Deliberately absent from SECTIONS above, for the same reason
+               `.plan-note-watermark` is: it is placed with a negative inline inset so that it
+               bleeds off the card's trailing edge, which is the effect, and a sweep that reports
+               every element wider than its box would call that a defect at every width.
+               What is worth asserting instead is the pair of claims the CSS actually makes --
+               that the bleed is contained by the hero's own `overflow: hidden` rather than
+               reaching the page, and that the art is gone on a phone where there is no room for
+               it beside the headline. Both are recorded here and checked below. */
+            art: art
+              ? {
+                  shown: getComputedStyle(art).display !== "none",
+                  heroClips: heroCard ? getComputedStyle(heroCard).overflowX : "",
+                }
+              : null,
+            /* The generative goal ring. A pseudo-element, so nothing above can see it: it is not
+               in `querySelectorAll`, it has no rect of its own to sweep, and every one of the
+               ways it can fail is silent. `--goal-pct` is set inline in dashboard/page.tsx as a
+               bare number, and the arc is `conic-gradient(var(--primary) calc(var(--goal-pct) *
+               1%), ...)`. If the property is missing, `calc()` falls back to 0 and the ring is an
+               empty track that looks like a deliberately unstarted goal. If the number arrived as
+               "13%" instead, `calc(13% * 1%)` is invalid, the whole gradient is dropped, and
+               `backgroundImage` reads `none` -- a ring that is simply not there. Both read as
+               design rather than as a bug, which is exactly what a regression test is for. */
+            ring: (() => {
+              const goal = dash.querySelector(".goal-item-card");
+              if (!goal) return null;
+              const ps = getComputedStyle(goal, "::before");
+              return {
+                pct: getComputedStyle(goal).getPropertyValue("--goal-pct").trim(),
+                w: Math.round(parseFloat(ps.width) || 0),
+                h: Math.round(parseFloat(ps.height) || 0),
+                arc: ps.backgroundImage.startsWith("conic-gradient"),
+                // The hole. Without a mask the ring is a filled pie, which is a different chart.
+                masked: (ps.maskImage || ps.webkitMaskImage || "none") !== "none",
+                content: ps.content,
+              };
+            })(),
+            /* The week curve. Two layers over one coordinate space, which is exactly the thing
+               that can silently come apart: the SVG stretches to fill `.week-chart-plot` while the
+               dots are placed at `top: calc(var(--y) * 1%)` of that same box, so if the plot's
+               height stops being definite the dots collapse to its top edge while the curve keeps
+               drawing correctly -- a graph with its markers in a row along the ceiling, and no
+               error anywhere. Measuring one dot's real offset against the `--y` it was given is
+               what catches that, and it also catches a fixture whose hand-copied path has drifted
+               from the component's arithmetic.
+
+               The rest is the mood claim the redesign is actually for: the line's gradient stops
+               have to resolve to this run's `--primary` and `--accent`. A chart that fell back to
+               a hardcoded colour would look perfectly fine in one palette and wrong in four. */
+            week: (() => {
+              const chart = dash.querySelector(".week-chart");
+              const plot = chart?.querySelector(".week-chart-plot");
+              const axis = chart?.querySelector(".week-chart-axis");
+              const line = chart?.querySelector(".week-chart-line");
+              if (!chart || !plot || !axis || !line) return null;
+              const pr = plot.getBoundingClientRect();
+              const dots = [...plot.querySelectorAll(".week-chart-dot")];
+              const stop = (sel) => {
+                const el = chart.querySelector(sel);
+                return el ? getComputedStyle(el).stopColor : "";
+              };
+              const rootStyle = getComputedStyle(document.documentElement);
+              // Resolved through a throwaway node rather than compared as raw token text: the
+              // stops report `rgb(...)` and the custom property reports whatever was authored.
+              const swatch = document.createElement("span");
+              swatch.style.cssText = "position:absolute;left:-9999px";
+              document.body.appendChild(swatch);
+              const resolve = (token) => {
+                swatch.style.color = `var(${token})`;
+                return getComputedStyle(swatch).color;
+              };
+              const out = {
+                days: axis.querySelectorAll(":scope > li").length,
+                tracks: getComputedStyle(axis).gridTemplateColumns.split(/\s+/).length,
+                plotH: Math.round(pr.height),
+                // A `d` the browser could not parse leaves a path of zero length, which renders as
+                // nothing at all -- the one failure that looks like an empty week.
+                lineLen: Math.round(line.getTotalLength()),
+                svgFills:
+                  Math.round(chart.querySelector(".week-chart-svg").getBoundingClientRect().height) > 0,
+                dots: dots.length,
+                // The dot nearest the top, checked against where it was told to be. Vertical only:
+                // the horizontal axis is mirrored in RTL and its own alignment is the axis grid's.
+                topDot: (() => {
+                  const best = dots.reduce(
+                    (acc, el) => {
+                      const want = +getComputedStyle(el).getPropertyValue("--y").trim();
+                      return want < acc.want ? { want, el } : acc;
+                    },
+                    { want: Infinity, el: null },
+                  );
+                  if (!best.el) return null;
+                  const r = best.el.getBoundingClientRect();
+                  return {
+                    want: best.want,
+                    // Centre of the dot as a percentage down the plot's content box. `translate`
+                    // already centres it on the point, so the centre is the number to compare.
+                    got: Math.round(((r.top + r.height / 2 - pr.top) / pr.height) * 1000) / 10,
+                  };
+                })(),
+                lineFrom: stop(".week-chart-line-from"),
+                lineTo: stop(".week-chart-line-to"),
+                areaFrom: stop(".week-chart-area-from"),
+                wantPrimary: resolve("--primary"),
+                wantAccent: resolve("--accent"),
+                // The plot is padded under atlas and not under doodle, so the comparison above has
+                // to be against the content box either way -- recorded so the log can show it.
+                pad: Math.round(parseFloat(getComputedStyle(plot).paddingTop) || 0),
+                gridInk: getComputedStyle(chart.querySelector(".week-chart-axis-line")).stroke,
+                mirrored: getComputedStyle(chart.querySelector(".week-chart-svg")).scale,
+                dir: rootStyle.direction,
+              };
+              swatch.remove();
+              return out;
+            })(),
           };
         }
 
@@ -983,12 +1429,51 @@ for (const [mood, dir] of RUNS) {
           };
         }
 
+        // ---- Phase 5, Batch B: pastel cycle, family marks, forum tilt ----
+        /* Three claims a stylesheet read cannot settle. (a) The goal tiles' fixed
+           nth-child pastel rotation is mood-blind by construction -- the same fault class as the
+           always-green task paper -- so atlas must collapse it to one uniform raised-glass tier,
+           while doodle must keep all four pastels. Both halves asserted, neither skippable.
+           (b) The Batch B card-family members carry hand-drawn corner marks as background-images;
+           doodle keeps them, atlas drops them, exactly like .dashboard-card in Phase 3. A
+           background: shorthand creeping into an atlas rule would pass a "marks absent" test on
+           atlas while silently wiping them from doodle -- which is why the doodle half is measured
+           too. (c) The plan board's nth-child tilt is the pinboard again: doodle keeps it on
+           desktop (the mobile block zeroes it), atlas has it at no width. */
+        const goalRoot = document.getElementById("fx-goalcards");
+        if (goalRoot) {
+          out.batchB = {
+            goalPapers: [...goalRoot.querySelectorAll(".goal-card")].map(
+              (c) => getComputedStyle(c).backgroundColor,
+            ),
+            wantRaisedGlass: resolveBg("var(--glass-bg-raised)"),
+            marks: [
+              ...document.querySelectorAll("#fx-challenges .challenge-list-card, #fx-social .friend-card"),
+            ].map((c) => getComputedStyle(c).backgroundImage),
+            planTilted: [...document.querySelectorAll("#fx-planboard .plan-day-note")].filter((n) => {
+              const m = new DOMMatrixReadOnly(getComputedStyle(n).transform);
+              return Math.abs(m.b) > 0.001 || Math.abs(m.c) > 0.001;
+            }).length,
+            // Exactly one event per kind, selected by class -- the month grid holds five events
+            // across three kinds, so a blanket query would miscount. The inline-START colour,
+            // read logically so the RTL run asserts the same thing the LTR one does.
+            calSpines: ["task", "session", "plan"].map((k) => {
+              const el = document.querySelector(`#fx-calendar .calendar-event.${k}`);
+              return el ? getComputedStyle(el).borderInlineStartColor : "missing";
+            }),
+            wantSpineTokens: ["--primary", "--accent", "--warning"].map((t) => resolveBg(`var(${t})`)),
+            // The ghost button's border stays TRANSPARENT under both skins -- the atlas rule
+            // excludes it by :not(), and this is what proves the exclusion held.
+            ghostInk: getComputedStyle(document.querySelector(".btn.btn-ghost")).borderTopColor,
+          };
+        }
+
         return out;
       },
-      { SECTIONS, TAP, DECO_SELECTORS },
+      { SECTIONS, TAP, DECO_SELECTORS, P5_SELECTORS },
     );
 
-    const tag = `${mood} ${w}x${h}${mobile ? " coarse" : ""}${dir === "rtl" ? " rtl" : ""}`;
+    const tag = `${skin}/${mood} ${w}x${h}${mobile ? " coarse" : ""}${dir === "rtl" ? " rtl" : ""}`;
     const navBad = res.nav ? res.nav.overlap > 0 || res.nav.wasted > 0 : false;
     // Below the breakpoint every listed card must drop to the xs shadow and a sub-2px
     // border. Nothing is asserted above it: `@media (max-width: 768px)` structurally
@@ -996,6 +1481,10 @@ for (const [mood, dir] of RUNS) {
     // full size, so "desktop must not look thinned" is not expressible as one value.
     const decoBad = w <= 768 ? (res.deco ?? []).filter((d) => !d.xs || d.bw > 1.5) : [];
     if (!res.deco?.length) throw new Error("decoration probe matched no cards -- fixture drifted");
+    /* Phase 5, Batch A border weights, per skin. See P5_SELECTORS for why the thresholds are 2 and 1
+       and why nothing in that list is a comfort-block member. */
+    if (!res.p5?.length) throw new Error("Batch A border probe matched nothing -- P5_SELECTORS is empty");
+    const p5Bad = res.p5.filter((d) => (skin === "doodle" ? d.bw < 2 : d.bw > 1));
     // 28.8px is the 1.8rem clamp floor. The plan proposed 1.6rem, which would have made
     // 360px smaller than it already was -- the opposite of "never looks squeezed" -- so the
     // floor stayed and only the ramp got faster. Asserted here so it cannot drift back down.
@@ -1004,13 +1493,30 @@ for (const [mood, dir] of RUNS) {
     if (!res.hdr.card) hdrBad.push("header is not rendering as a bordered, padded card");
     if (res.hdr.h1 < 28.8) hdrBad.push(`h1 is ${res.hdr.h1}px, below the 28.8px floor`);
     if (res.hdr.badgeW < res.hdr.badgeH) hdrBad.push(`icon badge squeezed to ${res.hdr.badgeW}x${res.hdr.badgeH}`);
-    if (w <= 768 && !res.hdr.xs) hdrBad.push("mobile header shadow did not step down to xs");
-    if (w > 768 && !res.hdr.base) hdrBad.push("desktop header shadow is not the full-size one");
+    if (w <= 768 && !res.hdr.xs)
+      hdrBad.push(`mobile header shadow did not step down to xs -- expected "${res.xsShadow}", got "${res.hdr.got}"`);
+    if (w > 768 && !res.hdr.base)
+      hdrBad.push(`desktop header shadow is not the full-size one -- got "${res.hdr.got}"`);
     if (!res.task) throw new Error("tasks notebook probe found nothing -- fixture drifted");
     const taskBad = [];
-    if (w <= 768) {
+    /* Tilt and tape are the pinboard, and the two skins disagree about it in a way that has to be
+       stated separately or one skin's intent gets reported as the other's defect. Doodle: a
+       pinboard on a desktop, flattened below 768px where cards are already in one column. Atlas:
+       no pinboard at any width -- a rotated glass panel reads as a rendering error, not as paper.
+       The `::before` survives into Atlas but is no longer tape: it is the course-coloured top
+       edge, and a single-column phone is where a course colour is most useful, not least, so it
+       is asserted present at every width rather than absent below the breakpoint. */
+    if (skin === "atlas") {
+      if (res.task.tilted) taskBad.push("an atlas note still carries the doodle pinboard tilt");
+      if (!res.task.tape) taskBad.push("the atlas course edge is not drawn on the note");
+    } else if (w <= 768) {
       if (res.task.tilted) taskBad.push("a task card still carries the pinboard tilt");
       if (res.task.tape) taskBad.push("the sticky-note tape strip is still rendered");
+    } else {
+      if (!res.task.tilted) taskBad.push("desktop lost the pinboard tilt");
+      if (!res.task.tape) taskBad.push("desktop lost the sticky-note tape");
+    }
+    if (w <= 768) {
       if (res.task.minH > 0) taskBad.push(`card min-height is still ${res.task.minH}px`);
       if (res.task.bodyMinH > 0) taskBad.push(`card body min-height is still ${res.task.bodyMinH}px`);
       if (res.task.manageOff !== "none") taskBad.push("manage row is visible with data-manage=off");
@@ -1025,8 +1531,6 @@ for (const [mood, dir] of RUNS) {
       if (res.task.inputW < 110) taskBad.push(`quick-add input squeezed to ${res.task.inputW}px`);
     } else {
       // Above the breakpoint every one of those is the opposite: the pinboard is the design.
-      if (!res.task.tilted) taskBad.push("desktop lost the pinboard tilt");
-      if (!res.task.tape) taskBad.push("desktop lost the sticky-note tape");
       if (res.task.manageOff === "none") taskBad.push("desktop hid the manage row");
       if (res.task.optsHidden) taskBad.push("desktop hid the quick-add selects");
     }
@@ -1041,8 +1545,19 @@ for (const [mood, dir] of RUNS) {
     const distinct = (list) => new Set(list.map(norm)).size;
     if (res.task.papers.some(dead))
       taskBad.push(`a sticky note has no paper colour at all (${res.task.papers.join(" / ")})`);
-    if (distinct(res.task.papers) < 2)
-      taskBad.push(`both courses painted the same paper (${res.task.papers[0]})`);
+    /* Inverted from what this used to claim, and the inversion is the fix. It used to demand that
+       two courses paint two different papers -- which is exactly how every note ended up green in
+       a pink mood, because the paper was mixed from the course colour. The paper is the mood now:
+       one value across every note, and that value has to be the mood's own tint rather than any
+       stale hardcoded green, so both halves are stated. Course identity did not disappear, it
+       moved to the things that are only ever the course -- the subject tag, the watermark glyph
+       and the top edge -- and the tag is still checked for two distinct fills below. */
+    if (distinct(res.task.papers) !== 1)
+      taskBad.push(
+        `two courses painted ${distinct(res.task.papers)} papers (${res.task.papers.join(" / ")}) -- the paper is the mood, not the course`,
+      );
+    else if (norm(res.task.papers[0]) !== norm(res.task.wantPaper))
+      taskBad.push(`note paper is ${res.task.papers[0]}, not the mood's own ${res.task.wantPaper}`);
     if (distinct(res.task.tags) < 2) taskBad.push("both course tags painted the same fill");
     if (res.task.spines.some(dead)) taskBad.push("a triage spine has no colour");
     if (distinct(res.task.spines) < 2) taskBad.push("high and low drew the same triage spine");
@@ -1107,17 +1622,35 @@ for (const [mood, dir] of RUNS) {
     }
     if (!res.doodle) throw new Error("hand-drawn chrome probe found nothing -- fixture drifted");
     const doodleBad = [];
-    /* --font-label opens with var(--font-plex), which the fixture sets to "IBM Plex Sans"; a
+    /* --font-label opens with var(--font-jakarta), which the fixture sets to "Plus Jakarta Sans"; a
        computed family that contains it proves the label chain resolved and reached the element.
-       (Was "Delius Swash Caps" before the app moved off the hand-lettered pair.) */
-    const LABEL_FACE = "IBM Plex Sans";
+       (Was "IBM Plex Sans" before the app moved off it -- Plex's variable wght axis stops at 700,
+       so every `font-weight: 800` in the stylesheets was clamping. Before that, "Delius Swash
+       Caps", back when the app used the hand-lettered pair.) */
+    const LABEL_FACE = "Plus Jakarta Sans";
     // Four different corner strings is the definition being asserted; three is the tolerance for
     // a shape that happens to repeat one pair, and one means somebody wrote a single radius.
     const wobbly = (c) => new Set(c).size >= 3 && !c.some((v) => v.includes("9999px"));
-    if (!wobbly(res.doodle.chipCorners))
-      doodleBad.push(`course chip is not hand-drawn: corners ${res.doodle.chipCorners.join(" | ")}`);
-    if (!wobbly(res.doodle.cardCorners))
-      doodleBad.push(`dashboard task card is not hand-drawn: corners ${res.doodle.cardCorners.join(" | ")}`);
+    /* ...and the Atlas inverse, because the wobble is a doodle signature. The skin block in
+       tokens.css collapses --radius-doodle* to one bento radius deliberately, so asserting four
+       different corners on an Atlas run reports the redesign itself as a defect -- which it did,
+       on all 30 of them. Rather than skip the check on the new skin, invert it: "one radius"
+       is exactly as falsifiable as "four different ones", and it still catches a hardcoded
+       doodle radius that the token remap cannot reach surviving into Atlas.
+
+       The two elements want different things from that radius, so they are not one predicate.
+       A chip going to a true pill (--radius-doodle-chip becomes --radius-full) is the intent;
+       a card going to a pill is a mistake, which is why only the card rules 9999px out. */
+    const uniform = (c) => new Set(c).size === 1;
+    const doodleSkin = skin === "doodle";
+    const chipOk = doodleSkin ? wobbly(res.doodle.chipCorners) : uniform(res.doodle.chipCorners);
+    const cardOk = doodleSkin
+      ? wobbly(res.doodle.cardCorners)
+      : uniform(res.doodle.cardCorners) && !res.doodle.cardCorners[0].includes("9999px");
+    const want = doodleSkin ? "hand-drawn (3+ distinct corners)" : "one uniform radius";
+    if (!chipOk) doodleBad.push(`course chip corners are not ${want}: ${res.doodle.chipCorners.join(" | ")}`);
+    if (!cardOk)
+      doodleBad.push(`dashboard task card corners are not ${want}: ${res.doodle.cardCorners.join(" | ")}`);
     /* The family check is about the cascade, not the rasteriser: the faces are not installed
        offline, so what this can prove is that --font-label resolved and reached the element
        rather than being dropped to the inherited value -- which is precisely what happened for
@@ -1148,17 +1681,38 @@ for (const [mood, dir] of RUNS) {
       doodleBad.push(`the disabled submit is faded to ${res.doodle.subOpacity} -- reads as broken, not as waiting`);
     if (res.doodle.subBorder !== "dashed")
       doodleBad.push(`the disabled submit is drawn ${res.doodle.subBorder}, not dashed`);
-    if (res.doodle.ringsMissing.length)
-      doodleBad.push(`no inner pen line on ${res.doodle.ringsMissing.join(", ")}`);
+    /* The inner pen line is doodle's frame, and Atlas replaces it with a hairline rim on the
+       element itself -- so "the line is there" and "the line is gone" are both real requirements,
+       one per skin. Asserting only the doodle half would let Atlas keep drawing ink inside glass;
+       skipping the check on Atlas would let a doodle regression through unnoticed. */
+    if (doodleSkin) {
+      if (res.doodle.ringsMissing.length)
+        doodleBad.push(`no inner pen line on ${res.doodle.ringsMissing.join(", ")}`);
+    } else if (res.doodle.ringsMissing.length !== 3) {
+      doodleBad.push(
+        `${3 - res.doodle.ringsMissing.length} of the 3 notebook frames still draw the doodle pen line under atlas`,
+      );
+    }
     if (res.doodle.cardPapers.some(dead))
       doodleBad.push(`a dashboard task card has no paper at all (${res.doodle.cardPapers.join(" / ")})`);
-    if (distinct(res.doodle.cardPapers) < 3)
-      doodleBad.push(`three courses painted ${distinct(res.doodle.cardPapers)} papers on the dashboard`);
+    /* Same inversion as the sticky notes: three courses, one paper, and that paper has to be the
+       mood's tint. The spine below is where the three courses are still told apart. */
+    if (distinct(res.doodle.cardPapers) !== 1)
+      doodleBad.push(
+        `three courses painted ${distinct(res.doodle.cardPapers)} papers on the dashboard (${res.doodle.cardPapers.join(" / ")}) -- the paper is the mood`,
+      );
+    else if (norm(res.doodle.cardPapers[0]) !== norm(res.doodle.wantCardPaper))
+      doodleBad.push(
+        `dashboard card paper is ${res.doodle.cardPapers[0]}, not the mood's own ${res.doodle.wantCardPaper}`,
+      );
     if (res.doodle.cardSpines.some(dead)) doodleBad.push("a dashboard card spine has no colour");
     if (distinct(res.doodle.cardSpines) < 3)
       doodleBad.push(`three courses drew ${distinct(res.doodle.cardSpines)} spines on the dashboard`);
-    if (res.doodle.cardTilted !== 3)
-      doodleBad.push(`${res.doodle.cardTilted}/3 dashboard cards carry the alternating tilt`);
+    // The alternating tilt is the pinboard again: all three under doodle, none under atlas.
+    if (res.doodle.cardTilted !== (doodleSkin ? 3 : 0))
+      doodleBad.push(
+        `${res.doodle.cardTilted}/3 dashboard cards are tilted, expected ${doodleSkin ? "3 (the doodle pinboard)" : "0 (atlas has no pinboard)"}`,
+      );
     if (res.doodle.cardPadStart < 20)
       doodleBad.push(`dashboard card leaves ${res.doodle.cardPadStart}px before the text, too tight for the 5px spine`);
 
@@ -1208,24 +1762,49 @@ for (const [mood, dir] of RUNS) {
     if (!res.analytics) throw new Error("analytics probe found nothing -- fixture drifted");
     const analyticsBad = [];
     const ana = res.analytics;
-    // Above the breakpoint only: `.analytics-panel`, `.analytics-wide-panel` and
-    // `.analytics-ai-panel` are all three in the mobile comfort block, which thins the border by
-    // 0.5px at <=768px -- and decoBad above already asserts that thinning from the other side.
-    //
-    // 2, not 2.5, because Chromium floors border-width to whole CSS pixels in the used value: the
-    // 2.5px the family declares is reported as 2px and the comfort block's 1.5px as 1px. The
-    // stylesheet is right; this is the number that is measurable. Same reason decoBad's ceiling is
-    // 1.5 rather than 1.
-    if (w > 768) {
-      if (ana.panelBorder < 2) analyticsBad.push(`panel border is ${ana.panelBorder}px, not the 2.5px every other card carries`);
-      if (ana.aiBorder < 2) analyticsBad.push(`AI panel border is ${ana.aiBorder}px, not 2.5px`);
+    /* Both frames, per skin. Doodle draws 2.5px of ink; atlas replaces it with a 1px rim, so
+       "thicker than 2px" and "no thicker than 1px" are both real requirements and each is the other's
+       regression test. Asserting only the doodle half would let an atlas rule keep the ink; skipping
+       the check under atlas would let a doodle regression through.
+
+       Doodle is checked above the breakpoint only: all three of `.analytics-panel`,
+       `.analytics-wide-panel` and `.analytics-ai-panel` are in the mobile comfort block, which thins
+       the border to 1.5px at <=768px -- and decoBad above already asserts that thinning from the
+       other side. Atlas is checked at every width, because 1px is what it declares and what the
+       comfort block hands it.
+
+       2, not 2.5, because Chromium floors border-width to whole CSS pixels in the used value: the
+       2.5px the family declares is reported as 2px and the comfort block's 1.5px as 1px. The
+       stylesheet is right; this is the number that is measurable. Same reason decoBad's ceiling is
+       1.5 rather than 1. */
+    if (doodleSkin) {
+      if (w > 768) {
+        if (ana.panelBorder < 2) analyticsBad.push(`panel border is ${ana.panelBorder}px, not the 2.5px every other card carries`);
+        if (ana.aiBorder < 2) analyticsBad.push(`AI panel border is ${ana.aiBorder}px, not 2.5px`);
+      }
+    } else {
+      if (ana.panelBorder > 1) analyticsBad.push(`panel border is ${ana.panelBorder}px under atlas, not a 1px rim`);
+      if (ana.aiBorder > 1) analyticsBad.push(`AI panel border is ${ana.aiBorder}px under atlas, not a 1px rim`);
     }
     /* The corner marks are a `background-image`, at every width, which is the whole reason these
        panels had to move from the `background:` shorthand to `background-color:` before they could
        join the card family. A shorthand added back anywhere -- base rule, mood override, media
-       query -- silently resets this to `none` and nothing else in the file would notice. */
-    if (ana.panelMarks === "none") analyticsBad.push("panel lost its corner marks (background-image: none)");
-    if (ana.aiMarks === "none") analyticsBad.push("AI panel lost its inverted corner marks");
+       query -- silently resets this to `none` and nothing else in the file would notice.
+
+       Inverted for atlas rather than skipped. The marks are three baked-in hex literals per panel
+       (#38BDF8/#FBBF24/#F472B6, and #263D5B/#F59E0B/#EC4899 in the cosmic twin), i.e. mood-blind ink,
+       which is the fault class Phase 4 spent its time removing from the task papers and the charts --
+       so Batch A drops them under atlas, the same call `.dashboard-card` in this family already made.
+       Stating it as `=== "none"` keeps that a measured decision instead of an untested one: a
+       `background:` shorthand creeping back into an atlas rule would pass this, but a *doodle* rule
+       losing its marks still fails above, and an atlas rule quietly re-inheriting them fails here. */
+    if (doodleSkin) {
+      if (ana.panelMarks === "none") analyticsBad.push("panel lost its corner marks (background-image: none)");
+      if (ana.aiMarks === "none") analyticsBad.push("AI panel lost its inverted corner marks");
+    } else {
+      if (ana.panelMarks !== "none") analyticsBad.push(`the panel still paints hand-drawn corner marks under atlas (${ana.panelMarks})`);
+      if (ana.aiMarks !== "none") analyticsBad.push(`the AI panel still paints hand-drawn corner marks under atlas (${ana.aiMarks})`);
+    }
     if (ana.selAppearance !== "none")
       analyticsBad.push(`the range select still wears OS chrome (appearance: ${ana.selAppearance})`);
     if (ana.selCaret === "none") analyticsBad.push("the drawn caret is missing from the toolbar select");
@@ -1278,9 +1857,85 @@ for (const [mood, dir] of RUNS) {
       analyticsBad.push(`the three signal tones resolve to ${distinct(ana.toneInks)} colours -- --signal-ink is not switching`);
     if (dead(ana.ctaFill) || norm(ana.ctaFill) === norm(ana.aiFill))
       analyticsBad.push(`the "Deeper insights" fill is ${ana.ctaFill} on a ${ana.aiFill} slab -- the base button's --surface won`);
-    if (ana.ringsMissing.length) analyticsBad.push(`no second pen line on ${ana.ringsMissing.join(", ")}`);
-    // Keyed by mood, so the RTL run overwrites its own LTR twin rather than a different palette.
-    CHART_INK[mood] = { tip: ana.tipInk, heat: ana.heatInk, cta: ana.ctaFill, signal: ana.toneInks[0] };
+    /* Same inversion as the three notebook frames: the second pen line is doodle's frame and atlas
+       replaces it with the rim on the element itself, so "both lines are there" and "both lines are
+       gone" are one requirement each. `FRAMES` is the two wide panels, and each declares its own
+       `position: relative`, so either can lose its line alone. */
+    if (doodleSkin) {
+      if (ana.ringsMissing.length) analyticsBad.push(`no second pen line on ${ana.ringsMissing.join(", ")}`);
+    } else if (ana.ringsMissing.length !== 2) {
+      analyticsBad.push(
+        `${2 - ana.ringsMissing.length} of the 2 analytics frames still draw the doodle pen line under atlas`,
+      );
+    }
+    /* The heat cell's radius is the only hand-drawn *literal* on this page -- `4px 2px 5px 2px /
+       2px 5px 2px 4px` rather than a --radius-doodle-* token -- which makes it the only radius the
+       skin's token remap cannot reach. So it is also the only one that fails silently: every other
+       corner on the page follows the skin for free, and this one would keep wobbling under atlas
+       with nothing to say so. */
+    const cellOk = doodleSkin ? wobbly(ana.cellCorners) : uniform(ana.cellCorners);
+    if (!cellOk)
+      analyticsBad.push(
+        `heat cell corners are ${ana.cellCorners.join(" / ")}, expected ${doodleSkin ? "hand-drawn (3+ distinct corners)" : "one uniform radius"}`,
+      );
+    /* ---- Phase 5, Batch B assertions ---- */
+    if (!res.batchB) throw new Error("Batch B probe found nothing -- fixture drifted");
+    const batchBBad = [];
+    {
+      const gDistinct = distinct(res.batchB.goalPapers);
+      if (doodleSkin) {
+        // Four tiles, four pastels -- the cycle is doodle's design and must survive untouched.
+        if (gDistinct < 4)
+          batchBBad.push(`the goal pastel cycle collapsed to ${gDistinct} colours under doodle`);
+      } else {
+        // The fixed pastel rotation is mood-blind; atlas replaces it with one raised-glass tier.
+        if (gDistinct !== 1)
+          batchBBad.push(
+            `goal cards painted ${gDistinct} papers under atlas (${res.batchB.goalPapers.join(" / ")}) -- the mood-blind pastel cycle survived`,
+          );
+        else if (norm(res.batchB.goalPapers[0]) !== norm(res.batchB.wantRaisedGlass))
+          batchBBad.push(
+            `atlas goal cards are ${res.batchB.goalPapers[0]}, not the raised glass tier (${res.batchB.wantRaisedGlass})`,
+          );
+        if (res.batchB.planTilted)
+          batchBBad.push(
+            `${res.batchB.planTilted} plan note(s) still carry the doodle pinboard tilt under atlas`,
+          );
+      }
+      for (const m of res.batchB.marks) {
+        if (doodleSkin && m === "none")
+          batchBBad.push("a family card lost its corner marks under doodle");
+        if (!doodleSkin && m !== "none")
+          batchBBad.push(`a family card still paints hand-drawn corner marks under atlas (${m})`);
+      }
+      // Three kinds, three spine colours -- asserted against the tokens each kind names rather
+      // than against each other, because task (--primary) and session (--accent) are the SAME
+      // hex in notebook and cosmic by design (the tokens.css note): a distinctness check would
+      // fail those two moods forever while proving nothing about the other three. Token
+      // equality is stricter anyway: it catches a rim-grey repaint (the Batch A tie bug) AND a
+      // wrong-token regression, in every mood.
+      if (res.batchB.calSpines.length !== 3)
+        batchBBad.push(`expected task/session/plan events in the fixture, found ${res.batchB.calSpines.length}`);
+      else {
+        const kinds = ["task", "session", "plan"];
+        for (const [i, got] of res.batchB.calSpines.entries()) {
+          const want = res.batchB.wantSpineTokens[i];
+          if (dead(got) || norm(got) !== norm(want))
+            batchBBad.push(
+              `the ${kinds[i]} event spine is ${got}, not its own token (${want})`,
+            );
+        }
+      }
+      // The ghost must stay borderless under atlas: its ink is transparent by design, and the
+      // global button rule deliberately excludes it.
+      if (!dead(res.batchB.ghostInk))
+        batchBBad.push(`the ghost button's border is ${res.batchB.ghostInk}, not transparent`);
+    }
+    /* Keyed by skin AND mood, so the RTL run overwrites its own LTR twin rather than a
+       different palette -- and so the doodle regression runs do not overwrite the atlas
+       measurements for the moods they share. Keying by mood alone silently reduced this to
+       whichever skin happened to run last in RUNS. */
+    CHART_INK[`${skin}/${mood}`] = { tip: ana.tipInk, heat: ana.heatInk, cta: ana.ctaFill, signal: ana.toneInks[0] };
 
     if (!res.detail) throw new Error("proposal-page probe found nothing -- fixture drifted");
     const detailBad = [];
@@ -1309,6 +1964,8 @@ for (const [mood, dir] of RUNS) {
     const dashBad = [];
     if (res.dash.colCount !== 2)
       dashBad.push(`expected two dashboard columns in the fixture, found ${res.dash.colCount}`);
+    if (res.dash.tileCount !== 4)
+      dashBad.push(`expected four dashboard tiles in the fixture, found ${res.dash.tileCount}`);
     if (res.dash.gridOver > 1)
       dashBad.push(`the layout grid is ${res.dash.gridOver}px wider than the page column it sits in`);
     if (res.dash.tileHidden > 1)
@@ -1317,10 +1974,47 @@ for (const [mood, dir] of RUNS) {
     // lived, because every row then shares one track: the left column's header set the width the
     // right column's tiles were cut to.
     const wantStacked = w <= 960;
-    if ((res.dash.colTops === 2) !== wantStacked)
+    /* Asserted on the tiles rather than the wrappers, because a wrapper can be in the right place
+       while the card inside it is not: distinct inline start edges is a statement about what a
+       reader actually sees -- one edge when stacked, two when side by side -- and it holds for
+       either skin's track sizing. */
+    if (res.dash.tileCols !== (wantStacked ? 1 : 2))
       dashBad.push(
-        `the columns are ${res.dash.colTops === 2 ? "stacked" : "side by side"} at ${w}px, expected the ${wantStacked ? "stacked" : "side by side"} layout`,
+        `the dashboard tiles occupy ${res.dash.tileCols} column(s) at ${w}px, expected ${wantStacked ? 1 : 2}`,
       );
+    /* "Close to each other and organized", stated as a measurement. Checked for both skins and
+       at every width, because the failure it catches -- a card positioned by the height of the
+       other column's card instead of by the card above it -- is invisible to every other
+       assertion here. */
+    for (const [i, s] of res.dash.stackGaps.entries()) {
+      const off = s.got.filter((g) => Math.abs(g - s.want) > 2);
+      if (off.length)
+        dashBad.push(
+          `dashboard column ${i + 1} leaves ${off.join("/")}px between its stacked cards at ${w}px, not the ${s.want}px gutter -- they are floating, not stacked`,
+        );
+    }
+    if (res.dash.skin === "atlas") {
+      /* The mechanism behind the gap check above. Two real column boxes are what make each stack
+         pack independently of the other one's heights; if a later rule puts these wrappers back
+         to `display: contents` the cards become grid items again and the rows re-lock. `tileCols`
+         above cannot see that -- it reads 2 in both layouts. */
+      for (const [i, d] of res.dash.colDisplay.entries()) {
+        if (d !== "flex")
+          dashBad.push(`atlas dashboard column ${i + 1} is display: ${d}, expected flex`);
+      }
+      const wantTracks = wantStacked ? 1 : 2;
+      if (res.dash.gridTracks !== wantTracks)
+        dashBad.push(
+          `the atlas bento has ${res.dash.gridTracks} column track(s) at ${w}px, expected ${wantTracks}`,
+        );
+    } else {
+      // The doodle skin keeps real block columns, so its own wrappers are the thing to measure
+      // and their rects are well defined.
+      if ((res.dash.colTops === 2) !== wantStacked)
+        dashBad.push(
+          `the columns are ${res.dash.colTops === 2 ? "stacked" : "side by side"} at ${w}px, expected the ${wantStacked ? "stacked" : "side by side"} layout`,
+        );
+    }
     /* The headers are the min-content the grid was sizing to, so what is asserted is that they are
        allowed to break -- at every width, because with room to spare a wrapping header still
        renders on one line, and it is the permission that stops the track from being widened.
@@ -1342,6 +2036,104 @@ for (const [mood, dir] of RUNS) {
       for (const [i, rows] of res.dash.cardRows.entries()) {
         if (rows !== 1) dashBad.push(`dashboard card header ${i + 1} wrapped to ${rows} rows at ${w}px`);
       }
+    }
+    /* The hero artwork, both halves of its contract. It is in the DOM for both skins and shown
+       for one, so "is it displayed" is a two-sided assertion rather than a presence check: the
+       doodle skin already fills that corner with its own ambient doodles and a second drawing
+       over them is noise, and below 960px the headline needs the whole card. */
+    if (!res.dash.art) {
+      dashBad.push("the hero artwork is missing from the dashboard fixture");
+    } else {
+      const wantArt = res.dash.skin === "atlas" && w > 960;
+      if (res.dash.art.shown !== wantArt)
+        dashBad.push(
+          `the hero artwork is ${res.dash.art.shown ? "shown" : "hidden"} on ${res.dash.skin} at ${w}px, expected it ${wantArt ? "shown" : "hidden"}`,
+        );
+      // The bleed has to be contained by the hero, not by luck. `overflow: hidden` on the card is
+      // the only thing between a -2rem inline inset and a page-wide horizontal scrollbar -- and it
+      // is the *only* thing asserted here. The card's own `scrollWidth` still reports the bleed,
+      // because a clipped overflow region is programmatically scrollable even when the user cannot
+      // reach it, so a `scrollWidth > clientWidth` check on the hero would report ~14px of
+      // deliberate decoration as a defect at every desktop width. That the bleed reaches nothing
+      // is covered where it matters instead: `res.doc` measures the document's own overflow.
+      if (res.dash.art.heroClips === "visible")
+        dashBad.push("the hero card does not clip, so the artwork's bleed reaches the page");
+    }
+    /* The goal ring. Only the atlas skin draws one -- doodle keeps its bar, and asserting the
+       pseudo-element is absent there is what stops the ring from leaking out of the skin. */
+    if (!res.dash.ring) {
+      dashBad.push("no .goal-item-card in the dashboard fixture");
+    } else if (res.dash.skin === "atlas") {
+      if (res.dash.ring.content === "none")
+        dashBad.push("the atlas goal ring's ::before is not generated");
+      if (!res.dash.ring.arc)
+        dashBad.push(
+          "the goal ring has no conic-gradient -- most likely --goal-pct arrived as a percentage, which makes calc() invalid and drops the whole gradient",
+        );
+      if (!res.dash.ring.masked) dashBad.push("the goal ring is unmasked, so it renders as a filled pie");
+      // A ring the fixture reports as 0% is indistinguishable from a goal nobody has started, so
+      // the number itself is asserted: the fixture hard-codes 13, matching its 134/1000 label.
+      if (res.dash.ring.pct !== "13")
+        dashBad.push(`--goal-pct resolved to "${res.dash.ring.pct}", expected the fixture's 13`);
+      if (res.dash.ring.w < 24 || res.dash.ring.h < 24)
+        dashBad.push(`the goal ring is ${res.dash.ring.w}x${res.dash.ring.h}px, too small to read`);
+      if (res.dash.ring.w !== res.dash.ring.h)
+        dashBad.push(`the goal ring is ${res.dash.ring.w}x${res.dash.ring.h}px -- an ellipse, not a ring`);
+    } else if (res.dash.ring.content !== "none") {
+      dashBad.push("the doodle goal card grew a ring -- the atlas ::before is not scoped to the skin");
+    }
+
+    /* The week curve. Skin-agnostic, unlike the ring: the same drawing runs on paper and on glass
+       and only its material differs, so every claim here holds for both. */
+    if (!res.dash.week) {
+      dashBad.push("the week chart's plot, axis or line is missing from the dashboard fixture");
+    } else {
+      const wk = res.dash.week;
+      if (wk.days !== 7) dashBad.push(`the week axis has ${wk.days} days, expected 7`);
+      // Seven tracks at every width, including 320px. An axis that reflowed to fewer columns would
+      // stop putting each label under its own point, which is the only thing tying the two
+      // together -- the curve is drawn at those column centres.
+      if (wk.tracks !== 7)
+        dashBad.push(`the week axis resolved to ${wk.tracks} grid tracks at ${w}px, expected 7`);
+      // 92px on a phone, 128px above the comfort breakpoint, plus the atlas skin's own 8px of
+      // padding on each side of the plot. Definite either way, or both layers collapse.
+      const wantPlot = (w <= 768 ? 92 : 128) + 2 * wk.pad;
+      if (Math.abs(wk.plotH - wantPlot) > 1)
+        dashBad.push(`the week chart's plot is ${wk.plotH}px at ${w}px, expected ${wantPlot}`);
+      if (!wk.svgFills) dashBad.push("the week chart's svg has no height");
+      // A `d` the browser rejected leaves a zero-length path, which draws nothing and reads as a
+      // week with no sessions in it. The fixture's four-point curve is ~500 user units long.
+      if (wk.lineLen < 100)
+        dashBad.push(`the week curve is ${wk.lineLen} units long -- the path data did not parse`);
+      // Four elapsed days in the fixture, three still to come. A dot for a day that has not
+      // happened would be the chart asserting a zero it does not know.
+      if (wk.dots !== 4)
+        dashBad.push(`the week chart drew ${wk.dots} dots, expected 4 -- one per elapsed day, none for the future`);
+      if (!wk.topDot) {
+        dashBad.push("the week chart has no dots at all");
+      } else if (Math.abs(wk.topDot.got - wk.topDot.want) > 1.5) {
+        dashBad.push(
+          `the highest week dot sits ${wk.topDot.got}% down the plot but was placed at ${wk.topDot.want}% -- the dots and the curve are no longer in the same coordinate space`,
+        );
+      }
+      /* The mood. Both ends of the line's gradient have to be this run's own palette, which is the
+         whole point of routing the stops through CSS instead of writing `stop-color` attributes:
+         a hardcoded hex would look right in notebook and wrong in the other four, and nothing else
+         in this harness would notice. */
+      if (wk.lineFrom !== wk.wantPrimary)
+        dashBad.push(`the week curve starts at ${wk.lineFrom}, not the mood's --primary ${wk.wantPrimary}`);
+      if (wk.lineTo !== wk.wantAccent)
+        dashBad.push(`the week curve ends at ${wk.lineTo}, not the mood's --accent ${wk.wantAccent}`);
+      if (wk.areaFrom !== wk.wantPrimary)
+        dashBad.push(`the week chart's fill is ${wk.areaFrom}, not the mood's --primary ${wk.wantPrimary}`);
+      // SVG contents do not flip with `direction`, so in RTL the curve has to be mirrored by hand
+      // or it runs Sunday-to-Saturday underneath labels running the other way.
+      const wantMirror = wk.dir === "rtl";
+      const isMirrored = wk.mirrored.startsWith("-1");
+      if (isMirrored !== wantMirror)
+        dashBad.push(
+          `the week curve is ${isMirrored ? "mirrored" : "not mirrored"} in ${wk.dir}, so it runs against its own axis labels`,
+        );
     }
 
     if (!res.setup) throw new Error("focus setup probe found nothing -- fixture drifted");
@@ -1387,6 +2179,7 @@ for (const [mood, dir] of RUNS) {
       res.spill.length ||
       navBad ||
       decoBad.length ||
+      p5Bad.length ||
       hdrBad.length ||
       taskBad.length ||
       stickyBad.length ||
@@ -1395,12 +2188,15 @@ for (const [mood, dir] of RUNS) {
       analyticsBad.length ||
       detailBad.length ||
       dashBad.length ||
-      setupBad.length;
+      setupBad.length ||
+      batchBBad.length;
     if (bad) fail++;
     console.log(
       `\n[${tag}] doc=+${res.doc} clipped=${res.clipped.length} tiny=${res.tiny.length} spill=${res.spill.length}` +
         (res.nav ? ` nav=${res.nav.shown ? `${res.nav.navH}px` : "hidden"} padB=${res.nav.padB}` : "") +
         ` hdr=h1:${res.hdr.h1}px/${res.hdr.xs ? "xs" : res.hdr.base ? "base" : "?"}` +
+        ` batchA=max${Math.max(...res.p5.map((d) => d.bw))}px/${res.p5.length}sel` +
+        ` batchB=${distinct(res.batchB.goalPapers)}paper/tilt${res.batchB.planTilted}/${res.batchB.marks.every((m) => m !== "none") ? "marks" : "nomarks"}` +
         ` task=${res.task.tilted ? "tilt" : "flat"}/${res.task.tape ? "tape" : "notape"}/minH${res.task.minH}` +
         ` add=${res.addFlow.ownLine ? "ownline" : "inline"}/cap${res.addFlow.capShown.filter(Boolean).length}` +
         ` vitals=${res.vitals.rows}row/${res.vitals.ecgShown ? "ecg" : "noecg"}` +
@@ -1409,9 +2205,11 @@ for (const [mood, dir] of RUNS) {
         ` timer=pill${res.timer.indOffset}px/plate${res.timer.plateR}<=${res.timer.tickInnerR}<${res.timer.tickOuterR}<=${res.timer.ringInnerR}/digits${res.timer.digitsW}` +
         ` fs=${res.timer.fs.plateR}<=${res.timer.fs.ringInnerR}/digits${res.timer.fs.digitsW}` +
         ` art=${res.timer.fs.art.map((a) => (a.shown ? `${a.w}px` : "off")).join("+")}` +
-        ` ana=${ana.panelBorder}px/${ana.panelMarks === "none" ? "nomarks" : "marks"}/sel${ana.selH}px/${ana.step1Shown ? "24h" : "4h"}/${distinct(ana.toneInks)}tone` +
+        ` ana=${ana.panelBorder}px/${ana.panelMarks === "none" ? "nomarks" : "marks"}/${ana.ringsMissing.length}noline/cell${new Set(ana.cellCorners).size}corner/sel${ana.selH}px/${ana.step1Shown ? "24h" : "4h"}/${distinct(ana.toneInks)}tone` +
         ` plan=${det.fields}field/${det.factRows}factrow/nav${det.navGap}px` +
-        ` dash=${res.dash.colTops}col/head${res.dash.stickyRows}+${res.dash.cardRows.join("+")}row/over${res.dash.gridOver}px` +
+        ` dash=${res.dash.tileCols}col/${res.dash.gridTracks}track/stack${res.dash.stackGaps.map((s) => s.got.join(",") || "-").join("|")}of${res.dash.stackGaps[0]?.want}px/head${res.dash.stickyRows}+${res.dash.cardRows.join("+")}row/over${res.dash.gridOver}px` +
+        ` /art${res.dash.art?.shown ? "on" : "off"}/ring${res.dash.ring?.content === "none" ? "off" : `${res.dash.ring?.pct}%`}` +
+        ` /week${res.dash.week?.days}d${res.dash.week?.dots}dot/${res.dash.week?.plotH}px/len${res.dash.week?.lineLen}/top${res.dash.week?.topDot?.got}~${res.dash.week?.topDot?.want}${res.dash.week?.mirrored?.startsWith("-1") ? "/flip" : ""}` +
         ` setup=${st.fixed ? "window" : "sidebar"}/scroll${st.cardScrolls}:${st.bodyScrolls}/over${st.overlap}px/gap${st.footGap}px`,
     );
     for (const c of res.clipped)
@@ -1425,8 +2223,13 @@ for (const [mood, dir] of RUNS) {
     if (res.nav?.wasted > 0) console.log(`    NAV-WASTED   ${res.nav.wasted}px dead strip with no bar rendered`);
     for (const d of decoBad)
       console.log(
-        `    DECO  ${d.sel} border=${d.bw}px xsShadow=${d.xs} -- expected xs shadow and border <=1.5px`,
+        `    DECO  ${d.sel} border=${d.bw}px xsShadow=${d.xs} -- expected border <=1.5px and shadow "${res.xsShadow}", got "${d.got}"`,
       );
+    for (const d of p5Bad)
+      console.log(
+        `    BATCHA ${d.sel} border=${d.bw}px -- expected ${skin === "doodle" ? ">=2px of doodle ink" : "a <=1px atlas rim"}`,
+      );
+    for (const m of batchBBad) console.log(`    BATCHB ${m}`);
     for (const m of hdrBad) console.log(`    HDR   ${m}`);
     for (const m of taskBad) console.log(`    TASK  ${m}`);
     for (const m of stickyBad) console.log(`    STICKY ${m}`);
@@ -1454,30 +2257,53 @@ for (const [mood, dir] of RUNS) {
  * eyeballed in, which is exactly how #263D5B ink ended up on a #182234 card for the whole life of
  * this page -- every within-run test passed, in all five moods, the entire time. */
 const inkBad = [];
+/* Atlas sweeps all five palettes; doodle only guards notebook and cosmic, which are the
+   two the light/dark comparison below actually needs. */
+const EXPECTED_INK_KEYS = [
+  "atlas/notebook",
+  "atlas/cosmic",
+  "atlas/sakura",
+  "atlas/aurora",
+  "atlas/sunset",
+  "doodle/notebook",
+  "doodle/cosmic",
+];
 const litMoods = Object.keys(CHART_INK);
-if (litMoods.length !== 5)
-  inkBad.push(`only ${litMoods.length} of 5 moods recorded chart ink (${litMoods.join(", ")})`);
-if (CHART_INK.notebook && CHART_INK.cosmic) {
+const missingInk = EXPECTED_INK_KEYS.filter((k) => !CHART_INK[k]);
+if (missingInk.length)
+  inkBad.push(`no chart ink recorded for ${missingInk.join(", ")} (got ${litMoods.join(", ")})`);
+/* The light-vs-dark comparison runs once per skin. Chart ink is a palette concern, so both
+   skins must pass it independently -- a hardcoded hex introduced under one skin would
+   otherwise hide behind the other skin's correct token. */
+for (const skin of ["atlas", "doodle"]) {
+  const light = CHART_INK[`${skin}/notebook`];
+  const dark = CHART_INK[`${skin}/cosmic`];
+  if (!light || !dark) continue;
   for (const [what, key] of [
     ["tooltip border", "tip"],
     ["heat cell fill", "heat"],
     ['"Deeper insights" fill', "cta"],
     ["signal card ink", "signal"],
   ]) {
-    const light = CHART_INK.notebook[key];
-    const dark = CHART_INK.cosmic[key];
-    if (light.replace(/\s/g, "") === dark.replace(/\s/g, ""))
-      inkBad.push(`${what} is ${light} in both notebook and cosmic -- it is not reading a token`);
+    if (light[key].replace(/\s/g, "") === dark[key].replace(/\s/g, ""))
+      inkBad.push(
+        `[${skin}] ${what} is ${light[key]} in both notebook and cosmic -- it is not reading a token`,
+      );
   }
 }
 if (inkBad.length) {
   fail++;
   console.log("\n[chart ink across moods]");
   for (const m of inkBad) console.log(`    INK   ${m}`);
-} else if (CHART_INK.cosmic) {
-  console.log(
-    `\n[chart ink across moods] tooltip ${CHART_INK.notebook.tip} -> ${CHART_INK.cosmic.tip}, heat ${CHART_INK.notebook.heat} -> ${CHART_INK.cosmic.heat}`,
-  );
+} else if (CHART_INK["atlas/cosmic"]) {
+  for (const skin of ["atlas", "doodle"]) {
+    const light = CHART_INK[`${skin}/notebook`];
+    const dark = CHART_INK[`${skin}/cosmic`];
+    if (light && dark)
+      console.log(
+        `\n[chart ink across moods: ${skin}] tooltip ${light.tip} -> ${dark.tip}, heat ${light.heat} -> ${dark.heat}`,
+      );
+  }
 }
 
 /* ================= desktop sidebar vertical fill =================
@@ -1496,22 +2322,35 @@ if (inkBad.length) {
  *
  * One mood only: nothing in tokens.css makes sidebar geometry mood-dependent (the mood picks
  * --sidebar-background, a colour). Both directions, because the gaps are block-axis and a
- * physical-property slip there would show up as an RTL-only asymmetry. */
+ * physical-property slip there would show up as an RTL-only asymmetry.
+ *
+ * Both skins, though -- unlike the mood, the skin does change sidebar geometry: it swaps the
+ * 2px doodle border for a 1px rim, and a border is part of the box. */
 const SIDEBAR_RUNS = [];
-for (const dir of ["ltr", "rtl"]) {
-  for (const h of [700, 900, 1080, 1440, 2160]) SIDEBAR_RUNS.push([1440, h, dir]);
+for (const skin of ["atlas", "doodle"]) {
+  for (const dir of ["ltr", "rtl"]) {
+    for (const h of [700, 900, 1080, 1440, 2160]) SIDEBAR_RUNS.push([skin, 1440, h, dir]);
+  }
 }
 // 769px is the first width at which the sidebar is not `display: none`.
-SIDEBAR_RUNS.push([769, 1080, "ltr"]);
+SIDEBAR_RUNS.push(["atlas", 769, 1080, "ltr"]);
 
-for (const [w, h, dir] of SIDEBAR_RUNS) {
+for (const [skin, w, h, dir] of SIDEBAR_RUNS) {
   const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   await page.goto(`file:///${process.cwd().replace(/\\/g, "/")}/${DIR}/css-geometry.html`);
-  await page.evaluate((d) => (document.documentElement.dir = d), dir);
+  // Transitions off before the skin is stamped, for the reason spelled out in the main sweep:
+  // the nav links transition, so a later duration change cannot catch a flip already in flight.
   await page.addStyleTag({
     content: "*, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; }",
   });
+  await page.evaluate(
+    ({ s, d }) => {
+      document.documentElement.dataset.skin = s;
+      document.documentElement.dir = d;
+    },
+    { s: skin, d: dir },
+  );
   await page.waitForTimeout(80);
 
   const sb = await page.evaluate(() => {
@@ -1623,7 +2462,7 @@ for (const [w, h, dir] of SIDEBAR_RUNS) {
     };
   });
 
-  const tag = `sidebar ${w}x${h}${dir === "rtl" ? " rtl" : ""}`;
+  const tag = `sidebar ${skin} ${w}x${h}${dir === "rtl" ? " rtl" : ""}`;
   if (!sb) throw new Error("sidebar probe found nothing -- fixture drifted");
   if (!sb.shown) throw new Error(`sidebar is display:none at ${w}px wide -- above the 768px breakpoint`);
   const sbBad = [];

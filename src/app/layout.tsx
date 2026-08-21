@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { JetBrains_Mono, IBM_Plex_Sans, Amiri, Cairo, Fraunces } from "next/font/google";
+import { JetBrains_Mono, Plus_Jakarta_Sans, Amiri, Cairo, Fraunces } from "next/font/google";
 import { getLocale, getMessages } from "next-intl/server";
 import { AppShell } from "@/components/navigation/app-shell";
 import { StudyBackground } from "@/components/ui/study-background";
 import { moodFromEnum } from "@/lib/settings/study-mood";
+import { skinFromEnum } from "@/lib/settings/study-skin";
 import { Providers } from "@/components/providers";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
@@ -14,21 +15,36 @@ import "./globals.css";
    is documented in the Fonts block of src/styles/tokens.css. */
 
 /* Body, labels, controls. No `weight` on purpose -- that pulls the variable font, so the app's
-   400/700/800 declarations interpolate off one file instead of downloading three. */
-const plexSans = IBM_Plex_Sans({
+   400/700/800 declarations interpolate off one file instead of downloading three.
+
+   This replaced IBM Plex Sans, whose variable wght axis stops at 700. A variable font clamps to
+   its axis range rather than synthesising a heavier face, so the 156 `font-weight: 800` and 34
+   `font-weight: 900` rules in the stylesheets were all rendering at 700 -- which is why the body
+   text read as under-weight and generic next to Fraunces headings that do reach 900. Jakarta's
+   axis runs 200-800, so every 800 is now real and only the 34 900s clamp, to 800. */
+const jakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  variable: "--font-plex",
+  variable: "--font-jakarta",
   display: "swap",
 });
 
+/* Timers, scoreboards and counters. The variable is `--font-jetbrains`, not `--font-mono`: this
+   class lands on the same <html> element that tokens.css styles as `:root`, so naming it
+   `--font-mono` put two same-specificity declarations of that property on one element, and the
+   tokens.css one (`--font-mono: var(--font-mono), …`) then referenced itself. A self-referential
+   custom property is a dependency cycle, which computes to the guaranteed-invalid value -- so
+   whenever that declaration won the cascade, every `font-family: var(--font-mono)` in the app
+   silently inherited the body sans instead. Every other face here already uses a distinct raw
+   name (--font-jakarta, --font-fraunces, --font-arabic) and is spliced into its semantic token in
+   tokens.css; mono is now the same shape. */
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
-  variable: "--font-mono",
+  variable: "--font-jetbrains",
   display: "swap",
 });
 
-/* Arabic body, labels and controls -- the RTL counterpart to IBM Plex Sans. Cairo is a variable
-   humanist Arabic (wght 200-1000), so like Plex it interpolates every weight the UI asks for off a
+/* Arabic body, labels and controls -- the RTL counterpart to Plus Jakarta Sans. Cairo is a variable
+   humanist Arabic (wght 200-1000), so like Jakarta it interpolates every weight the UI asks for off a
    single file; omitting `weight` is what pulls that variable cut. It keeps the token name
    --font-arabic, so every chain in tokens.css that splices Arabic in is untouched -- only the face
    behind the name moved off IBM Plex Sans Arabic, which the user asked to retire site-wide. */
@@ -84,7 +100,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         where: { id: session.user.id },
         select: {
           name: true,
-          preference: { select: { locale: true, studyMood: true } },
+          preference: { select: { locale: true, studyMood: true, skin: true } },
           _count: { select: { notifications: { where: { readAt: null } } } },
         },
       })
@@ -94,15 +110,21 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   /* Rendered onto <html> so the correct palette is in the very first paint. Reading it
      from localStorage after hydration is what caused the flash of the wrong theme. */
   const mood = moodFromEnum(profile?.preference?.studyMood);
+  /* Same reasoning, second axis: the skin decides every radius, border and shadow in the
+     app, so resolving it client-side would repaint every surface one frame after hydration
+     -- a far louder flash than the palette one, because it changes geometry and not just
+     colour. Mood picks the colours, skin picks the materials. */
+  const skin = skinFromEnum(profile?.preference?.skin);
   return (
     <html
       lang={locale}
       dir={locale === "ar" ? "rtl" : "ltr"}
-      className={`${plexSans.variable} ${jetbrainsMono.variable} ${cairo.variable} ${amiri.variable} ${fraunces.variable}`}
+      className={`${jakartaSans.variable} ${jetbrainsMono.variable} ${cairo.variable} ${amiri.variable} ${fraunces.variable}`}
       data-mood={mood}
+      data-skin={skin}
     >
       <body className="min-h-full flex flex-col relative">
-        <StudyBackground initialMood={mood} />
+        <StudyBackground initialMood={mood} initialSkin={skin} />
         <Providers messages={messages} session={session} locale={locale}>
           <AppShell
             user={

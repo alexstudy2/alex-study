@@ -9,6 +9,10 @@ import {
 
 export const STUDY_MOOD_ENUM = ["NOTEBOOK", "SAKURA", "COSMIC", "AURORA", "SUNSET"] as const;
 
+/* The material system, orthogonal to the mood. Kept next to STUDY_MOOD_ENUM because the
+   preferences PATCH body carries both and they are validated by the same schema. */
+export const STUDY_SKIN_ENUM = ["ATLAS", "DOODLE"] as const;
+
 export const profileSettingsSchema = z
   .object({
     name: z.string().trim().min(3).max(100).optional(),
@@ -21,6 +25,7 @@ export const profileSettingsSchema = z
 export const studyPreferencesSchema = z
   .object({
     studyMood: z.enum(STUDY_MOOD_ENUM).optional(),
+    skin: z.enum(STUDY_SKIN_ENUM).optional(),
     defaultFocusMinutes: z.coerce
       .number()
       .int()

@@ -81,10 +81,15 @@ export function ChallengeList({
             ? "تحديات ودية مع زملاء الكلية."
             : "Friendly study challenges with classmates."}
         actions={
-          <div className="page-header">
-            <Link className="page-header-link" href="/leaderboard">
-              {ar ? "لوحة المتصدرين" : "Leaderboard"}
-            </Link>
+          /* The Button used to sit inside the nav pill, where `.page-header a` (border: 0;
+             background: transparent; color: var(--muted)) outranks `.btn-primary` and rendered the
+             page's main call to action as muted ghost text. It is a sibling of the pill now. */
+          <>
+            <div className="page-header">
+              <Link className="page-header-link" href="/leaderboard">
+                {ar ? "لوحة المتصدرين" : "Leaderboard"}
+              </Link>
+            </div>
             <Button
               href="/challenges/new"
               variant="primary"
@@ -93,7 +98,7 @@ export function ChallengeList({
             >
               {ar ? "تحدٍ جديد" : "New challenge"}
             </Button>
-          </div>
+          </>
         }
       />
 
