@@ -275,8 +275,15 @@
   --glass-rim: color-mix(in srgb, var(--secondary) 16%, transparent);
   --glass-rim-strong: color-mix(in srgb, var(--secondary) 26%, transparent);
   --glass-sheen: color-mix(in srgb, #ffffff 55%, transparent);
-  --glass-blur: 20px;
-  --glass-blur-heavy: 36px;
+  /* Blur radius IS the glass budget. A backdrop-filter re-runs every frame its backdrop
+     changes -- and on Atlas the aurora behind it is always drifting, so every glass sheet
+     pays this cost continuously, not once. Gaussian passes grow steeply with radius, and
+     these values sit right at the knee where "frosted" already reads: past ~12px the extra
+     smear is nearly invisible under a 62-78% opaque fill, but the per-frame GPU bill keeps
+     climbing. The old 20/36px pair was the single largest reason Atlas felt heavy next to
+     doodle; cutting it here lands on every one of the ~45 use sites at once. */
+  --glass-blur: 12px;
+  --glass-blur-heavy: 22px;
 
   /* Soft elevation. Each step pairs a diffuse drop shadow with the 1px rim, so a single
      token gives a surface both its lift and its edge. */
@@ -300,8 +307,11 @@
   --bento-radius-inner: 14px;
 
   /* Ambient aurora. Duration is long on purpose -- this is background weather, not a UI
-     transition, so the sub-300ms UI rule does not apply to it. */
-  --aurora-duration: 14s;
+     transition, so the sub-300ms UI rule does not apply to it. Longer still than it first
+     was: the drift is what invalidates every glass backdrop every frame, and a slower
+     drift is proportionally gentler on the compositor (and on battery) with no readable
+     change in mood at these speeds. */
+  --aurora-duration: 22s;
   --aurora-scale: 1.35;
 }
 
@@ -327,6 +337,21 @@
     --glass-bg-raised: var(--surface-elevated);
     --glass-bg-sunken: var(--surface-sunken);
   }
+}
+
+/* The deliberate-performance version of the fallback above. `data-perf="lite"` is stamped
+   on <html> by the pre-paint script in layout.tsx (weak hardware signals) or by the runtime
+   watchdog in study-background.tsx (sustained low frame rate). Same contract as the
+   @supports block -- fills go opaque so no surface depends on a blur that is about to be
+   switched off -- but chosen for speed rather than forced by missing support. Specificity
+   (0,2,0) outranks both this file's bare-:root declarations and the @supports block, and it
+   must stay a token-level swap: adding per-component overrides here is how the two lists
+   drift apart. The element-level half of lite mode (animation stops, backdrop-filter kill
+   switch) lives next to the aurora rules in components.css. */
+:root[data-perf="lite"] {
+  --glass-bg: var(--surface);
+  --glass-bg-raised: var(--surface-elevated);
+  --glass-bg-sunken: var(--surface-sunken);
 }
 
 @media (max-width: 768px) {

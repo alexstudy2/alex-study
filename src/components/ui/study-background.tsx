@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { MOOD_STORAGE_KEY, type StudyMood } from "@/lib/settings/study-mood";
 import { SKIN_STORAGE_KEY, type StudySkin } from "@/lib/settings/study-skin";
+import { detectWeakDevice, forcedPerfMode } from "@/lib/settings/perf-mode";
 
 export function StudyBackground({
   initialMood = "notebook",
@@ -72,7 +73,71 @@ export function StudyBackground({
     document.documentElement.dataset.skin = skin;
   }, [skin]);
 
-  // Smooth mouse spotlight & subtle parallax with RAF
+  /* Resolve the performance tier after hydration. The layout's inline script already set
+     `data-perf` before first paint from the same static signals; this effect is the
+     post-hydration authority. It reapplies idempotently (Strict Mode's dev remount resets
+     <html> attributes it does not manage -- see preventing-flash-before-hydration in the
+     Next docs), honours a forced choice over any detection, and then runs the watchdog:
+     if measured frame rate says the full material system is beyond this machine, it
+     escalates to lite once. Escalation only ever goes full -> lite; a device that passes
+     is left on full even if a later moment stutters, because a one-off hitch (a fetch, a
+     dev overlay) must not be able to strip the design mid-session. */
+  useEffect(() => {
+    const root = document.documentElement;
+    const forced = forcedPerfMode();
+    const tier = forced ?? (detectWeakDevice() ? "lite" : "full");
+    root.dataset.perf = tier;
+    if (tier === "lite") return;
+
+    /* Measure real frames, not wall-clock: intervals longer than 250ms are tab-hidden or
+       debugger pauses, not slow frames, and counting them would falsely condemn a fast,
+       backgrounded device. Sampling starts 1.5s in so hydration and first-paint jank --
+       which every app pays once -- cannot poison the average. */
+    let rafId = 0;
+    let startDelay: ReturnType<typeof setTimeout> | null = null;
+    let lastTimestamp = 0;
+    let countedFrames = 0;
+    let elapsedMs = 0;
+
+    const evaluate = () => {
+      const fps = (countedFrames * 1000) / elapsedMs;
+      if (fps < 34) {
+        // The static signals vouched for this device; reality outvoted them.
+        root.dataset.perf = "lite";
+      }
+    };
+
+    const sample = (timestamp: number) => {
+      if (lastTimestamp > 0) {
+        const delta = timestamp - lastTimestamp;
+        if (delta < 250) {
+          elapsedMs += delta;
+          countedFrames += 1;
+        }
+      }
+      lastTimestamp = timestamp;
+      if (countedFrames >= 80) {
+        evaluate();
+        return;
+      }
+      rafId = requestAnimationFrame(sample);
+    };
+
+    startDelay = setTimeout(() => {
+      rafId = requestAnimationFrame(sample);
+    }, 1500);
+
+    return () => {
+      if (startDelay !== null) clearTimeout(startDelay);
+      cancelAnimationFrame(rafId);
+    };
+  }, []);
+
+  /* Smooth mouse spotlight with RAF. The loop is demand-driven: it starts when the pointer
+     moves and stops itself once the spotlight has caught up. The earlier version scheduled
+     a frame unconditionally forever -- 60 main-thread wakeups per second for a spotlight
+     that was already sitting still -- which is exactly the kind of invisible tax that makes
+     every scroll and keystroke on an Atlas page feel heavier than it is. */
   useEffect(() => {
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReduced) return;
@@ -81,37 +146,46 @@ export function StudyBackground({
        afford it. */
     if (!window.matchMedia("(pointer: fine)").matches) return;
 
-    const handlePointerMove = (e: PointerEvent) => {
-      const x = (e.clientX / window.innerWidth) * 100;
-      const y = (e.clientY / window.innerHeight) * 100;
-      targetPosRef.current = { x, y };
-    };
+    const container = containerRef.current;
 
-    const updateLoop = () => {
+    const tick = () => {
+      rafIdRef.current = null;
+      /* rAF does not fire in hidden tabs anyway; bailing here means a move that arrives
+         just before tab-switch resumes cleanly on the next real pointer event instead of
+         snapping the spotlight across the page. */
+      if (document.hidden) return;
+
       const current = mousePosRef.current;
       const target = targetPosRef.current;
-      const dx = target.x - current.x;
-      const dy = target.y - current.y;
+      current.x += (target.x - current.x) * 0.08;
+      current.y += (target.y - current.y) * 0.08;
 
-      if (Math.abs(dx) > 0.05 || Math.abs(dy) > 0.05) {
-        current.x += dx * 0.08;
-        current.y += dy * 0.08;
-
-        if (containerRef.current) {
-          containerRef.current.style.setProperty("--mouse-x", `${current.x.toFixed(2)}%`);
-          containerRef.current.style.setProperty("--mouse-y", `${current.y.toFixed(2)}%`);
-        }
+      if (container) {
+        container.style.setProperty("--mouse-x", `${current.x.toFixed(2)}%`);
+        container.style.setProperty("--mouse-y", `${current.y.toFixed(2)}%`);
       }
 
-      rafIdRef.current = requestAnimationFrame(updateLoop);
+      /* Still visibly far from the pointer? Keep easing. Otherwise let the loop die --
+         the next pointermove restarts it. */
+      if (Math.abs(target.x - current.x) > 0.05 || Math.abs(target.y - current.y) > 0.05) {
+        rafIdRef.current = requestAnimationFrame(tick);
+      }
+    };
+
+    const handlePointerMove = (e: PointerEvent) => {
+      targetPosRef.current = {
+        x: (e.clientX / window.innerWidth) * 100,
+        y: (e.clientY / window.innerHeight) * 100,
+      };
+      if (rafIdRef.current === null) {
+        rafIdRef.current = requestAnimationFrame(tick);
+      }
     };
 
     window.addEventListener("pointermove", handlePointerMove, { passive: true });
-    rafIdRef.current = requestAnimationFrame(updateLoop);
-
     return () => {
       window.removeEventListener("pointermove", handlePointerMove);
-      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
+      if (rafIdRef.current !== null) cancelAnimationFrame(rafIdRef.current);
     };
   }, []);
 
@@ -133,11 +207,11 @@ export function StudyBackground({
       <div className="ambient-texture-grid" />
 
       {atlas ? (
-        /* Atlas: an aurora mesh. Three blurred gradient orbs on long, offset drift loops --
-           pure CSS, so it keeps running off the main thread while the app hydrates and
-           fetches. The spotlight reads --mouse-x/y as a gradient POSITION on this element
-           rather than as a transform on the orbs: driving a child's transform from a parent
-           custom property restyles every child on every frame. */
+        /* Atlas: an aurora mesh. Three soft gradient orbs on long, offset drift loops --
+            pure CSS, so it keeps running off the main thread while the app hydrates and
+            fetches. The spotlight reads --mouse-x/y as a gradient POSITION on this element
+            rather than as a transform on the orbs: driving a child's transform from a parent
+            custom property restyles every child on every frame. */
         <div className="ambient-aurora-layer">
           <div className="ambient-aurora-orb ambient-aurora-orb-1" />
           <div className="ambient-aurora-orb ambient-aurora-orb-2" />

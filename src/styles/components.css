@@ -9582,10 +9582,10 @@
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-  /* The orbs are wider than the viewport and blurred well past their own bounds. `paint`
-     containment clips that overflow to this box and, more importantly, tells the browser
-     nothing inside can affect layout outside it -- so the drift never invalidates the
-     app's layout. */
+  /* The orbs are wider than the viewport, with falloffs that keep fading past their own
+      bounds. `paint` containment clips that overflow to this box and, more importantly,
+      tells the browser nothing inside can affect layout outside it -- so the drift never
+      invalidates the app's layout. */
   contain: paint;
 }
 
@@ -9595,10 +9595,17 @@
   /* Promoted once, up front. Without this the first animation frame is what triggers layer
      creation, which is a visible hitch at exactly the moment the page is settling. */
   will-change: transform;
+  /* No `filter: blur()` on any orb, deliberately, even though the original design blurred
+     them by 60-80px. A gaussian blur of a 55-70vmax element is one of the most expensive
+     raster operations in CSS -- and these layers animate forever, so the cost is paid every
+     frame for the lifetime of the page. A radial gradient with eased stops reaches the same
+     soft falloff for free: the smoothness lives in the stop positions above, not in a
+     post-pass over an oversized texture. If an orb ever reads as too crisp, soften it by
+     moving its middle stops inward -- never by reaching for the filter again. */
 }
 
-/* Orb 1 -- the anchor. Primary-tinted, top-left, the only one that scales: `scale` on a
-   blurred layer can force a re-rasterisation at the new size, so it is spent once here and
+/* Orb 1 -- the anchor. Primary-tinted, top-left, the only one that scales: `scale` on an
+   oversized layer can force a re-rasterisation at the new size, so it is spent once here and
    the other two stay translate-only. */
 .ambient-aurora-orb-1 {
   top: -20%;
@@ -9608,9 +9615,11 @@
   background: radial-gradient(
     circle at center,
     color-mix(in srgb, var(--primary) var(--aurora-orb-alpha), transparent) 0%,
-    transparent 68%
+    color-mix(in srgb, var(--primary) calc(var(--aurora-orb-alpha) * 0.72), transparent) 34%,
+    color-mix(in srgb, var(--primary) calc(var(--aurora-orb-alpha) * 0.32), transparent) 52%,
+    color-mix(in srgb, var(--primary) calc(var(--aurora-orb-alpha) * 0.08), transparent) 62%,
+    transparent 72%
   );
-  filter: blur(60px);
   animation: aurora-drift-1 var(--aurora-duration) var(--ease-in-out) infinite alternate;
 }
 
@@ -9624,9 +9633,11 @@
   background: radial-gradient(
     circle at center,
     color-mix(in srgb, var(--accent) var(--aurora-orb-alpha), transparent) 0%,
-    transparent 66%
+    color-mix(in srgb, var(--accent) calc(var(--aurora-orb-alpha) * 0.72), transparent) 33%,
+    color-mix(in srgb, var(--accent) calc(var(--aurora-orb-alpha) * 0.3), transparent) 50%,
+    color-mix(in srgb, var(--accent) calc(var(--aurora-orb-alpha) * 0.07), transparent) 60%,
+    transparent 70%
   );
-  filter: blur(70px);
   animation: aurora-drift-2 calc(var(--aurora-duration) * 1.7) var(--ease-in-out) infinite alternate;
 }
 
@@ -9641,9 +9652,11 @@
   background: radial-gradient(
     circle at center,
     color-mix(in srgb, var(--secondary) calc(var(--aurora-orb-alpha) * 0.45), transparent) 0%,
-    transparent 62%
+    color-mix(in srgb, var(--secondary) calc(var(--aurora-orb-alpha) * 0.32), transparent) 30%,
+    color-mix(in srgb, var(--secondary) calc(var(--aurora-orb-alpha) * 0.14), transparent) 47%,
+    color-mix(in srgb, var(--secondary) calc(var(--aurora-orb-alpha) * 0.03), transparent) 56%,
+    transparent 66%
   );
-  filter: blur(80px);
   animation: aurora-drift-3 calc(var(--aurora-duration) * 2.3) var(--ease-in-out) infinite alternate;
 }
 
@@ -9692,7 +9705,8 @@
 
 /* Translate-dominant on purpose: percentage translations on a composited layer are a matrix
    change the compositor applies to an already-rasterised texture, so these cost effectively
-   nothing per frame despite the 60-80px blurs. */
+   nothing per frame -- and with the blur filters gone (see .ambient-aurora-orb), the
+   textures being moved are cheap gradients rather than blurred giants. */
 @keyframes aurora-drift-1 {
   from {
     transform: translate3d(-6%, -4%, 0) scale(1);
@@ -9735,6 +9749,41 @@
   .ambient-aurora-spotlight {
     display: none;
   }
+}
+
+/* ================= Lite performance mode (html[data-perf="lite"]) =================
+   The escape hatch when the full material system costs more than the device can render.
+   Who sets it: the pre-paint script in layout.tsx (weak-hardware signals) or the runtime
+   frame-rate watchdog in study-background.tsx; what it means is defined entirely by this
+   block and the token swap in tokens.css. Three moves, in descending order of payoff:
+
+   1. The drift stops. With a static backdrop, every glass sheet's blur is computed once
+      instead of continuously -- that alone turns Atlas from a 60fps GPU treadmill into an
+      ordinary static page.
+   2. Every backdrop-filter goes away. The token swap already made the fills opaque, so the
+      blur was doing no visible work; `!important` on a universal selector is normally a
+      smell, but here it is exactly the point -- one rule that out-ranks all ~45 use sites,
+      including inline styles, instead of a second hand-maintained list that will drift.
+   3. The spotlight goes with the drift. A blend-mode layer repainting across the viewport
+      is motion cost without anything to illuminate.
+
+   The result keeps the palette, the bento rhythm and every surface boundary -- it reads as
+   the same design photographed on a calmer day, not as a degraded fallback. */
+[data-perf="lite"] .ambient-aurora-orb-1,
+[data-perf="lite"] .ambient-aurora-orb-2,
+[data-perf="lite"] .ambient-aurora-orb-3 {
+  animation: none;
+}
+
+[data-perf="lite"] *,
+[data-perf="lite"] *::before,
+[data-perf="lite"] *::after {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+[data-perf="lite"] .ambient-aurora-spotlight {
+  display: none;
 }
 
 /* ================= Brand Mark =================

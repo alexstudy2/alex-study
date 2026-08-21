@@ -122,7 +122,24 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       className={`${jakartaSans.variable} ${jetbrainsMono.variable} ${cairo.variable} ${amiri.variable} ${fraunces.variable}`}
       data-mood={mood}
       data-skin={skin}
+      suppressHydrationWarning
     >
+      {/* Performance tier before first paint. Atlas composites dozens of backdrop-filter
+          sheets over a moving background; on hardware that cannot hold that at frame rate,
+          the very first frame should already be the cheap one instead of restyling the whole
+          page moments after painting. This mirrors forcedPerfMode()/detectWeakDevice() in
+          src/lib/settings/perf-mode.ts (which cannot be imported here: bundled code has not
+          run yet) -- keep the two behaviourally identical. It can only ever ADD "lite";
+          absence of the attribute means full. study-background.tsx re-resolves after
+          hydration and additionally demotes devices whose measured frame rate says the
+          static signals lied. The CSP already allows 'unsafe-inline'. */}
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var f=localStorage.getItem("alex-study-perf");if(f==="lite"){document.documentElement.setAttribute("data-perf","lite");return}if(f==="full")return;var n=navigator,d=n.deviceMemory;if(typeof d==="number"&&d>0&&d<=4){document.documentElement.setAttribute("data-perf","lite");return}if(n.connection&&n.connection.saveData){document.documentElement.setAttribute("data-perf","lite");return}var c=n.hardwareConcurrency||0;if(c>0&&c<=6&&matchMedia("(pointer: coarse)").matches)document.documentElement.setAttribute("data-perf","lite")}catch(e){}})()`,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col relative">
         <StudyBackground initialMood={mood} initialSkin={skin} />
         <Providers messages={messages} session={session} locale={locale}>
