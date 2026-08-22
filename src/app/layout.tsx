@@ -9,6 +9,7 @@ import { skinFromEnum } from "@/lib/settings/study-skin";
 import { Providers } from "@/components/providers";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
+import { recordPageView } from "@/lib/admin/track";
 import "./globals.css";
 
 /* Five families, all self-hosted: next.config.ts sets CSP `font-src 'self' data:`, so a Google
@@ -113,6 +114,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
      Content-Security-Policy header, but this hand-written bootstrap is ours to nonce.
      Undefined when no proxy ran -- then the attribute is simply omitted. */
   const cspNonce = (await headers()).get("x-nonce") ?? undefined;
+  /* Visit analytics: one row per real document navigation, best-effort. */
+  await recordPageView(session?.user?.id);
   /* Rendered onto <html> so the correct palette is in the very first paint. Reading it
      from localStorage after hydration is what caused the flash of the wrong theme. */
   const mood = moodFromEnum(profile?.preference?.studyMood);

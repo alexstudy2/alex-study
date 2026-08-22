@@ -288,6 +288,8 @@ model User {
   accountabilityRecipients  AccountabilityCheck[]        @relation("AccountabilityRecipient")
   studyPlans                StudyPlan[]
   studyPlanSaves            StudyPlanSave[]
+  pageViews                 PageView[]
+  adminAuditLogs            AuditLog[]        @relation("AdminActor")
 
   @@unique([collegeId, academicYear])
 }
@@ -945,6 +947,42 @@ model ServiceUsageLog {
   @@index([service, occurredAt])
   @@index([userId, service, occurredAt])
   @@index([aiJobId, occurredAt])
+}
+
+/* ================= Admin console =================
+   The /admin surface is the one place that intentionally reads across users. Both models
+   here are write-heavy append-only logs; indexes lead with time because every admin query
+   is "recent N" or a date-bucketed chart. */
+
+model PageView {
+  id        String   @id @default(uuid())
+  userId    String?
+  path      String
+  referrer  String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([path, createdAt])
+}
+
+/// Append-only trail of privileged actions taken in /admin.
+/// adminId is SetNull-on-delete deliberately: the accountability trail must survive the
+/// admin, so rows keep their (now-dangling) id rather than vanishing with the account.
+model AuditLog {
+  id           String   @id @default(uuid())
+  adminId      String?
+  action       String
+  targetUserId String?
+  meta         Json?
+  createdAt    DateTime @default(now())
+  admin        User?    @relation("AdminActor", fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([adminId, createdAt])
+  @@index([targetUserId, createdAt])
 }
 
 /// A hand-built study plan from the Plan Forum: a title, a date range, and one sticky note per day.

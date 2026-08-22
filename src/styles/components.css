@@ -9282,7 +9282,16 @@
 .study-ambient-canvas {
   position: fixed;
   inset: 0;
-  z-index: 0;
+  /* Negative, not 0. As a positioned sibling rendered before the app trees, z-index 0 made
+     this canvas paint OVER every non-positioned descendant of <body> (CSS 2.2 Appendix E:
+     in-flow content paints in steps 3-5, positioned z>=0 in step 6). Any surface rendered
+     without an elevating wrapper -- the admin console, the onboarding consent page, shared
+     cards -- came out invisible under it; only glass cards with their own stacking context
+     poked through. A negative index slots the canvas into step 2, behind all content while
+     staying above the body-propagated root background, so no shell ever has to remember to
+     lift itself again (.auth-shell/.app-frame keep their z-index 1; it is simply no longer
+     load-bearing). */
+  z-index: -1;
   pointer-events: none;
   overflow: hidden;
   transition: background-color 0.5s ease;

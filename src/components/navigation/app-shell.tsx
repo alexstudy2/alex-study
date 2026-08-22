@@ -26,6 +26,8 @@ const publicPaths = [
   "/reset-password",
   "/share",
   "/onboarding",
+  // The admin console renders its own full-page chrome; the student shell stays off it.
+  "/admin",
 ];
 
 export function AppShell({
