@@ -269,7 +269,9 @@
   text-transform: none;
 }
 
-.auth-content h2 {
+/* The consent screen (onboarding/privacy) asks its question as an h1 rather than an h2 --
+   it is the page's only heading -- so the card's display-serif rule covers both. */
+.auth-content :is(h1, h2) {
   font-family: var(--font-display-fancy);
   font-size: clamp(1.6rem, 3.5vw, 2.2rem);
   line-height: 1.15;

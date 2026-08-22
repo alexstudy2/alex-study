@@ -47,7 +47,7 @@ export default async function AdminLivePage({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="admin-stack snug">
       <nav className="flex flex-wrap gap-2">
         {tabs.map((t) => (
           <Link

@@ -11,7 +11,7 @@ export default async function AdminUsersPage({
   const { users, total, pages, page: current } = await listUsers({ q, page });
 
   return (
-    <div className="space-y-4">
+    <div className="admin-stack snug">
       <form method="GET" className="flex gap-2">
         <input
           name="q"

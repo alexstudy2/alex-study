@@ -883,6 +883,233 @@ body.mobile-sheet-open {
   }
 }
 
+/* ================= Onboarding Consent =================
+   A standalone page outside both the student frame and the (auth) group. It dresses in the
+   front door's own vocabulary -- the same graph paper as .auth-panel behind one centred
+   .auth-content card -- rather than inventing a second look for a screen most users see
+   exactly once. Everything here is hand-written CSS: Tailwind's margin and heading
+   utilities do not survive this app's unlayered cascade (see base.css). */
+.onboarding-shell {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: clamp(var(--space-4), 5vw, var(--space-8));
+  background-color: var(--surface);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--secondary) 7%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--secondary) 7%, transparent) 1px, transparent 1px);
+  background-size: 30px 30px;
+}
+
+/* The consent copy runs longer than a sign-in form and two full-label buttons share its
+   last row, so the card gets the sign-up wizard's floor rather than the sign-in's. */
+.onboarding-shell .auth-content {
+  width: min(100%, 36rem);
+}
+
+/* The choice row draws the card's own dashed divider, so drop the subtitle's -- otherwise
+   the two sit back to back as a double rule. Three classes because
+   [data-skin="atlas"] .auth-subtitle re-thins this border for the front door and would tie
+   a two-class override on specificity, winning by import order. */
+.onboarding-shell .auth-content .auth-subtitle {
+  padding-bottom: 0;
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
+/* ================= Admin Console =================
+   A standalone surface outside the student frame: the same 78rem canvas as every other
+   page, its own header row and nav pills. All structural spacing and typography here is
+   hand-written -- this app's unlayered cascade (base.css's universal margin reset and
+   heading rules) nullifies Tailwind's margin and heading utilities, so a page that leans
+   on them renders unspaced, with raw serif h2s. Grid/flex/padding utilities still work
+   and are used where they are proven. */
+.admin-shell {
+  width: 100%;
+  max-width: 78rem;
+  min-height: 100dvh;
+  margin-inline: auto;
+  padding: var(--space-6) var(--space-4) var(--space-8);
+}
+
+@media (min-width: 768px) {
+  .admin-shell {
+    padding: var(--space-8) var(--space-8) var(--space-12);
+  }
+}
+
+.admin-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.admin-header .eyebrow {
+  /* The brand label sits above the title on its own row when there is room, but may share
+     the header row on narrow screens without forcing anything to shrink below its words. */
+  flex-basis: 100%;
+  margin: 0;
+}
+
+@media (min-width: 768px) {
+  .admin-header .eyebrow {
+    flex-basis: auto;
+  }
+}
+
+.admin-header h1 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--foreground);
+}
+
+.admin-header-user {
+  margin-inline-start: auto;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.admin-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+
+/* Vertical rhythm between console blocks. `.admin-stack > * + *` rather than per-child
+   margins, so adding a section never means remembering one here too. */
+.admin-stack > * + * {
+  margin-top: var(--space-6);
+}
+
+/* Stack variants: the console's vertical rhythm in three sizes. `.admin-stack` replaces the
+   `space-y-*` utilities, which are nullified by base.css's universal `margin: 0` reset. */
+.admin-stack {
+  --admin-gap: var(--space-6);
+}
+
+.admin-stack.snug {
+  --admin-gap: var(--space-4);
+}
+
+.admin-stack.tight {
+  --admin-gap: var(--space-2);
+}
+
+.admin-stack > * + * {
+  margin-top: var(--admin-gap);
+}
+
+/* Group label over each block of stat cards -- small caps in the muted ink with a dashed
+   underline, the same grouping gesture as .dashboard-card-header. */
+.admin-section-heading {
+  display: block;
+  margin: 0 0 var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 2px dashed var(--line);
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+[dir="rtl"] .admin-section-heading {
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+/* Heading inside a titled .ui-card (a chart, a table, a list): serif like every other
+   panel heading in the app (.analytics-panel h2, .insight-toolbar h2), not a raw utility. */
+.admin-panel-heading {
+  display: block;
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-heading);
+  font-size: var(--text-base);
+  font-weight: 800;
+  line-height: 1.25;
+  color: var(--foreground);
+}
+
+/* The variant that opens a full-bleed (p-0) card directly above its table. */
+.admin-panel-heading.inset {
+  padding: var(--space-4) var(--space-4) 0;
+  margin: 0;
+}
+
+/* --- Stat tiles --- */
+.admin-stat-label {
+  margin: 0;
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+[dir="rtl"] .admin-stat-label {
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.admin-stat-value {
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-3xl);
+  font-weight: 800;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  color: var(--foreground);
+}
+
+.admin-stat-hint {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+/* Page title on a user's detail page -- the header's title without the row context. */
+.admin-page-title {
+  display: block;
+  margin: 0 0 var(--space-1);
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+}
+
+.admin-meta-list {
+  margin-top: var(--space-3);
+}
+
+/* Pushed to the far end of a flex row (audit timestamps, leaderboard hours, danger
+   buttons); `ml-auto` is nullified by the universal reset, so the push is a real class. */
+.admin-row-end {
+  margin-inline-start: auto;
+}
+
+/* Fixed inline gap for siblings inside a wrapping block (the copy button after its code),
+   where an auto-push has nothing to push against. */
+.admin-inline-gap {
+  margin-inline-start: var(--space-2);
+}
+
+/* Label-over-control pair; `space-y-1` would be nullified by the universal reset, so the
+   gap is a grid one. */
+.admin-field {
+  display: grid;
+  gap: var(--space-1);
+}
+
 /* ================= Social & Activity Components ================= */
 .social-shell {
   max-width: 74rem;

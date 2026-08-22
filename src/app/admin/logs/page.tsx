@@ -23,7 +23,7 @@ export default async function AdminLogsPage({
   const sp = await searchParams;
   const type = (tabs.some((t) => t.key === sp.type) ? sp.type : "audit") as Tab;
   return (
-    <div className="space-y-4">
+    <div className="admin-stack snug">
       <nav className="flex flex-wrap gap-2">
         {tabs.map((t) => (
           <Link

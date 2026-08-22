@@ -22,16 +22,16 @@ export default async function AdminUserDetailPage({
     detail;
 
   return (
-    <div className="space-y-6">
+    <div className="admin-stack">
       <Link href="/admin/users" className="text-sm underline">
         ← All users
       </Link>
 
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="ui-card p-4">
-          <h1 className="text-xl font-extrabold">{user.name}</h1>
+          <h1 className="admin-page-title">{user.name}</h1>
           <p className="font-mono text-xs text-muted">{user.collegeId} · Year {user.academicYear}</p>
-          <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm md:grid-cols-3">
+          <dl className="admin-meta-list grid grid-cols-2 gap-x-4 gap-y-1 text-sm md:grid-cols-3">
             <div><dt className="inline font-bold">Role: </dt><dd className="inline">{user.role}</dd></div>
             <div><dt className="inline font-bold">Email: </dt><dd className="inline">{user.email ?? "—"}</dd></div>
             <div><dt className="inline font-bold">Locale: </dt><dd className="inline">{user.preference?.locale ?? "EN"}</dd></div>
@@ -51,10 +51,10 @@ export default async function AdminUserDetailPage({
 
       {activeTimers.length > 0 ? (
         <section className="ui-card p-4">
-          <h2 className="mb-2 text-sm font-extrabold uppercase tracking-wide text-muted">
+          <h2 className="admin-panel-heading">
             Running right now
           </h2>
-          <ul className="space-y-1 text-sm">
+          <ul className="admin-stack tight text-sm">
             {activeTimers.map((t) => (
               <li key={t.id}>
                 ⏱️ {t.status} · {t.elapsedMinutes}/{t.plannedMinutes} min
@@ -67,7 +67,7 @@ export default async function AdminUserDetailPage({
       ) : null}
 
       <section className="ui-card overflow-x-auto p-0">
-        <h2 className="p-4 pb-0 text-sm font-extrabold uppercase tracking-wide text-muted">
+        <h2 className="admin-panel-heading inset">
           Tasks (latest {recentTasks.length})
         </h2>
         <table className="w-full text-sm">
@@ -96,7 +96,7 @@ export default async function AdminUserDetailPage({
       </section>
 
       <section className="ui-card overflow-x-auto p-0">
-        <h2 className="p-4 pb-0 text-sm font-extrabold uppercase tracking-wide text-muted">
+        <h2 className="admin-panel-heading inset">
           Study sessions (latest {recentSessions.length})
         </h2>
         <table className="w-full text-sm">
@@ -127,8 +127,8 @@ export default async function AdminUserDetailPage({
 
       <div className="grid gap-6 md:grid-cols-2">
         <section className="ui-card p-4">
-          <h2 className="mb-2 text-sm font-extrabold uppercase tracking-wide text-muted">Recent AI jobs</h2>
-          <ul className="space-y-1 text-sm">
+          <h2 className="admin-panel-heading">Recent AI jobs</h2>
+          <ul className="admin-stack tight text-sm">
             {aiJobs.map((j) => (
               <li key={j.id}>
                 <span className="font-bold">{j.type}</span> · {j.status}
@@ -139,10 +139,10 @@ export default async function AdminUserDetailPage({
           </ul>
         </section>
         <section className="ui-card p-4">
-          <h2 className="mb-2 text-sm font-extrabold uppercase tracking-wide text-muted">
+          <h2 className="admin-panel-heading">
             Manual reset requests & admin trail
           </h2>
-          <ul className="space-y-1 text-sm">
+          <ul className="admin-stack tight text-sm">
             {manualResets.map((r) => (
               <li key={r.id}>
                 🆘 {r.status} · {new Date(r.createdAt).toLocaleString("en-GB")} · {r.details.slice(0, 60)}…

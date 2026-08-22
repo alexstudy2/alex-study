@@ -90,12 +90,10 @@ export function AdminUserActions({ userId, role, selfUserId }: Props) {
   const field =
     "doodle-input w-full";
   return (
-    <div className="ui-card space-y-4 p-4">
-      <h2 className="text-sm font-extrabold uppercase tracking-wide text-muted">
-        Admin controls
-      </h2>
+    <div className="ui-card admin-stack snug p-4">
+      <h2 className="admin-panel-heading">Admin controls</h2>
 
-      <label className="block space-y-1">
+      <label className="admin-field">
         <span className="field-label">Your admin password (re-authentication)</span>
         <input
           type="password"
@@ -106,8 +104,8 @@ export function AdminUserActions({ userId, role, selfUserId }: Props) {
         />
       </label>
 
-      <div className="space-y-2 rounded border border-dashed p-3">
-        <p className="text-xs font-bold uppercase text-muted">Replace this user&apos;s password</p>
+      <div className="admin-stack tight rounded border border-dashed p-3">
+        <p className="admin-stat-label">Replace this user&apos;s password</p>
         <input
           type="text"
           className={field}
@@ -133,16 +131,18 @@ export function AdminUserActions({ userId, role, selfUserId }: Props) {
           </button>
         </div>
         {generated ? (
-          <div className="rounded bg-[var(--primary-subtle)] p-2">
-            <p className="text-xs font-bold uppercase text-muted">Shown once — copy now</p>
+          <div className="admin-stack tight rounded bg-[var(--primary-subtle)] p-2">
+            <p className="admin-stat-label">Shown once — copy now</p>
             <code className="select-all break-all font-mono font-bold">{generated}</code>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm ml-2"
-              onClick={() => navigator.clipboard?.writeText(generated)}
-            >
-              Copy
-            </button>
+            <div>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm admin-inline-gap"
+                onClick={() => navigator.clipboard?.writeText(generated)}
+              >
+                Copy
+              </button>
+            </div>
           </div>
         ) : (
           <p className="text-xs text-muted">The user is logged out everywhere; reset tokens are cleared.</p>
@@ -150,7 +150,7 @@ export function AdminUserActions({ userId, role, selfUserId }: Props) {
       </div>
 
       <div className="flex flex-wrap items-end gap-2">
-        <label className="space-y-1">
+        <label className="admin-field">
           <span className="field-label">Change role</span>
           <select className="doodle-select" value={nextRole} onChange={(e) => setNextRole(e.target.value)}>
             <option value="ADMIN">ADMIN</option>
@@ -160,7 +160,7 @@ export function AdminUserActions({ userId, role, selfUserId }: Props) {
         <button type="button" disabled={busy || nextRole === role} onClick={changeRole} className="btn btn-secondary btn-sm">
           Apply role
         </button>
-        <button type="button" disabled={busy} onClick={forceLogout} className="btn btn-danger btn-sm ml-auto">
+        <button type="button" disabled={busy} onClick={forceLogout} className="btn btn-danger btn-sm admin-row-end">
           Force logout everywhere
         </button>
       </div>
