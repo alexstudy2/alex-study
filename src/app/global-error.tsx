@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { captureError } from "@/lib/observability/logger";
 
 export default function GlobalError({
+  error,
   reset,
 }: {
   error: Error & { digest?: string };
@@ -10,11 +12,16 @@ export default function GlobalError({
 }) {
   const [lang, setLang] = useState("en");
 
+  /* Report instead of swallowing (audit M5): client-side captureError logs to the
+     browser console with scope + digest, which is also what a future client-side
+     reporter would attach to. Server errors flow through captureError at their
+     throw sites and reach structured stderr. */
   useEffect(() => {
+    captureError("global-error", error, { digest: error.digest });
     if (document.documentElement.lang === "ar" || window.location.pathname.startsWith("/ar")) {
       setTimeout(() => setLang("ar"), 0);
     }
-  }, []);
+  }, [error]);
 
   const isAr = lang === "ar";
 

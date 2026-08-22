@@ -2,6 +2,7 @@ import { calendarEvents } from "@/lib/calendar/queries";
 import { calendarWindow, type CalendarView } from "@/lib/calendar/dates";
 import { planCalendarEvents, visiblePlan } from "@/lib/plan-forum/queries";
 import { apiUser, invalid, notFound, unauthorized } from "@/lib/tasks/response";
+import { enforceRateLimit, readRateLimit } from "@/lib/http/rate-limit";
 
 /**
  * The grid's events for one window.
@@ -14,6 +15,8 @@ import { apiUser, invalid, notFound, unauthorized } from "@/lib/tasks/response";
 export async function GET(request: Request) {
   const user = await apiUser();
   if (!user) return unauthorized();
+  const limited = await enforceRateLimit(request, readRateLimit, user.id);
+  if (limited) return limited;
   const params = new URL(request.url).searchParams;
   const view = params.get("view") ?? "month";
   const anchor = params.get("anchor") ? new Date(params.get("anchor")!) : new Date();

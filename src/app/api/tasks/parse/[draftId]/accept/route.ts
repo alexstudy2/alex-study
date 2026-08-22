@@ -12,6 +12,24 @@ export async function POST(request: Request, ctx: { params: Promise<{ draftId: s
     where: { id: draftId, userId: user.id, status: "PENDING", expiresAt: { gt: new Date() } },
   });
   if (!draft) return notFound();
+  /* Same ownership gate as POST /api/tasks: the edit payload can point subjectId or
+     parentTaskId at another student's rows, and taskInclude would then render their
+     Subject wholesale in the response. The draft's own stored ids were validated when
+     the draft was created; only caller-supplied overrides need re-checking here. */
+  if (
+    edits.data.subjectId &&
+    !(await prisma.subject.findFirst({
+      where: { id: edits.data.subjectId, userId: user.id, archivedAt: null },
+    }))
+  )
+    return invalid({ subjectId: ["Unknown subject"] });
+  if (
+    edits.data.parentTaskId &&
+    !(await prisma.task.findFirst({
+      where: { id: edits.data.parentTaskId, userId: user.id, parentTaskId: null, deletedAt: null },
+    }))
+  )
+    return invalid({ parentTaskId: ["Unknown parent task"] });
   const task = await prisma.$transaction(async (tx) => {
     const max = await tx.task.aggregate({
       where: { userId: user.id, parentTaskId: null, deletedAt: null },

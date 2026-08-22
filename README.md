@@ -31,7 +31,7 @@
 | **Framework** | Next.js 16 (App Router), React 19, TypeScript |
 | **Styling** | Tailwind CSS v4, Vanilla CSS Design Tokens, Cinzel Serif Typography |
 | **Database & ORM** | Supabase (PostgreSQL), Prisma ORM 6.19 |
-| **Authentication** | Auth.js (Credentials Provider with College ID + Academic Year) |
+| **Authentication** | next-auth v4 (Credentials Provider with College ID + Academic Year) |
 | **State Management** | Zustand (Client), TanStack Query (Server) |
 | **AI Integration** | Groq AI (OpenAI-compatible SDK) |
 | **Rate Limiting & Locking**| Upstash Redis (REST API) |
@@ -81,12 +81,16 @@ CRON_SECRET="..."
 ```
 
 ### 4. Database Setup
-Push the schema to your database and seed initial test data:
+Apply the migration history (never `db push` against a shared database -- the migration
+files contain raw-SQL partial unique indexes that `push` cannot see and would silently
+drop, and push/deploy produce different constraint sets; see docs/OPERATIONS.md):
 ```bash
-npx prisma db push
+npx prisma migrate deploy
 npx prisma generate
 npm run db:seed
 ```
+`npx prisma db push` is acceptable only for a throwaway local sandbox that will never be
+migrated.
 
 ### 5. Run Development Server
 ```bash
@@ -120,8 +124,27 @@ npm test
 ## 🛡️ Privacy & Security
 
 - **Compound Auth Key**: Authentication uses `(collegeId, academicYear)` compound unique constraints.
-- **Privacy Controls**: Leaderboard visibility is opt-out, and college IDs are never exposed publicly.
+- **Privacy Controls**: Leaderboard visibility is opt-out, and college IDs are findable only by exact match in user search.
 - **Server-Only AI Calls**: AI interactions stay strictly server-side, validated with Zod, and auto-purged after 30 days.
+
+---
+
+## 🚀 Production Deployment
+
+1. **Database**: apply migrations against the direct (session-mode) connection with
+   `npx prisma migrate deploy` -- see docs/OPERATIONS.md. Never `db push` a shared
+   environment (raw-SQL partial indexes are invisible to push and would be dropped).
+2. **Vercel project**: import the repo; region and function limits come from
+   `vercel.json`. Node >= 20 is enforced via the `engines` field.
+3. **Required environment variables** (full annotated list in `.env.example`):
+   `DATABASE_URL`, `NEXTAUTH_SECRET` (32+ chars), `CRON_SECRET` (32+ chars), and either
+   `NEXTAUTH_URL` or `AUTH_TRUST_HOST=true`. Optional but warned-at-boot when absent:
+   Upstash (shared rate limiting), SMTP (email delivery), Groq (AI features).
+4. **GitHub Secrets**: repository secrets `APP_URL` and `CRON_SECRET` power the scheduled
+   cron workflow (`.github/workflows/cron.yml`) that calls `/api/internal/jobs/*`.
+5. **Post-deploy smoke**: `GET /api/health` must return `{"ok":true}`; sign-in sets a
+   `__Secure-` prefixed cookie; completing a password reset invalidates older sessions
+   immediately; the response CSP carries a per-request nonce.
 
 ---
 

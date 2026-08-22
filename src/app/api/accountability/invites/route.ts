@@ -4,9 +4,12 @@ import { canonicalPair } from "@/lib/social/pairs";
 import { accountabilityPairInclude } from "@/lib/social/queries";
 import { accountabilityInviteSchema } from "@/lib/social/validation";
 import { apiUser, invalid, notFound, unauthorized } from "@/lib/tasks/response";
+import { enforceRateLimit, inviteRateLimit } from "@/lib/http/rate-limit";
 export async function POST(request: Request) {
   const user = await apiUser();
   if (!user) return unauthorized();
+  const limited = await enforceRateLimit(request, inviteRateLimit, user.id);
+  if (limited) return limited;
   const parsed = accountabilityInviteSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return invalid();
   const friendship = await prisma.friendship.findFirst({

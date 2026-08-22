@@ -34,7 +34,20 @@ export async function PATCH(request: Request) {
   if (!user) return unauthorized();
   const parsed = profileSettingsSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return invalid(parsed.error.flatten().fieldErrors);
-  const { locale, email, ...profile } = parsed.data;
+  const { locale, email, currentPassword, ...profile } = parsed.data;
+  /* Email changes re-authenticate (audit L17 interim): the account's email is where
+     password-recovery mail goes, so moving it must cost the same proof as deleting the
+     account. Unchanged or absent emails pass without a password. */
+  if (email !== undefined) {
+    const record = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { email: true, passwordHash: true },
+    });
+    const changingEmail = (email || null) !== (record?.email ?? null);
+    if (changingEmail && (!currentPassword || !record || !(await compare(currentPassword, record.passwordHash)))) {
+      return Response.json({ error: "invalid_password" }, { status: 403 });
+    }
+  }
   try {
     const updated = await prisma.$transaction(async (tx) => {
       const account = await tx.user.update({
@@ -84,6 +97,15 @@ export async function DELETE(request: Request) {
   if (!record || !(await compare(parsed.data.password, record.passwordHash))) {
     return Response.json({ error: "invalid_password" }, { status: 403 });
   }
-  await prisma.user.delete({ where: { id: user.id } });
+  /* Residue scrub (audit M11): usage rows survive deletion by design (SetNull) for
+     aggregate budgeting, but their freeform metadata JSON can carry the departing user's
+     identity. Null it in the same transaction that deletes the account. */
+  await prisma.$transaction([
+    prisma.serviceUsageLog.updateMany({
+      where: { userId: user.id },
+      data: { metadata: Prisma.DbNull },
+    }),
+    prisma.user.delete({ where: { id: user.id } }),
+  ]);
   return Response.json({ deleted: true });
 }

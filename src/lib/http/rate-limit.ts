@@ -24,12 +24,36 @@ function headerValue(
   return Array.isArray(value) ? value[0] : value;
 }
 
+/**
+ * Identity for pre-auth rate limits.
+ *
+ * History (audit M3): this used to take the FIRST x-forwarded-for entry, which is the
+ * one header an attacker fully controls -- any client can ship `X-Forwarded-For:
+ * <random>` and defeat every IP budget by rotation. Proxies APPEND the address they saw,
+ * so the truthful client address sits at the END of the chain, one hop back per trusted
+ * proxy layer (TRUSTED_PROXY_COUNT, default 1 -- the usual single edge proxy / Vercel
+ * edge). Platform headers remain as fallbacks for chains we cannot reason about.
+ *
+ * Residual risk, documented rather than hidden: on a deployment with NO proxy at all, a
+ * lone spoofed XFF entry is indistinguishable from an honest one -- nothing in the HTTP
+ * contract marks provenance. Set TRUSTED_PROXY_COUNT to match the actual proxy depth.
+ */
 export function requestIdentifier(
   headers: Headers | Record<string, string | string[] | undefined>,
 ) {
-  const forwarded = headerValue(headers, "x-forwarded-for")?.split(",")[0]?.trim();
+  const forwarded = headerValue(headers, "x-forwarded-for");
+  if (forwarded) {
+    const hops = forwarded
+      .split(",")
+      .map((hop) => hop.trim())
+      .filter(Boolean);
+    if (hops.length > 0) {
+      const parsed = Number.parseInt(process.env.TRUSTED_PROXY_COUNT ?? "1", 10);
+      const trusted = Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+      return hops[Math.max(0, hops.length - trusted)];
+    }
+  }
   return (
-    forwarded ||
     headerValue(headers, "cf-connecting-ip") ||
     headerValue(headers, "x-real-ip") ||
     "anonymous"
@@ -132,10 +156,42 @@ export const recoveryRateLimit: RateLimitPolicy = {
   limit: 5,
   windowSeconds: 60 * 60,
 };
+
+/**
+ * Timing-uniformity aid for account-recovery miss paths (audit L3): an unknown college ID
+ * currently answers instantly while a known one pays DB-write + SMTP latency, so response
+ * TIME leaks existence. Call this before the generic success response on miss branches --
+ * it cannot make the paths identical, but it removes the loudest signal.
+ */
+export async function recoveryMissDelay() {
+  const ms = 150 + Math.random() * 250;
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
 export const searchRateLimit: RateLimitPolicy = {
   name: "user-search",
   limit: 60,
   windowSeconds: 60,
+};
+/* Whole-collection reads (analytics windows, whole-college leaderboard scans, calendar,
+   insights). Generous for real navigation -- a dashboard load is a handful of calls --
+   but bounded so scripted scraping pays per request instead of riding free (audit L5). */
+export const readRateLimit: RateLimitPolicy = {
+  name: "reads",
+  limit: 60,
+  windowSeconds: 60,
+};
+/* Lobby chat is the one unbounded write-per-member surface; 20/min keeps it human. */
+export const chatRateLimit: RateLimitPolicy = {
+  name: "lobby-chat",
+  limit: 20,
+  windowSeconds: 60,
+};
+/* Every send here triggers an outbound email or a peer notification -- challenge invites,
+   friend requests, accountability invites (audit L5's email-bomb channel). */
+export const inviteRateLimit: RateLimitPolicy = {
+  name: "invites",
+  limit: 10,
+  windowSeconds: 60 * 60,
 };
 export const generationRateLimit: RateLimitPolicy = {
   name: "generation",

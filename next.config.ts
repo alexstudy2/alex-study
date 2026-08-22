@@ -3,20 +3,11 @@ import createNextIntlPlugin from "next-intl/plugin";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 const isProduction = process.env.NODE_ENV === "production";
-const contentSecurityPolicy = [
-  "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isProduction ? "" : " 'unsafe-eval'"}`,
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
-  "font-src 'self' data:",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-  "worker-src 'self' blob:",
-  ...(isProduction ? ["upgrade-insecure-requests"] : []),
-].join("; ");
+/* NOTE: the Content-Security-Policy header is intentionally NOT set here. It moved to
+   src/proxy.ts (audit M1), which stamps a per-request nonce that Next.js applies to its
+   scripts -- something static config cannot do -- and browsers INTERSECT duplicate CSP
+   headers, so a policy here would silently cancel the nonce one. Do not re-add the
+   header without deleting it from the proxy first. */
 
 const nextConfig: NextConfig = {
   async headers() {
@@ -24,7 +15,6 @@ const nextConfig: NextConfig = {
       {
         source: "/(.*)",
         headers: [
-          { key: "Content-Security-Policy", value: contentSecurityPolicy },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

@@ -175,11 +175,14 @@ export function SettingsWorkspace({ initial, locale }: { initial: Initial; local
     setBusy(true);
     setStatus("");
     const values = Object.fromEntries(new FormData(event.currentTarget));
+    /* Only send the re-auth password when provided -- an empty string would fail the
+       server schema's min(1), and unchanged emails don't need it. */
     const payload = {
       name: values.name,
       academicYear: Number(values.academicYear),
       email: values.email,
       locale: values.locale,
+      ...(values.currentPassword ? { currentPassword: values.currentPassword } : {}),
     };
     const response = await fetch("/api/me", {
       method: "PATCH",
@@ -188,6 +191,14 @@ export function SettingsWorkspace({ initial, locale }: { initial: Initial; local
     });
     setBusy(false);
     if (!response.ok) {
+      if (response.status === 403) {
+        setStatus(
+          ar
+            ? "كلمة المرور الحالية مطلوبة لتغيير البريد الإلكتروني."
+            : "Your current password is required to change the recovery email."
+        );
+        return;
+      }
       setStatus(text.error);
       return;
     }
@@ -440,6 +451,24 @@ export function SettingsWorkspace({ initial, locale }: { initial: Initial; local
                   />
                 </label>
               </div>
+
+              {/* Changing the recovery email now requires re-entering the password
+                  (server-enforced): that address receives password-reset mail, so moving
+                  it must cost the same proof as deleting the account. */}
+              <label className="doodle-form-field">
+                <span className="field-label">
+                  {ar
+                    ? "كلمة المرور الحالية — مطلوبة فقط عند تغيير البريد"
+                    : "Current Password — only needed when changing email"}
+                </span>
+                <input
+                  name="currentPassword"
+                  type="password"
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                  className="doodle-input"
+                />
+              </label>
 
               {/* Language Selection */}
               <div className="doodle-form-field">

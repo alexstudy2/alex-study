@@ -1,1 +1,8 @@
-{}
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": ["dub1"],
+  "functions": {
+    "src/app/api/exam-plans/generate/route.ts": { "memory": 1024, "maxDuration": 60 },
+    "src/app/api/exam-plans/extract-topics/route.ts": { "memory": 1024, "maxDuration": 60 }
+  }
+}

@@ -1,7 +1,7 @@
 import { manualResetSchema } from "@/lib/auth/validation";
 import { prisma } from "@/lib/db/prisma";
 import { readRequestBody } from "@/lib/http/body";
-import { enforceRateLimit, recoveryRateLimit } from "@/lib/http/rate-limit";
+import { enforceRateLimit, recoveryMissDelay, recoveryRateLimit } from "@/lib/http/rate-limit";
 
 export async function POST(request: Request) {
   const limited = await enforceRateLimit(request, recoveryRateLimit);
@@ -15,5 +15,9 @@ export async function POST(request: Request) {
     await prisma.manualPasswordResetRequest.create({
       data: { userId: user.id, details: parsed.data.details },
     });
+  else
+    /* Same response either way; this keeps the TIMING from revealing existence too
+       (audit L3). */
+    await recoveryMissDelay();
   return Response.json({ ok: true }, { status: 201 });
 }

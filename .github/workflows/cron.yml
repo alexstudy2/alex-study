@@ -30,47 +30,45 @@ jobs:
           BASE_URL="${APP_URL%/}"
           echo "🚀 Calling Alex Study internal cron endpoints on: $BASE_URL"
 
+          # A failing job used to end in `|| echo "⚠️ warning"` (audit M14): the pipeline
+          # looked green forever while background work silently stopped. Failures are now
+          # collected and the step -- and therefore the workflow -- goes red at the end,
+          # so a dead job page is something an operator actually sees.
+          FAILURES=0
+
+          run_job() {
+            local label="$1"; local path="$2"
+            echo "⚡ Triggering ${label}..."
+            if ! curl -f -s --max-time 120 -X POST "$BASE_URL$path" \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              -H "Content-Type: application/json"; then
+              echo "::error::${label} failed"
+              FAILURES=$((FAILURES + 1))
+            fi
+          }
+
           # 1. Challenges Lifecycle
-          echo "⚡ Triggering Challenges Lifecycle..."
-          curl -f -s -X POST "$BASE_URL/api/internal/jobs/challenges" \
-            -H "Authorization: Bearer $CRON_SECRET" \
-            -H "Content-Type: application/json" || echo "⚠️ Challenges job warning"
+          run_job "Challenges Lifecycle" "/api/internal/jobs/challenges"
 
           # 2. Accountability Reminders
-          echo "⚡ Triggering Accountability Reminders..."
-          curl -f -s -X POST "$BASE_URL/api/internal/jobs/accountability-reminders" \
-            -H "Authorization: Bearer $CRON_SECRET" \
-            -H "Content-Type: application/json" || echo "⚠️ Accountability reminders warning"
+          run_job "Accountability Reminders" "/api/internal/jobs/accountability-reminders"
 
           # 3. Daily Maintenance & Insights (Runs at 20:00 UTC or on Manual Run)
           if [ "${{ github.event.schedule }}" = "0 20 * * *" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "🧹 Triggering AI Cleanup..."
-            curl -f -s -X POST "$BASE_URL/api/internal/jobs/cleanup" \
-              -H "Authorization: Bearer $CRON_SECRET" \
-              -H "Content-Type: application/json" || echo "⚠️ Cleanup job warning"
-
-            echo "🔥 Triggering Burnout Detection..."
-            curl -f -s -X POST "$BASE_URL/api/internal/jobs/burnout-detection" \
-              -H "Authorization: Bearer $CRON_SECRET" \
-              -H "Content-Type: application/json" || echo "⚠️ Burnout detection warning"
-
-            echo "📈 Triggering Performance Detection..."
-            curl -f -s -X POST "$BASE_URL/api/internal/jobs/performance-detection" \
-              -H "Authorization: Bearer $CRON_SECRET" \
-              -H "Content-Type: application/json" || echo "⚠️ Performance detection warning"
-
-            echo "✨ Triggering AI Recaps..."
-            curl -f -s -X POST "$BASE_URL/api/internal/jobs/ai-recaps" \
-              -H "Authorization: Bearer $CRON_SECRET" \
-              -H "Content-Type: application/json" || echo "⚠️ AI recaps warning"
+            run_job "AI Cleanup" "/api/internal/jobs/cleanup"
+            run_job "Burnout Detection" "/api/internal/jobs/burnout-detection"
+            run_job "Performance Detection" "/api/internal/jobs/performance-detection"
+            run_job "AI Recaps" "/api/internal/jobs/ai-recaps"
           fi
 
           # 4. Weekly Leaderboards (Sunday 23:00 UTC or Manual Run)
           if [ "${{ github.event.schedule }}" = "0 23 * * 0" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "🏆 Triggering Weekly Leaderboards Calculation..."
-            curl -f -s -X POST "$BASE_URL/api/internal/jobs/weekly-leaderboards" \
-              -H "Authorization: Bearer $CRON_SECRET" \
-              -H "Content-Type: application/json" || echo "⚠️ Weekly leaderboards warning"
+            run_job "Weekly Leaderboards Calculation" "/api/internal/jobs/weekly-leaderboards"
+          fi
+
+          if [ "$FAILURES" -gt 0 ]; then
+            echo "::error::${FAILURES} scheduled job(s) failed."
+            exit 1
           fi
 
           echo "✅ Scheduled tasks finished successfully!"

@@ -5,6 +5,7 @@ import { canonicalPair } from "@/lib/social/pairs";
 import { friendshipInclude } from "@/lib/social/queries";
 import { friendRequestSchema } from "@/lib/social/validation";
 import { apiUser, invalid, unauthorized } from "@/lib/tasks/response";
+import { enforceRateLimit, inviteRateLimit } from "@/lib/http/rate-limit";
 
 export async function GET() {
   const user = await apiUser();
@@ -20,6 +21,8 @@ export async function GET() {
 export async function POST(request: Request) {
   const user = await apiUser();
   if (!user) return unauthorized();
+  const limited = await enforceRateLimit(request, inviteRateLimit, user.id);
+  if (limited) return limited;
   const parsed = friendRequestSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success || parsed.data.userId === user.id) return invalid();
   const target = await prisma.user.findUnique({

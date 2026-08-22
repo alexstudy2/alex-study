@@ -239,6 +239,10 @@ model User {
   academicYear              Int
   email                     String?                      @unique
   passwordHash              String
+  /* Server-side session revocation. Stamped into every JWT at sign-in and re-checked
+     against this column by apiUser(); bumping it (password reset) instantly invalidates
+     every outstanding cookie. See REMEDIATION_PLAN.md T1.4. */
+  sessionVersion            Int                          @default(0)
   imageUrl                  String?
   timezone                  String                       @default("Africa/Cairo")
   weekStartsOn              Int                          @default(0)
@@ -271,7 +275,6 @@ model User {
   aiJobs                    AIJob[]
   examPlans                 ExamPlan[]
   serviceUsageLogs          ServiceUsageLog[]
-  dailyMetrics              DailyUserMetric[]
   taskDrafts                TaskDraft[]
   timerRuns                 TimerRun[]
   hostedTimerRuns           TimerRun[]                   @relation("TimerHost")
@@ -342,6 +345,8 @@ model PasswordResetToken {
   usedAt    DateTime?
   createdAt DateTime  @default(now())
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
 }
 
 model ManualPasswordResetRequest {
@@ -408,6 +413,9 @@ model Task {
   @@unique([recurrenceSourceId, recurrenceDate])
   @@index([userId, status, dueAt])
   @@index([userId, deletedAt, sortOrder])
+  /* Serves goal-progress / analytics / challenge scans that filter by completion date
+     (audit L14) -- previously only (status,dueAt) composites existed. */
+  @@index([userId, completedAt])
 }
 
 model TaskDraft {
@@ -431,6 +439,8 @@ model TaskDraft {
   user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, status, expiresAt])
+  /* Retention-purge predicate (audit H7). */
+  @@index([expiresAt])
 }
 
 model StudySession {
@@ -485,7 +495,7 @@ model TimerRun {
   session                  StudySession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
   task                     Task?         @relation(fields: [taskId], references: [id], onDelete: SetNull)
   subject                  Subject?      @relation(fields: [subjectId], references: [id], onDelete: SetNull)
-  room                     Room?         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  room                     Room?         @relation(fields: [roomId], references: [id], onDelete: SetNull)
   host                     User?         @relation("TimerHost", fields: [hostUserId], references: [id], onDelete: SetNull)
 
   @@index([userId, status])
@@ -551,6 +561,8 @@ model RoomMessage {
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([roomId, createdAt])
+  /* Retention-purge predicate (audit H7): deleteMany where createdAt < now-30d. */
+  @@index([createdAt])
 }
 
 model SessionReaction {
@@ -637,6 +649,8 @@ model AccountabilityCheck {
 
   @@index([pairId, sentAt])
   @@index([subjectUserId, sentAt])
+  /* Retention-purge predicate (audit H7/L15). */
+  @@index([sentAt])
 }
 
 model Notification {
@@ -653,6 +667,8 @@ model Notification {
   deliveries NotificationDelivery[]
 
   @@index([userId, readAt, createdAt])
+  /* Plain recency index for the list query, which does not filter on readAt (audit L14). */
+  @@index([userId, createdAt])
 }
 
 model NotificationDelivery {
@@ -672,6 +688,11 @@ model Challenge {
   id             String                   @id @default(uuid())
   creatorId      String
   opponentId     String
+  /* Canonical sorted-pair key ("a:b") -- the durable half of one-live-challenge-per-pair.
+     The live-status uniqueness itself is a PARTIAL unique index that exists only in
+     migration SQL (`Challenge_one_live_per_pair`), invisible here by design; never db push
+     against an environment relying on it (same caveat as the TimerRun partial indexes). */
+  pairKey        String?
   subjectId      String?
   subjectKey     String?
   subjectLabel   String?
@@ -703,6 +724,7 @@ model Challenge {
   @@index([creatorId, status, createdAt])
   @@index([opponentId, status, createdAt])
   @@index([status, startsAt, endsAt])
+  @@index([pairKey])
 }
 
 model ChallengeProgress {
@@ -774,7 +796,10 @@ model LeaderboardSnapshot {
   periodEnd    DateTime
   metric       LeaderboardMetric
   generatedAt  DateTime           @default(now())
-  owner        User?              @relation("LeaderboardOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  /* SetNull, not Cascade (audit H5): FRIENDS snapshots are persisted per generating user,
+     so cascading this would let one account deletion destroy other users' shared
+     rank history. The owner column is provenance metadata only. */
+  owner        User?              @relation("LeaderboardOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
   entries      LeaderboardEntry[]
 
   @@index([scope, metric, periodStart])
@@ -900,25 +925,6 @@ model ExamPlanItem {
   createdTask      Task?            @relation("ExamPlanCreatedTask", fields: [createdTaskId], references: [id], onDelete: SetNull)
 
   @@index([examPlanId, sortOrder])
-}
-
-model DailyUserMetric {
-  id                String   @id @default(uuid())
-  userId            String
-  metricDate        DateTime
-  timezone          String   @default("Africa/Cairo")
-  studyMinutes      Int      @default(0)
-  plannedMinutes    Int      @default(0)
-  tasksCompleted    Int      @default(0)
-  tasksDue          Int      @default(0)
-  distractionCount  Int      @default(0)
-  averageFocusScore Float?
-  currentStreak     Int      @default(0)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, metricDate])
 }
 
 model ServiceUsageLog {

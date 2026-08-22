@@ -15,9 +15,13 @@ export async function GET(request: Request) {
     where: {
       id: { not: user.id },
       profileVisibility: "COLLEGE_ONLY",
+      /* College IDs match EXACTLY only (audit M13): a contains-probe let any student map
+         arbitrary IDs to names and years, contradicting the documented privacy stance.
+         Friends who know each other's full ID still find each other; fragments no longer
+         leak anything. */
       OR: [
         { name: { contains: parsed.data, mode: "insensitive" } },
-        { collegeId: { contains: parsed.data, mode: "insensitive" } },
+        { collegeId: { equals: parsed.data, mode: "insensitive" } },
       ],
       AND: [
         { sentFriendRequests: { none: { addresseeId: user.id, status: "BLOCKED" } } },

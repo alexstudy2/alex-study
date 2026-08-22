@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
-import { apiUser, notFound, unauthorized } from "@/lib/tasks/response";
+import { apiUser, forbidden, notFound, unauthorized } from "@/lib/tasks/response";
 export async function GET(_: Request, c: { params: Promise<{ roomId: string }> }) {
   const user = await apiUser();
   if (!user) return unauthorized();
@@ -7,7 +7,7 @@ export async function GET(_: Request, c: { params: Promise<{ roomId: string }> }
   const membership = await prisma.roomMember.findUnique({
     where: { roomId_userId: { roomId, userId: user.id } },
   });
-  if (!membership) return unauthorized();
+  if (!membership) return forbidden();
   await prisma.roomMember.update({
     where: { id: membership.id },
     data: { lastSeenAt: new Date() },

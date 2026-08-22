@@ -28,6 +28,13 @@ const TYPE_DAILY_LIMITS: Record<string, number> = {
   EXAM_PLAN: 6,
   /** One per page of a photographed index, with room to re-shoot a blurry one. */
   EXAM_TOPICS: 8,
+  /**
+   * Quick-parse is the cheapest call in the app (650 completion tokens) and the most
+   * iterative -- students type a sentence, check the draft, reword, retry. The governors
+   * that bound it are the shared token budgets and the route's 8-per-hour limiter; the
+   * per-type ceiling only exists here so it counts as tracked work like the rest.
+   */
+  TASK_PARSE: 12,
 };
 
 /** The per-type ceiling, exported so tests and callers name the limit instead of copying the number. */

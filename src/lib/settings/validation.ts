@@ -15,10 +15,21 @@ export const STUDY_SKIN_ENUM = ["ATLAS", "DOODLE"] as const;
 
 export const profileSettingsSchema = z
   .object({
-    name: z.string().trim().min(3).max(100).optional(),
+    /* Same control-char ban as the register-time name schema (audit L8) -- this module
+       cannot import it from auth/validation without a cycle, so mirror the rule. */
+    name: z
+      .string()
+      .trim()
+      .min(3)
+      .max(100)
+      .regex(/^[^\u0000-\u001f\u007f]*$/, "Control characters are not allowed in names")
+      .optional(),
     academicYear: z.coerce.number().int().min(1).max(6).optional(),
     email: z.union([z.literal(""), z.string().trim().email()]).optional(),
     locale: z.enum(["EN", "AR"]).optional(),
+    /* Required by the server only when the request actually changes the email address
+       (audit L17 interim): re-authenticate before moving where recovery mail goes. */
+    currentPassword: z.string().min(1).max(128).optional(),
   })
   .refine((value) => Object.keys(value).length > 0);
 

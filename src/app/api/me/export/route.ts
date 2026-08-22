@@ -45,7 +45,6 @@ export async function GET(request: Request) {
       aiJobs: true,
       examPlans: true,
       serviceUsageLogs: true,
-      dailyMetrics: true,
       taskDrafts: true,
       timerRuns: true,
       notifications: true,
@@ -53,6 +52,14 @@ export async function GET(request: Request) {
       accountabilityPairsB: true,
       accountabilitySubjects: true,
       accountabilityRecipients: true,
+      /* Portability completion (audit M11): forum-authored plans and saves, reactions the
+         user left on peers' sessions, and the rooms/timers they hosted are their data too
+         -- the earlier allowlist silently omitted all five. */
+      studyPlans: true,
+      studyPlanSaves: true,
+      sessionReactions: true,
+      ownedRooms: true,
+      hostedTimerRuns: true,
     },
   });
   return new Response(

@@ -51,3 +51,6 @@ alex-study-temp
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local database snapshots (PII -- keep out of VCS)
+backups/

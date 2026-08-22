@@ -5,7 +5,10 @@ import { prisma } from "@/lib/db/prisma";
 import { credentialsSchema } from "@/lib/auth/validation";
 
 export const authOptions: NextAuthOptions = {
-  session: { strategy: "jwt" },
+  /* Explicit instead of the v4 default: the 30-day lifetime is now a documented choice
+     that pairs with server-side revocation (sessionVersion) rather than an accident of
+     omission -- a stolen cookie dies at the next password change even within this window. */
+  session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
   pages: { signIn: "/sign-in" },
   /* Left to next-auth this is inferred from whether NEXTAUTH_URL starts with https://
      (core/init.js), so a stale localhost value in a hosted environment silently drops the
@@ -40,6 +43,7 @@ export const authOptions: NextAuthOptions = {
           academicYear: user.academicYear,
           role: user.role,
           locale: user.preference?.locale ?? "EN",
+          sessionVersion: user.sessionVersion,
         };
       },
     }),
@@ -76,6 +80,10 @@ export const authOptions: NextAuthOptions = {
           academicYear: user.academicYear,
           role: user.role,
           locale: user.locale,
+          /* The revocation counter this cookie was issued against. apiUser() compares it
+             with the database on every request; a bump on password reset strands this
+             value and the cookie stops working. */
+          sv: user.sessionVersion,
         });
       if (trigger === "update" && session) {
         if (session.locale === "EN" || session.locale === "AR") token.locale = session.locale;
@@ -95,6 +103,9 @@ export const authOptions: NextAuthOptions = {
           academicYear: token.academicYear,
           role: token.role,
           locale: token.locale,
+          /* Server-side only: apiUser() reads this to verify against User.sessionVersion.
+             Harmless if a curious client sees it -- it is just a counter. */
+          sv: typeof token.sv === "number" ? token.sv : undefined,
         });
       return session;
     },

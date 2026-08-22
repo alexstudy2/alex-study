@@ -197,7 +197,14 @@ export function runBurnoutDetection(now = new Date()) {
 }
 
 export async function runAICleanup(now = new Date()) {
-  const [insights, plans] = await prisma.$transaction([
+  /* Retention rules (audit H7): docs/OPERATIONS.md promised a 30-day lobby-chat window
+     and nothing enforced it; drafts carried an expiresAt nobody read; expired recovery
+     tokens and accountability check-ins accrued forever. Each deleteMany below has a
+     matching index from migration 202608220019_phase2_integrity. */
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000);
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000);
+  const ninetyDaysAgo = new Date(now.getTime() - 90 * 86400000);
+  const [insights, plans, messages, drafts, resetTokens, checks] = await prisma.$transaction([
     prisma.aIInsight.deleteMany({ where: { purgeAt: { lte: now } } }),
     prisma.examPlan.updateMany({
       where: {
@@ -207,6 +214,21 @@ export async function runAICleanup(now = new Date()) {
       },
       data: { syllabusText: null, contextPurgedAt: now },
     }),
+    prisma.roomMessage.deleteMany({ where: { createdAt: { lt: thirtyDaysAgo } } }),
+    prisma.taskDraft.deleteMany({ where: { expiresAt: { lte: now } } }),
+    prisma.passwordResetToken.deleteMany({
+      where: {
+        OR: [{ expiresAt: { lte: now } }, { usedAt: { not: null, lte: sevenDaysAgo } }],
+      },
+    }),
+    prisma.accountabilityCheck.deleteMany({ where: { sentAt: { lt: ninetyDaysAgo } } }),
   ]);
-  return { insightsPurged: insights.count, examPlanContextsPurged: plans.count };
+  return {
+    insightsPurged: insights.count,
+    examPlanContextsPurged: plans.count,
+    roomMessagesPurged: messages.count,
+    taskDraftsPurged: drafts.count,
+    resetTokensPurged: resetTokens.count,
+    accountabilityChecksPurged: checks.count,
+  };
 }

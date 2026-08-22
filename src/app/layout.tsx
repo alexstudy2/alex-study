@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { JetBrains_Mono, Plus_Jakarta_Sans, Amiri, Cairo, Fraunces } from "next/font/google";
 import { getLocale, getMessages } from "next-intl/server";
 import { AppShell } from "@/components/navigation/app-shell";
@@ -107,6 +108,11 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     : null;
   const locale = profile?.preference?.locale.toLowerCase() ?? (await getLocale());
   const messages = await getMessages({ locale });
+  /* The per-request CSP nonce the proxy generated for this document (see src/proxy.ts).
+     Next.js nonces its own framework scripts automatically from the request's
+     Content-Security-Policy header, but this hand-written bootstrap is ours to nonce.
+     Undefined when no proxy ran -- then the attribute is simply omitted. */
+  const cspNonce = (await headers()).get("x-nonce") ?? undefined;
   /* Rendered onto <html> so the correct palette is in the very first paint. Reading it
      from localStorage after hydration is what caused the flash of the wrong theme. */
   const mood = moodFromEnum(profile?.preference?.studyMood);
@@ -132,9 +138,10 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           run yet) -- keep the two behaviourally identical. It can only ever ADD "lite";
           absence of the attribute means full. study-background.tsx re-resolves after
           hydration and additionally demotes devices whose measured frame rate says the
-          static signals lied. The CSP already allows 'unsafe-inline'. */}
+          static signals lied. The nonce comes from the proxy's CSP (see cspNonce above). */}
       <head>
         <script
+          nonce={cspNonce}
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var f=localStorage.getItem("alex-study-perf");if(f==="lite"){document.documentElement.setAttribute("data-perf","lite");return}if(f==="full")return;var n=navigator,d=n.deviceMemory;if(typeof d==="number"&&d>0&&d<=4){document.documentElement.setAttribute("data-perf","lite");return}if(n.connection&&n.connection.saveData){document.documentElement.setAttribute("data-perf","lite");return}var c=n.hardwareConcurrency||0;if(c>0&&c<=6&&matchMedia("(pointer: coarse)").matches)document.documentElement.setAttribute("data-perf","lite")}catch(e){}})()`,
           }}

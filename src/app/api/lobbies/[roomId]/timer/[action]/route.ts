@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db/prisma";
 import { activeSeconds } from "@/lib/sessions/timer";
-import { apiUser, invalid, notFound, unauthorized } from "@/lib/tasks/response";
+import { apiUser, forbidden, invalid, notFound, unauthorized } from "@/lib/tasks/response";
 import { canControlTimer } from "@/lib/lobbies/permissions";
 import { timerActionSchema } from "@/lib/sessions/validation";
 export async function POST(r: Request, c: { params: Promise<{ roomId: string; action: string }> }) {
@@ -13,7 +13,7 @@ export async function POST(r: Request, c: { params: Promise<{ roomId: string; ac
   const member = await prisma.roomMember.findUnique({
     where: { roomId_userId: { roomId, userId: user.id } },
   });
-  if (!member || !canControlTimer(member.role)) return unauthorized();
+  if (!member || !canControlTimer(member.role)) return forbidden();
   const run = await prisma.timerRun.findFirst({
     where: { roomId, status: { in: ["RUNNING", "PAUSED"] } },
     orderBy: { createdAt: "desc" },
@@ -53,8 +53,17 @@ export async function POST(r: Request, c: { params: Promise<{ roomId: string; ac
               }
             : null;
   if (!data) return Response.json({ error: "invalid_timer_state" }, { status: 409 });
+  /* Atomic claim instead of the old check-then-write (audit M7): two moderators tapping
+     complete at once must produce one winner and one stale-version conflict, not two
+     writes with divergent elapsed totals. */
+  const claim = await prisma.timerRun.updateMany({
+    where: { id: run.id, version: p.data.version },
+    data,
+  });
+  if (claim.count === 0)
+    return Response.json({ error: "stale_timer_version" }, { status: 409 });
   return Response.json({
-    timer: await prisma.timerRun.update({ where: { id: run.id }, data }),
+    timer: await prisma.timerRun.findUnique({ where: { id: run.id } }),
     serverNow: now.toISOString(),
   });
 }

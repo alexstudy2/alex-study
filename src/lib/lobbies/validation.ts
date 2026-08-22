@@ -19,3 +19,7 @@ export const reactionSchema = z.object({
   sessionId: z.string().uuid(),
   reaction: z.enum(["👏", "🔥", "💪", "✅"]),
 });
+/** Join bodies are empty for PUBLIC rooms; PRIVATE rooms require the owner's code. */
+export const joinRoomSchema = z.object({
+  code: z.string().trim().min(6).max(100).optional(),
+});

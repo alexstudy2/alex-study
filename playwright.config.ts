@@ -10,10 +10,16 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   webServer: {
-    command: "npm run dev -- --hostname 127.0.0.1 --port 3000",
+    /* E2E used to exercise `next dev` only (audit M15): headers, minification and
+       prod-only behaviour like the nonce CSP never got tested. Set E2E_PROD=1 (CI, or a
+       release gate) to run against a real production build; the default keeps dev for
+       fast inner-loop runs. */
+    command: process.env.E2E_PROD
+      ? "npm run build && npm run start -- --hostname 127.0.0.1 --port 3000"
+      : "npm run dev -- --hostname 127.0.0.1 --port 3000",
     url: "http://127.0.0.1:3000/sign-in",
     reuseExistingServer: true,
-    timeout: 120_000,
+    timeout: process.env.E2E_PROD ? 420_000 : 120_000,
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"], channel: "chromium" } },

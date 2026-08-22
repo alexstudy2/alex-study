@@ -5,6 +5,7 @@ import { createNotification } from "@/lib/notifications/service";
 import { challengeInclude } from "@/lib/challenges/queries";
 import { reconcileChallenge } from "@/lib/challenges/engine";
 import { publicName } from "@/lib/challenges/rules";
+import { canonicalPair } from "@/lib/social/pairs";
 import type { challengeInputSchema } from "@/lib/challenges/validation";
 
 type ChallengeInput = z.infer<typeof challengeInputSchema>;
@@ -34,17 +35,6 @@ export async function createChallenge(
     },
   });
   if (!friendship) return { error: "opponent_not_friend" as const };
-  const overlapping = await prisma.challenge.findFirst({
-    where: {
-      status: { in: ["PENDING", "SCHEDULED", "ACTIVE"] },
-      OR: [
-        { creatorId: user.id, opponentId: input.opponentId },
-        { creatorId: input.opponentId, opponentId: user.id },
-      ],
-    },
-    select: { id: true },
-  });
-  if (overlapping) return { error: "active_pair_challenge" as const };
   const subjectType = input.type.startsWith("SUBJECT_");
   const subject =
     subjectType && input.subjectId
@@ -55,26 +45,60 @@ export async function createChallenge(
   const subjectKey = subject?.normalizedName ?? options.subjectSnapshot?.key ?? null;
   const subjectLabel = subject?.name ?? options.subjectSnapshot?.label ?? null;
   if (subjectType && (!subjectKey || !subjectLabel)) return { error: "invalid_subject" as const };
-  const challenge = await prisma.challenge.create({
-    data: {
-      creatorId: user.id,
-      opponentId: input.opponentId,
-      subjectId: subject?.id,
-      subjectKey,
-      subjectLabel,
-      type: input.type,
-      targetValue: input.targetValue,
-      resolutionType: input.resolutionType,
-      startsAt: new Date(input.startsAt),
-      endsAt: new Date(input.endsAt),
-      shareToken: newShareToken(),
-      rematchOfId: options.rematchOfId,
-      progress: {
-        create: [{ userId: user.id }, { userId: input.opponentId }],
+  /* The one-live-challenge-per-pair rule used to be a bare probe-then-create (audit M9):
+     two concurrent invites both passed the probe and both became ACTIVE. The probe and
+     the create now share one serializable transaction -- the database serializes racing
+     pairs, and a serialization retry (P2034) is reported as the same friendly conflict
+     instead of double-spending an ACTIVE challenge into existence. The durable half of
+     this fix (a partial unique index on live statuses) is deferred to the next migration
+     batch; see REMEDIATION_PLAN.md T3.6. */
+  let challenge;
+  try {
+    challenge = await prisma.$transaction(
+      async (tx) => {
+        const overlapping = await tx.challenge.findFirst({
+          where: {
+            status: { in: ["PENDING", "SCHEDULED", "ACTIVE"] },
+            OR: [
+              { creatorId: user.id, opponentId: input.opponentId },
+              { creatorId: input.opponentId, opponentId: user.id },
+            ],
+          },
+          select: { id: true },
+        });
+        if (overlapping) return null;
+        return tx.challenge.create({
+          data: {
+            creatorId: user.id,
+            opponentId: input.opponentId,
+            /* Durable half of one-live-per-pair (audit M9): the partial unique index
+               `Challenge_one_live_per_pair` (migration SQL) enforces it at the database. */
+            pairKey: canonicalPair(user.id, input.opponentId).pairKey,
+            subjectId: subject?.id,
+            subjectKey,
+            subjectLabel,
+            type: input.type,
+            targetValue: input.targetValue,
+            resolutionType: input.resolutionType,
+            startsAt: new Date(input.startsAt),
+            endsAt: new Date(input.endsAt),
+            shareToken: newShareToken(),
+            rematchOfId: options.rematchOfId,
+            progress: {
+              create: [{ userId: user.id }, { userId: input.opponentId }],
+            },
+          },
+          include: challengeInclude,
+        });
       },
-    },
-    include: challengeInclude,
-  });
+      { isolationLevel: "Serializable", timeout: 15000, maxWait: 10000 },
+    );
+  } catch (error) {
+    if ((error as { code?: string }).code === "P2034")
+      return { error: "active_pair_challenge" as const };
+    throw error;
+  }
+  if (!challenge) return { error: "active_pair_challenge" as const };
   await createNotification({
     userId: input.opponentId,
     type: "CHALLENGE_INVITE",

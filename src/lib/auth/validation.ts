@@ -9,6 +9,19 @@ import { STUDY_MOOD_ENUM } from "@/lib/settings/validation";
 export const collegeIdSchema = z.string().trim().min(1).max(32).regex(/^[A-Za-z0-9-]+$/);
 
 /**
+ * Display names flow into email subjects/bodies and notification titles. Rejecting
+ * control characters (including CR/LF) at the schema keeps header-injection concerns
+ * structurally impossible instead of delegated to the mail library's defensive
+ * stripping (audit L8).
+ */
+export const nameSchema = z
+  .string()
+  .trim()
+  .min(3)
+  .max(100)
+  .regex(/^[^\u0000-\u001f\u007f]*$/, "Control characters are not allowed in names");
+
+/**
  * What the sign-up wizard's preferences step collects.
  *
  * Every field is defaulted to the same value as its column default on `UserPreference`
@@ -56,7 +69,7 @@ export const signupPreferencesSchema = z
   });
 
 export const registerSchema = z.object({
-  name: z.string().trim().min(3).max(100),
+  name: nameSchema,
   collegeId: collegeIdSchema,
   academicYear: z.coerce.number().int().min(1).max(6),
   email: z.union([z.literal(""), z.string().trim().email()]).optional(),

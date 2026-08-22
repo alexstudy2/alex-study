@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
-import { apiUser, invalid, unauthorized } from "@/lib/tasks/response";
+import { apiUser, forbidden, invalid, unauthorized } from "@/lib/tasks/response";
 import { reactionSchema } from "@/lib/lobbies/validation";
 export async function POST(r: Request, c: { params: Promise<{ roomId: string }> }) {
   const user = await apiUser();
@@ -9,7 +9,7 @@ export async function POST(r: Request, c: { params: Promise<{ roomId: string }> 
   if (
     !(await prisma.roomMember.findUnique({ where: { roomId_userId: { roomId, userId: user.id } } }))
   )
-    return unauthorized();
+    return forbidden();
   const p = reactionSchema.safeParse(await r.json().catch(() => null));
   if (!p.success) return invalid();
   const session = await prisma.studySession.findFirst({ where: { id: p.data.sessionId, roomId } });

@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
-import { apiUser, invalid, unauthorized } from "@/lib/tasks/response";
+import { apiUser, forbidden, invalid, unauthorized } from "@/lib/tasks/response";
 import { roomTimerSchema } from "@/lib/lobbies/validation";
 import { canControlTimer } from "@/lib/lobbies/permissions";
 export async function POST(r: Request, c: { params: Promise<{ roomId: string }> }) {
@@ -10,7 +10,7 @@ export async function POST(r: Request, c: { params: Promise<{ roomId: string }> 
   const member = await prisma.roomMember.findUnique({
     where: { roomId_userId: { roomId, userId: user.id } },
   });
-  if (!member || !canControlTimer(member.role)) return unauthorized();
+  if (!member || !canControlTimer(member.role)) return forbidden();
   const p = roomTimerSchema.safeParse(await r.json().catch(() => null));
   if (!p.success) return invalid();
   const now = new Date();

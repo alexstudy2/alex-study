@@ -46,6 +46,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     const variantClass = `btn-${variant}`;
     const sizeClass = size === "icon-sm" ? "btn-icon-sm" : size === "icon" ? "btn-icon" : `btn-${size}`;
     const combinedClassName = ["btn", variantClass, sizeClass, className].filter(Boolean).join(" ");
+    /* Any target implies a new browsing context; force the noopener pair so a linked
+       page can never touch this one (audit L11). Caller-supplied rel is preserved. */
+    const effectiveRel = target ? ["noopener", "noreferrer", rel].filter(Boolean).join(" ") : rel;
 
     if (href) {
       return (
@@ -53,7 +56,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           href={href}
           className={combinedClassName}
           target={target}
-          rel={rel}
+          rel={effectiveRel}
           aria-disabled={disabled || isLoading}
           aria-busy={isLoading ? "true" : undefined}
           tabIndex={disabled || isLoading ? -1 : undefined}

@@ -136,8 +136,14 @@ export async function runTrackedAIJob<T>(
   let attempt = job.attempts;
   while (attempt < maxAttempts) {
     attempt += 1;
-    await prisma.aIJob.update({
-      where: { id: job.id },
+    /* Atomic claim instead of an unconditional status write (audit M10): concurrent
+       identical requests both reach this line after passing the sniff above, but only
+       one transition wins -- the loser sees count 0 and reports in-progress rather than
+       double-spending Groq tokens and creating duplicate artifacts. The condition also
+       makes retry attempts safe: a FAILED job from the previous attempt still matches
+       `notIn` because the failure path wrote FAILED before returning. */
+    const claim = await prisma.aIJob.updateMany({
+      where: { id: job.id, status: { notIn: ["RUNNING", "COMPLETED"] } },
       data: {
         status: "RUNNING",
         attempts: attempt,
@@ -146,6 +152,8 @@ export async function runTrackedAIJob<T>(
         errorCode: null,
       },
     });
+    if (claim.count === 0)
+      return { ok: false, error: "ai_in_progress", status: 409, jobId: job.id };
     try {
       const value = await input.run({
         jobId: job.id,
